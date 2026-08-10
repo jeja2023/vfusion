@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>视汇 - 视频网发布终端</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-main: #f8fafc;
+      --bg-card: #ffffff;
+      --border-color: #cbd5e1;
+      --border-hover: #94a3b8;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --primary-gradient: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --text-sub: #475569;
+      --success: #16a34a;
+      --success-bg: #f0fdf4;
+      --success-border: #bbf7d0;
+      --warning: #d97706;
+      --warning-bg: #fffbeb;
+      --warning-border: #fde68a;
+      --danger: #dc2626;
+      --danger-bg: #fef2f2;
+      --danger-border: #fecaca;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+      --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+    html, body { height: 100%; overflow-x: hidden; }
+    body { background-color: var(--bg-main); color: var(--text-main); padding: 1.25rem 2rem; display: flex; flex-direction: column; }
+    .container { max-width: 100%; width: 100%; margin: 0 auto; display: flex; flex-direction: column; flex: 1; }
+
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 0.85rem; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.75rem; flex-shrink: 0; }
+    .logo-box { display: flex; align-items: center; gap: 0.85rem; flex-shrink: 0; }
+    .logo-badge { background: var(--primary-gradient); color: #ffffff; font-weight: 800; font-size: 1.15rem; padding: 0.45rem 0.95rem; border-radius: 10px; letter-spacing: 0.5px; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 3px 6px rgba(37,99,235,0.28); white-space: nowrap; }
+    .brand-logo-icon { width: 22px; height: 22px; flex-shrink: 0; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15)); }
+
+    .logo-title h1 { font-size: 1.25rem; font-weight: 700; color: var(--text-main); white-space: nowrap; }
+    .logo-title p { font-size: 0.8rem; color: var(--text-muted); margin-top: 1px; white-space: nowrap; }
+
+    .header-right { display: flex; gap: 0.75rem; align-items: center; flex-wrap: nowrap; }
+
+    .net-tag { background: var(--success-bg); border: 1px solid var(--success-border); color: var(--success); padding: 0.4rem 0.85rem; border-radius: 20px; font-size: 0.82rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.45rem; white-space: nowrap; flex-shrink: 0; }
+    .net-dot { width: 8px; height: 8px; background-color: var(--success); border-radius: 50%; }
+
+    .tabs-nav { display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 2px; flex-shrink: 0; overflow-x: auto; }
+    .tab-btn { background: transparent; border: none; font-size: 0.875rem; font-weight: 600; color: var(--text-muted); padding: 0.55rem 1.15rem; border-radius: 8px 8px 0 0; cursor: pointer; display: inline-flex; align-items: center; gap: 0.45rem; border-bottom: 2px solid transparent; transition: all 0.15s ease; white-space: nowrap; flex-shrink: 0; }
+    .tab-btn:hover { color: var(--primary); background: #ffffff; }
+    .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); background: #ffffff; box-shadow: var(--shadow-sm); }
+
+    .tab-content { display: none; flex: 1; }
+    .tab-content.active { display: flex; flex-direction: column; }
+
+    .card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; box-shadow: var(--shadow-md); margin-bottom: 1rem; flex: 1; display: flex; flex-direction: column; }
+    .card-header { margin-bottom: 1.25rem; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+    .card-header h2 { font-size: 1.1rem; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 0.5rem; }
+    .card-header p { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem; }
+
+    .split-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; flex: 1; }
+    @media (max-width: 960px) { .split-layout { grid-template-columns: 1fr; } }
+
+    .split-col { display: flex; flex-direction: column; gap: 1rem; }
+
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .form-group { display: flex; flex-direction: column; gap: 0.35rem; }
+    .form-group.full-width { grid-column: 1 / -1; }
+
+    label { font-size: 0.825rem; font-weight: 600; color: var(--text-sub); }
+    label .req { color: var(--danger); margin-left: 2px; }
+
+    input, select, textarea { background: #ffffff; border: 1px solid var(--border-color); border-radius: 8px; padding: 0.55rem 0.75rem; color: var(--text-main); font-size: 0.875rem; outline: none; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+    input:focus, select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12); }
+    textarea { resize: vertical; min-height: 75px; }
+
+    .radio-group { display: flex; gap: 0.6rem; margin-top: 0.2rem; flex-wrap: wrap; }
+    .radio-label { display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.85rem; background: #f8fafc; padding: 0.45rem 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); color: var(--text-sub); transition: all 0.15s ease; white-space: nowrap; }
+    .radio-label:hover { background: #f1f5f9; }
+    .radio-label input { accent-color: var(--primary); }
+
+    .upload-zone { border: 2px dashed #cbd5e1; border-radius: 10px; padding: 1.5rem 1rem; text-align: center; background: #f8fafc; cursor: pointer; transition: all 0.2s ease; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 140px; }
+    .upload-zone:hover { border-color: var(--primary); background: #f0f9ff; }
+    .upload-icon-svg { width: 32px; height: 32px; color: var(--primary); margin-bottom: 0.35rem; }
+
+    .preview-container { display: flex; flex-wrap: wrap; gap: 0.65rem; max-height: 120px; overflow-y: auto; }
+    .preview-wrapper { position: relative; display: inline-block; }
+    .preview-thumb { width: 75px; height: 75px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); }
+    .preview-delete-btn { position: absolute; top: -6px; right: -6px; background: var(--danger); color: #fff; border: none; border-radius: 50%; width: 18px; height: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+
+    .btn-submit { width: 100%; background: var(--primary-gradient); color: #ffffff; font-weight: 600; font-size: 0.925rem; padding: 0.75rem 1.25rem; border: none; border-radius: 8px; cursor: pointer; transition: all 0.15s ease; box-shadow: 0 2px 5px rgba(37,99,235,0.25); display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; white-space: nowrap; flex-shrink: 0; }
+    .btn-submit:hover { opacity: 0.95; box-shadow: 0 4px 8px rgba(37,99,235,0.35); }
+    .btn-submit:active { transform: scale(0.98); }
+    .btn-submit:disabled { background: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    .icon-svg { width: 18px; height: 18px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+    .log-card { display: none; background: #f0fdf4; border: 1px solid var(--success-border); border-radius: 10px; padding: 1rem; margin-top: 1rem; }
+    .log-title { font-size: 0.875rem; font-weight: 600; color: var(--success); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.4rem; }
+    .log-code { font-family: monospace; font-size: 0.8rem; color: #1e293b; white-space: pre-wrap; word-break: break-all; background: #ffffff; border: 1px solid #cbd5e1; padding: 0.65rem; border-radius: 6px; margin-top: 0.35rem; max-height: 120px; overflow-y: auto; }
+
+    .filter-bar { display: flex; gap: 0.65rem; margin-bottom: 1rem; flex-wrap: wrap; flex-shrink: 0; }
+    .filter-bar input, .filter-bar select { background: #ffffff; border: 1px solid var(--border-color); color: var(--text-main); padding: 0.45rem 0.75rem; border-radius: 8px; font-size: 0.825rem; outline: none; white-space: nowrap; }
+    .filter-bar input { flex: 1; min-width: 180px; }
+
+    .badge-level { padding: 0.2rem 0.55rem; border-radius: 20px; font-size: 0.725rem; font-weight: 700; white-space: nowrap; display: inline-flex; }
+    .badge-level.高 { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-border); }
+    .badge-level.中 { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-border); }
+    .badge-level.低 { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }
+
+    .builder-form { display: flex; flex-direction: column; gap: 0.85rem; background: #f8fafc; padding: 1.25rem; border-radius: 10px; border: 1px solid var(--border-color); }
+    .form-field-item { display: flex; flex-direction: column; gap: 0.35rem; }
+    .form-field-item label { font-size: 0.825rem; font-weight: 600; color: var(--text-sub); }
+    .form-field-item input, .form-field-item select { padding: 0.5rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.85rem; }
+
+    .table-container { overflow-x: auto; max-height: calc(100vh - 280px); overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; text-align: left; }
+    th, td { padding: 0.65rem 0.85rem; border: 1px solid var(--border-color); color: var(--text-main); white-space: nowrap; }
+    th { background: #f8fafc; color: var(--text-muted); font-weight: 700; position: sticky; top: 0; z-index: 2; }
+    th.col-idx, td.col-idx { width: 55px; text-align: center; font-weight: 600; color: var(--text-muted); background: #f8fafc; }
+
+    #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+    .toast { pointer-events: auto; padding: 0.75rem 1.25rem; border-radius: 8px; font-size: 0.875rem; font-weight: 600; background: #ffffff; color: var(--text-main); border: 1px solid var(--border-color); box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 0.6rem; animation: toastIn 0.25s ease forwards; white-space: nowrap; }
+    .toast.success { border-color: var(--success-border); background: #f0fdf4; color: var(--success); }
+    .toast.error { border-color: var(--danger-border); background: #fef2f2; color: var(--danger); }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .login-overlay { position: fixed; inset: 0; background: var(--bg-main); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
+    .login-box { background: #ffffff; border: 1px solid var(--border-color); border-radius: 16px; width: 100%; max-width: 420px; padding: 2.5rem; box-shadow: var(--shadow-lg); text-align: center; }
+    .login-box .logo-badge { margin: 0 auto 1.25rem; width: fit-content; }
+  </style>
+</head>
+<body>
+  <div id="toast-container"></div>
+
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-box">
+      <div class="logo-badge">
+        <svg class="brand-logo-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M16 2.5L5 6.5V14.5C5 21.5 10 27.2 16 29.5C22 27.2 27 21.5 27 14.5V6.5L16 2.5Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" fill="rgba(255,255,255,0.15)"/>
+          <path d="M9.5 12.5L16 19.5L22.5 12.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="16" cy="11.5" r="3.2" stroke="currentColor" stroke-width="2"/>
+          <circle cx="16" cy="11.5" r="1.2" fill="currentColor"/>
+        </svg>
+        视汇 VFusion
+      </div>
+      <h2 style="font-size:1.3rem; font-weight:700; color:var(--text-main);">视频网采集发布端登录</h2>
+      <p style="font-size:0.85rem; color:var(--text-muted); margin-top:0.35rem; margin-bottom:1.75rem;">隔离网络采集发布身份验证</p>
+
+      <form id="loginForm" onsubmit="handleLogin(event)">
+        <div class="form-group" style="text-align:left; margin-bottom:1rem;">
+          <label>用户名</label>
+          <input type="text" id="loginUsername" placeholder="请输入用户名 (如 operator / admin / auditor)" required>
+        </div>
+        <div class="form-group" style="text-align:left; margin-bottom:1.5rem;">
+          <label>登录密码</label>
+          <input type="password" id="loginPassword" placeholder="请输入密码 (默认 123)" required>
+        </div>
+        <button type="submit" class="btn-submit" style="margin-top:0;">登录系统</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="container">
+    <header>
+      <div class="logo-box">
+        <div class="logo-badge">
+          <svg class="brand-logo-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16 2.5L5 6.5V14.5C5 21.5 10 27.2 16 29.5C22 27.2 27 21.5 27 14.5V6.5L16 2.5Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" fill="rgba(255,255,255,0.15)"/>
+            <path d="M9.5 12.5L16 19.5L22.5 12.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="16" cy="11.5" r="3.2" stroke="currentColor" stroke-width="2"/>
+            <circle cx="16" cy="11.5" r="1.2" fill="currentColor"/>
+          </svg>
+          视汇
+        </div>
+        <div class="logo-title">
+          <h1>视汇 - 视频网发布终端</h1>
+          <p>单向网闸隔离模式 · 跨网 Schema 热更新</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <select id="appIdSelect" onchange="switchAppTenant()" style="padding:0.45rem 0.75rem; border-radius:8px; border:1px solid var(--border-color); font-weight:600; font-size:0.85rem; background:#ffffff; white-space:nowrap; flex-shrink:0;">
+          <option value="sys_gate_security">门禁安防系统 (sys_gate_security)</option>
+          <option value="sys_factory_monitor">厂区巡检系统 (sys_factory_monitor)</option>
+        </select>
+        <div class="net-tag">
+          <div class="net-dot"></div>
+          视频网采集端
+        </div>
+        <span id="userInfoTag" style="font-size:0.85rem; font-weight:600; color:var(--text-sub); white-space:nowrap; flex-shrink:0;"></span>
+        <button class="btn-submit" style="width:auto; min-width:70px; margin-top:0; padding:0.45rem 0.95rem; font-size:0.85rem; background:var(--danger); white-space:nowrap; flex-shrink:0;" onclick="handleLogout()">退出</button>
+      </div>
+    </header>
+
+    <div class="tabs-nav">
+      <button class="tab-btn active" id="tabBtn-publish" onclick="switchTab('tab-publish')">
+        <svg class="icon-svg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        新建事件发布
+      </button>
+      <button class="tab-btn" id="tabBtn-builder" onclick="switchTab('tab-builder')">
+        <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        视频网表单设计器
+      </button>
+      <button class="tab-btn" id="tabBtn-audits" onclick="switchTab('tab-audits')">
+        <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+        系统审计日志
+      </button>
+      <button class="tab-btn" id="tabBtn-users" onclick="switchTab('tab-users')">
+        <svg class="icon-svg" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 1 0 7.75"/></svg>
+        用户与权限管理
+      </button>
+    </div>
+
+    <!-- 页签 1：新建事件发布 -->
+    <div id="tab-publish" class="tab-content active">
+      <div class="card">
+        <div class="card-header">
+          <h2>
+            <svg class="icon-svg" viewBox="0 0 24 24" style="color:var(--primary);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            新建事件信息发布
+          </h2>
+          <p>录入信息并上传照片，系统将自动打包为标准单据（压缩包+元数据+摘要校验+数字签名）投递至网闸摆渡目录</p>
+        </div>
+
+        <form id="publishForm" style="display:flex; flex-direction:column; flex:1;">
+          <div class="split-layout">
+            <!-- 左栏：表单控件 -->
+            <div class="split-col">
+              <div class="form-grid" id="dynamicFormGrid"></div>
+            </div>
+
+            <!-- 右栏：拖拽上传 + 预览 + 提交 -->
+            <div class="split-col">
+              <div class="form-group" style="flex:1;">
+                <label>上传现场抓拍照片 <span class="req">*</span></label>
+                <div class="upload-zone" onclick="document.getElementById('photoInput').click()">
+                  <svg class="upload-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  <p style="font-size:0.875rem; font-weight:600; color:var(--text-main);">点击或拖拽上传照片</p>
+                  <p style="font-size:0.775rem; color:var(--text-muted); margin-top:3px;">支持 JPG / PNG，自动签署 MD5 与数字签名</p>
+                  <input type="file" id="photoInput" name="images" multiple accept="image/*" style="display:none;" onchange="handleFileSelect(event)">
+                </div>
+                <div class="preview-container" id="previewContainer"></div>
+              </div>
+
+              <button type="submit" class="btn-submit" id="btnSubmit">
+                <svg class="icon-svg" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                确认提交并生成数据摆渡包
+              </button>
+            </div>
+          </div>
+        </form>
+
+        <div class="log-card" id="logCard">
+          <div class="log-title">
+            <svg class="icon-svg" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>打包成功，已完成原子重命名并存入发送目录</span>
+          </div>
+          <div class="log-code" id="logCode"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 页签 2：表单设计器 -->
+    <div id="tab-builder" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2>视频网表单设计器</h2>
+            <p>独立新增或修改表单字段，提交的数据包会自动携带最新 Schema 规范。</p>
+          </div>
+          <div style="display:flex; gap:0.6rem;">
+            <button class="btn-submit" style="width:auto; padding:0.45rem 0.85rem; font-size:0.825rem;" onclick="exportSchemaJson()">导出 JSON</button>
+            <button class="btn-submit" style="width:auto; padding:0.45rem 0.85rem; font-size:0.825rem; background:var(--success);" onclick="saveSchemaConfig()">保存表单配置</button>
+          </div>
+        </div>
+
+        <div class="split-layout">
+          <!-- 左栏：新增字段 -->
+          <div class="split-col">
+            <h3 style="font-size:0.95rem; font-weight:700; color:var(--text-main);">+ 新增动态字段</h3>
+            <div class="builder-form">
+              <div class="form-field-item"><label>字段键名 (例如 location)</label><input type="text" id="newFieldKey" placeholder="例如 location"></div>
+              <div class="form-field-item"><label>中文标签 (例如 发生地点)</label><input type="text" id="newFieldLabel" placeholder="例如 发生地点"></div>
+              <div class="form-field-item">
+                <label>控件类型</label>
+                <select id="newFieldType">
+                  <option value="text">单行文本</option>
+                  <option value="select">下拉单选</option>
+                  <option value="radio">单选框</option>
+                  <option value="textarea">多行文本</option>
+                </select>
+              </div>
+              <div class="form-field-item"><label>选项列表 (逗号分隔)</label><input type="text" id="newFieldOptions" placeholder="例如 选项1, 选项2"></div>
+              <button class="btn-submit" style="padding:0.55rem; font-size:0.85rem;" onclick="addFieldToSchema()">+ 添加到表单字段列表</button>
+            </div>
+          </div>
+
+          <!-- 右栏：字段列表表格 -->
+          <div class="split-col">
+            <h3 style="font-size:0.95rem; font-weight:700; color:var(--text-main);">已生效字段列表</h3>
+            <div class="table-container">
+              <table>
+                <thead><tr><th class="col-idx">序号</th><th>键名</th><th>中文标签</th><th>类型</th><th>候选项</th><th>操作</th></tr></thead>
+                <tbody id="schemaFieldsBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 页签 3：系统审计日志 -->
+    <div id="tab-audits" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <h2>系统安全审计日志 (视频网)</h2>
+          <button class="btn-submit" style="width:auto; padding:0.45rem 0.85rem; font-size:0.825rem; background:var(--success);" onclick="exportAuditLogsCsv()">导出审计日志 (CSV)</button>
+        </div>
+
+        <div class="filter-bar">
+          <input type="text" id="auditKeyword" placeholder="搜索审计事件/描述信息..." oninput="loadFullAuditLogs()">
+          <select id="auditStatusFilter" onchange="loadFullAuditLogs()">
+            <option value="">所有状态级别</option>
+            <option value="SUCCESS">成功 (SUCCESS)</option>
+            <option value="INFO">信息 (INFO)</option>
+            <option value="WARN">警告 (WARN)</option>
+            <option value="ERROR">错误 (ERROR)</option>
+          </select>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead><tr><th class="col-idx">序号</th><th>时间戳</th><th>操作类别</th><th>描述明细</th><th>状态</th></tr></thead>
+            <tbody id="auditTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 页签 4：用户与 RBAC 权限管理 -->
+    <div id="tab-users" class="tab-content">
+      <div class="card">
+        <div class="card-header"><h2>视频网用户与 RBAC 权限管理</h2></div>
+
+        <div class="split-layout">
+          <!-- 左栏：新增用户 -->
+          <div class="split-col">
+            <h3 style="font-size:0.95rem; font-weight:700; color:var(--text-main);">+ 新增视频网账号</h3>
+            <div class="builder-form">
+              <div class="form-field-item"><label>用户名 (例如 zhangsan)</label><input type="text" id="newUsername" placeholder="用户名"></div>
+              <div class="form-field-item"><label>姓名 (例如 张三)</label><input type="text" id="newFullname" placeholder="真实姓名"></div>
+              <div class="form-field-item"><label>登录密码</label><input type="password" id="newUserPwd" placeholder="初始密码"></div>
+              <div class="form-field-item">
+                <label>指派角色</label>
+                <select id="newUserRole">
+                  <option value="operator">业务操作员 (operator)</option>
+                  <option value="auditor">安全审计员 (auditor)</option>
+                  <option value="admin">系统超级管理员 (admin)</option>
+                </select>
+              </div>
+              <button class="btn-submit" style="padding:0.55rem; font-size:0.85rem;" onclick="createNewUser()">+ 创建账号</button>
+            </div>
+          </div>
+
+          <!-- 右栏：账号列表表格 -->
+          <div class="split-col">
+            <h3 style="font-size:0.95rem; font-weight:700; color:var(--text-main);">视频网账号列表</h3>
+            <div class="table-container">
+              <table>
+                <thead><tr><th class="col-idx">序号</th><th>用户名</th><th>真实姓名</th><th>角色</th><th>状态</th><th>操作</th></tr></thead>
+                <tbody id="usersTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentUser = null;
+    let selectedFiles = [];
+    let currentSchema = { fields: [] };
+
+    const auditTypeMap = {
+      'AUTH_SUCCESS': '用户登录',
+      'AUTH_FAIL': '登录失败',
+      'USER_ADD': '新增用户',
+      'USER_PWD_RESET': '重置密码',
+      'USER_DEL': '删除用户',
+      'INGEST': '单据发布打包',
+      'SCHEMA_UPDATE': 'Schema更新',
+      'EXPORT_AUDIT': '导出日志',
+      'ERROR': '错误'
+    };
+
+    const auditStatusMap = {
+      'SUCCESS': '成功',
+      'INFO': '信息',
+      'WARN': '警告',
+      'ERROR': '错误'
+    };
+
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.innerHTML = `
+        <svg class="icon-svg" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        <span>${message}</span>
+      `;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
+
+    async function checkAuth() {
+      const storedUser = localStorage.getItem('vfusion_collector_user');
+      if (storedUser) {
+        currentUser = JSON.parse(storedUser);
+        document.getElementById('loginOverlay').style.display = 'none';
+        document.getElementById('userInfoTag').innerText = `${currentUser.name} (${currentUser.username})`;
+        applyRolePermissions();
+        loadSchema();
+      } else {
+        document.getElementById('loginOverlay').style.display = 'flex';
+      }
+    }
+
+    function applyRolePermissions() {
+      if (!currentUser) return;
+      const role = currentUser.role;
+
+      if (role === 'operator') {
+        document.getElementById('tabBtn-audits').style.display = 'none';
+        document.getElementById('tabBtn-users').style.display = 'none';
+      } else {
+        document.getElementById('tabBtn-audits').style.display = 'inline-flex';
+        document.getElementById('tabBtn-users').style.display = 'inline-flex';
+      }
+    }
+
+    function switchAppTenant() {
+      const appId = document.getElementById('appIdSelect').value;
+      showToast(`已切换至应用租户: ${appId}`);
+      loadSchema();
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const username = document.getElementById('loginUsername').value.trim();
+      const password = document.getElementById('loginPassword').value.trim();
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const json = await res.json();
+        if (json.success) {
+          currentUser = json.data.user;
+          localStorage.setItem('vfusion_collector_user', JSON.stringify(currentUser));
+          localStorage.setItem('vfusion_collector_token', json.data.token);
+          showToast(`登录成功！欢迎 ${currentUser.name}`);
+          checkAuth();
+        } else {
+          showToast(json.error, 'error');
+        }
+      } catch (err) {
+        showToast('登录请求失败: ' + err.message, 'error');
+      }
+    }
+
+    function handleLogout() {
+      localStorage.removeItem('vfusion_collector_user');
+      localStorage.removeItem('vfusion_collector_token');
+      currentUser = null;
+      document.getElementById('loginOverlay').style.display = 'flex';
+      showToast('已安全退出');
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+
+      if (tabId === 'tab-builder') loadSchema();
+      if (tabId === 'tab-audits') loadFullAuditLogs();
+      if (tabId === 'tab-users') loadUsers();
+    }
+
+    async function loadFullAuditLogs() {
+      const kw = document.getElementById('auditKeyword').value;
+      const status = document.getElementById('auditStatusFilter').value;
+      const res = await fetch(`/api/audit-logs?keyword=${encodeURIComponent(kw)}&status=${encodeURIComponent(status)}`);
+      const json = await res.json();
+      const tbody = document.getElementById('auditTableBody');
+      if (!json.success || json.data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">未查询到审计日志记录</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = json.data.map((item, idx) => {
+        const typeCn = auditTypeMap[item.type] || item.type;
+        const statusCn = auditStatusMap[item.status] || item.status;
+        return `
+          <tr>
+            <td class="col-idx">${idx + 1}</td>
+            <td><code>${new Date(item.timestamp).toLocaleString()}</code></td>
+            <td><strong>${typeCn}</strong></td>
+            <td>${item.message}</td>
+            <td><span class="badge-level ${item.status === 'ERROR' ? '高' : (item.status === 'WARN' ? '中' : '低')}">${statusCn}</span></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function exportAuditLogsCsv() {
+      showToast('正在导出视频网审计日志 (CSV)...');
+      window.location.href = '/api/audit-logs/export';
+    }
+
+    async function loadUsers() {
+      const res = await fetch('/api/users');
+      const json = await res.json();
+      const tbody = document.getElementById('usersTableBody');
+      if (!json.success || json.data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">暂无用户记录</td></tr>`;
+        return;
+      }
+      const roleMap = { admin: '超级管理员', operator: '操作员', auditor: '审计员' };
+      tbody.innerHTML = json.data.map((item, idx) => `
+        <tr>
+          <td class="col-idx">${idx + 1}</td>
+          <td><code>${item.username}</code></td>
+          <td><strong>${item.name}</strong></td>
+          <td><span class="badge-level ${item.role === 'admin' ? '高' : '低'}">${roleMap[item.role] || item.role}</span></td>
+          <td><span style="color:var(--success); font-weight:600;">启用</span></td>
+          <td style="display:flex; gap:0.4rem;">
+            <button class="btn-submit" style="width:auto; min-width:55px; margin-top:0; padding:0.25rem 0.55rem; font-size:0.75rem; white-space:nowrap; flex-shrink:0;" onclick="resetUserPassword(${item.id})">重置密码</button>
+            ${item.username !== 'admin' ? `<button class="btn-submit" style="width:auto; min-width:45px; margin-top:0; padding:0.25rem 0.55rem; font-size:0.75rem; background:var(--danger); white-space:nowrap; flex-shrink:0;" onclick="deleteUser(${item.id})">删除</button>` : ''}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function createNewUser() {
+      const username = document.getElementById('newUsername').value.trim();
+      const name = document.getElementById('newFullname').value.trim();
+      const password = document.getElementById('newUserPwd').value.trim();
+      const role = document.getElementById('newUserRole').value;
+
+      if (!username || !name || !password) { showToast('请填写完整用户信息！', 'error'); return; }
+
+      const res = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, name, password, role })
+      });
+      const json = await res.json();
+      if (json.success) {
+        showToast('视频网新用户添加成功！');
+        document.getElementById('newUsername').value = '';
+        document.getElementById('newFullname').value = '';
+        document.getElementById('newUserPwd').value = '';
+        loadUsers();
+      } else { showToast(json.error, 'error'); }
+    }
+
+    async function resetUserPassword(id) {
+      const newPwd = prompt('请输入新密码 (如 123456):');
+      if (!newPwd) return;
+
+      const res = await fetch(`/api/users/${id}/reset-password`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ new_password: newPwd })
+      });
+      const json = await res.json();
+      if (json.success) showToast('密码重置成功！');
+      else showToast(json.error, 'error');
+    }
+
+    async function deleteUser(id) {
+      if (!confirm('确认删除该用户？')) return;
+      const res = await fetch(`/api/users/${id}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (json.success) { showToast('用户已删除', 'error'); loadUsers(); }
+      else showToast(json.error, 'error');
+    }
+
+    async function loadSchema() {
+      const appId = document.getElementById('appIdSelect').value;
+      try {
+        const res = await fetch(`/api/schema?app_id=${appId}`);
+        const json = await res.json();
+        if (json.success) {
+          currentSchema = json.data;
+          renderDynamicForm(currentSchema.fields);
+          renderSchemaFields();
+        }
+      } catch (err) { console.error('加载 Schema 失败:', err); }
+    }
+
+    function renderDynamicForm(fields) {
+      const grid = document.getElementById('dynamicFormGrid');
+      grid.innerHTML = '';
+
+      (fields || []).forEach(field => {
+        const group = document.createElement('div');
+        group.className = 'form-group' + (field.type === 'textarea' ? ' full-width' : '');
+
+        let inputHtml = '';
+        if (field.type === 'select') {
+          const optsHtml = field.options.map(opt => `<option value="${opt}">${opt}</option>`).join('');
+          inputHtml = `<select name="${field.key}" ${field.required ? 'required' : ''}>${optsHtml}</select>`;
+        } else if (field.type === 'radio') {
+          const optsHtml = field.options.map((opt, idx) => `
+            <label class="radio-label">
+              <input type="radio" name="${field.key}" value="${opt}" ${idx === 0 ? 'checked' : ''}>
+              ${opt}
+            </label>
+          `).join('');
+          inputHtml = `<div class="radio-group">${optsHtml}</div>`;
+        } else if (field.type === 'textarea') {
+          inputHtml = `<textarea name="${field.key}" placeholder="请输入${field.label}" ${field.required ? 'required' : ''}></textarea>`;
+        } else {
+          inputHtml = `<input type="text" name="${field.key}" placeholder="请输入${field.label}" ${field.required ? 'required' : ''}>`;
+        }
+
+        group.innerHTML = `
+          <label>${field.label} ${field.required ? '<span class="req">*</span>' : ''}</label>
+          ${inputHtml}
+        `;
+        grid.appendChild(group);
+      });
+    }
+
+    function renderSchemaFields() {
+      const tbody = document.getElementById('schemaFieldsBody');
+      if (!tbody) return;
+      tbody.innerHTML = (currentSchema.fields || []).map((f, idx) => `
+        <tr>
+          <td class="col-idx">${idx + 1}</td>
+          <td><code>${f.key}</code></td>
+          <td><strong>${f.label}</strong></td>
+          <td>${f.type}</td>
+          <td>${(f.options || []).join(', ') || '-'}</td>
+          <td><button class="btn-submit" style="width:auto; min-width:55px; margin-top:0; padding:0.25rem 0.55rem; font-size:0.75rem; background:var(--danger); white-space:nowrap; flex-shrink:0;" onclick="removeSchemaField(${idx})">删除</button></td>
+        </tr>
+      `).join('');
+      renderDynamicForm(currentSchema.fields);
+    }
+
+    function addFieldToSchema() {
+      const key = document.getElementById('newFieldKey').value.trim();
+      const label = document.getElementById('newFieldLabel').value.trim();
+      const type = document.getElementById('newFieldType').value;
+      const optionsStr = document.getElementById('newFieldOptions').value.trim();
+
+      if (!key || !label) { showToast('请填写字段键名和中文标签！', 'error'); return; }
+
+      currentSchema.fields.push({
+        key, label, type,
+        options: optionsStr ? optionsStr.split(',').map(s=>s.trim()) : [],
+        required: true, searchable: true, show_in_table: true
+      });
+      renderSchemaFields();
+      showToast('已添加新字段');
+      document.getElementById('newFieldKey').value = '';
+      document.getElementById('newFieldLabel').value = '';
+      document.getElementById('newFieldOptions').value = '';
+    }
+
+    function removeSchemaField(idx) {
+      currentSchema.fields.splice(idx, 1);
+      renderSchemaFields();
+      showToast('字段已移除', 'error');
+    }
+
+    async function saveSchemaConfig() {
+      const appId = document.getElementById('appIdSelect').value;
+      currentSchema.app_id = appId;
+      const res = await fetch('/api/schema', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(currentSchema)
+      });
+      const json = await res.json();
+      if (json.success) {
+        showToast(json.message);
+        renderDynamicForm(currentSchema.fields);
+      }
+    }
+
+    function exportSchemaJson() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentSchema, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", "vfusion_schema_v2.json");
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showToast('表单配置文件导出成功');
+    }
+
+    function handleFileSelect(e) {
+      selectedFiles = Array.from(e.target.files);
+      renderFilePreviews();
+    }
+
+    function renderFilePreviews() {
+      const container = document.getElementById('previewContainer');
+      container.innerHTML = '';
+
+      selectedFiles.forEach((file, idx) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'preview-wrapper';
+        wrapper.innerHTML = `
+          <img class="preview-thumb" src="${URL.createObjectURL(file)}">
+          <button type="button" class="preview-delete-btn" onclick="removeSelectedFile(${idx})">✕</button>
+        `;
+        container.appendChild(wrapper);
+      });
+    }
+
+    function removeSelectedFile(idx) {
+      selectedFiles.splice(idx, 1);
+      renderFilePreviews();
+    }
+
+    document.getElementById('publishForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (selectedFiles.length === 0) { showToast('请至少上传一张抓拍照片！', 'error'); return; }
+
+      const btn = document.getElementById('btnSubmit');
+      btn.disabled = true;
+      btn.innerHTML = '正在计算摘要校验与数字签名并封装数据包...';
+
+      const formData = new FormData(e.target);
+      const appId = document.getElementById('appIdSelect').value;
+      formData.append('app_id', appId);
+      formData.append('event_id', 'EVT_' + Date.now());
+      if (currentUser) formData.append('operator', currentUser.name);
+
+      try {
+        const res = await fetch('/api/publish', { method: 'POST', body: formData });
+        const result = await res.json();
+
+        if (result.success) {
+          showToast('数据摆渡包已成功生成并自动投递！');
+          const logCard = document.getElementById('logCard');
+          const logCode = document.getElementById('logCode');
+          logCard.style.display = 'block';
+          logCode.innerText = JSON.stringify(result.data, null, 2);
+          logCard.scrollIntoView({ behavior: 'smooth' });
+
+          e.target.reset();
+          document.getElementById('previewContainer').innerHTML = '';
+          selectedFiles = [];
+        } else { showToast('打包失败: ' + result.error, 'error'); }
+      } catch (err) { showToast('提交异常: ' + err.message, 'error'); }
+      finally {
+        btn.disabled = false;
+        btn.innerHTML = `
+          <svg class="icon-svg" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          确认提交并生成数据摆渡包
+        `;
+      }
+    });
+
+    checkAuth();
+    setInterval(loadSchema, 6000);
+  </script>
+</body>
+</html>

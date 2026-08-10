@@ -1,0 +1,15 @@
+node_modules/
+dist_vfusion_v0.9.0/
+storage/ftp_out/*
+storage/ftp_in/*
+storage/archive/*
+storage/error/*
+storage/assets/*
+!storage/ftp_out/.gitkeep
+!storage/ftp_in/.gitkeep
+!storage/archive/.gitkeep
+!storage/error/.gitkeep
+!storage/assets/.gitkeep
+*.log
+.DS_Store
+Thumbs.db

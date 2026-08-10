@@ -1,0 +1,24 @@
+{
+  "name": "vfusion",
+  "version": "0.9.6",
+  "private": true,
+  "description": "VFusion (视汇) - 通用跨隔离网数据交换与汇聚平台",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "start:collector": "node packages/collector/server.js",
+    "start:core": "node packages/core/server.js",
+    "test:pack": "node packages/common/test.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "formidable": "^3.5.2",
+    "unzipper": "^0.12.3"
+  }
+}

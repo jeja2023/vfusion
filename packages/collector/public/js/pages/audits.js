@@ -7,7 +7,8 @@ async function loadFullAuditLogs() {
     const statusSelect = document.getElementById('auditStatusFilter');
     const kw = kwInput ? kwInput.value.trim() : '';
     const status = statusSelect ? statusSelect.value : '';
-    const res = await fetch(`/api/audit-logs?keyword=${encodeURIComponent(kw)}&status=${encodeURIComponent(status)}`);
+    const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
+    const res = await fetchFn(`/api/audit-logs?keyword=${encodeURIComponent(kw)}&status=${encodeURIComponent(status)}`);
     const json = await res.json();
     if (json.success) {
       cachedAuditData = json.data || [];

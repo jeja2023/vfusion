@@ -11,15 +11,30 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-// 用于嵌入 onclick="fn('...')" 这类内联属性的字符串字面量
-function escapeJsString(value) {
-  if (value === null || value === undefined) return '';
-  return String(value)
-    .replace(/\\/g, '\\\\')
-    .replace(/'/g, "\\'")
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '\\u003c')
-    .replace(/\r?\n/g, '\\n');
+function getAuthToken() {
+  return localStorage.getItem('vfusion_collector_token') || '';
+}
+
+const nativeFetch = window.fetch.bind(window);
+
+async function apiFetch(url, options = {}) {
+  const opts = { ...options };
+  opts.headers = { ...(options.headers || {}) };
+  const token = getAuthToken();
+  if (token) opts.headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await nativeFetch(url, opts);
+  if (res.status === 401 && !url.includes('/api/auth/login') && !url.includes('/api/schema')) {
+    const wasLoggedIn = !!currentUser || !!token;
+    localStorage.removeItem('vfusion_collector_token');
+    localStorage.removeItem('vfusion_collector_user');
+    currentUser = null;
+    if (wasLoggedIn) {
+      showToast('登录状态已过期，请重新登录', 'error');
+      document.getElementById('loginOverlay').style.display = 'flex';
+    }
+  }
+  return res;
 }
 
 const auditTypeMap = {
@@ -167,6 +182,7 @@ function switchTab(tabId) {
   const targetTab = document.getElementById(tabId);
   if (targetTab) targetTab.classList.add('active');
 
+  if (tabId === 'tab-publish' && typeof loadSchema === 'function') loadSchema();
   if (tabId === 'tab-history' && typeof loadPublishedHistory === 'function') loadPublishedHistory();
   if (tabId === 'tab-builder' && typeof loadSchema === 'function') loadSchema();
   if (tabId === 'tab-ftp' && typeof loadCollectorFtpConfig === 'function') loadCollectorFtpConfig();
@@ -177,5 +193,6 @@ function switchTab(tabId) {
 window.addEventListener('DOMContentLoaded', async () => {
   await loadPageTemplates();
   bindPublishFormSubmit();
-  checkAuth();
+  await checkAuth();
+  if (typeof loadSchema === 'function') await loadSchema();
 });

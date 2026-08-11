@@ -3,7 +3,8 @@ let cachedUsersData = [];
 
 async function loadUsers() {
   try {
-    const res = await fetch('/api/users');
+    const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
+    const res = await fetchFn('/api/users');
     const json = await res.json();
     if (json.success) {
       cachedUsersData = json.data || [];
@@ -68,7 +69,8 @@ async function createNewUser() {
 
   if (!username || !name || !password) { showToast('请填写完整用户信息！', 'error'); return; }
 
-  const res = await fetch('/api/users', {
+  const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
+  const res = await fetchFn('/api/users', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, name, password, role })
@@ -87,7 +89,8 @@ async function resetUserPassword(id) {
   const newPwd = prompt('请输入新密码 (如 123456):');
   if (!newPwd) return;
 
-  const res = await fetch(`/api/users/${id}/reset-password`, {
+  const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
+  const res = await fetchFn(`/api/users/${id}/reset-password`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ new_password: newPwd })
@@ -99,7 +102,8 @@ async function resetUserPassword(id) {
 
 async function deleteUser(id) {
   if (!confirm('确认删除该用户？')) return;
-  const res = await fetch(`/api/users/${id}`, { method: 'DELETE' });
+  const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
+  const res = await fetchFn(`/api/users/${id}`, { method: 'DELETE' });
   const json = await res.json();
   if (json.success) { showToast('用户已删除', 'error'); loadUsers(); }
   else showToast(json.error, 'error');

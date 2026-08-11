@@ -3,7 +3,8 @@ let cachedHistoryData = [];
 
 async function loadPublishedHistory() {
   try {
-    const res = await fetch('/api/published-history');
+    const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
+    const res = await fetchFn('/api/published-history');
     const json = await res.json();
     if (json.success) {
       cachedHistoryData = json.data || [];

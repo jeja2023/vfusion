@@ -3,7 +3,8 @@ let registeredPersonnel = [];
 
 async function loadPersonnelList() {
   try {
-    const res = await fetch('/api/personnel');
+    const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
+    const res = await fetchFn('/api/personnel');
     const json = await res.json();
     if (json.success) registeredPersonnel = json.data || [];
   } catch (e) {}
@@ -178,7 +179,8 @@ function bindPublishFormSubmit() {
     formData.append('submit_time', new Date().toISOString());
 
     try {
-      const res = await fetch('/api/publish', { method: 'POST', body: formData });
+      const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
+      const res = await fetchFn('/api/publish', { method: 'POST', body: formData });
       const result = await res.json();
 
       if (result.success) {

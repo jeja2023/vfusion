@@ -1,6 +1,7 @@
 async function loadCollectorFtpConfig() {
   try {
-    const res = await fetch('/api/config/ftp');
+    const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
+    const res = await fetchFn('/api/config/ftp');
     const json = await res.json();
     if (json.success && json.data) {
       const d = json.data;
@@ -34,7 +35,8 @@ function getCollectorFtpFormValues() {
 async function saveCollectorFtpConfig() {
   const configData = getCollectorFtpFormValues();
   try {
-    const res = await fetch('/api/config/ftp', {
+    const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
+    const res = await fetchFn('/api/config/ftp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(configData)
@@ -67,7 +69,8 @@ async function testCollectorFtpConnection() {
   }
 
   try {
-    const res = await fetch('/api/config/ftp/test', {
+    const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
+    const res = await fetchFn('/api/config/ftp/test', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(configData)

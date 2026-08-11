@@ -5,7 +5,8 @@ async function loadSchema() {
   const appId = 'sys_gate_security';
   try {
     if (typeof loadPersonnelList === 'function') await loadPersonnelList();
-    const res = await fetch(`/api/schema?app_id=${appId}`);
+    const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
+    const res = await fetchFn(`/api/schema?app_id=${appId}`);
     const json = await res.json();
     if (json.success) {
       currentSchema = json.data;

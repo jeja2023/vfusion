@@ -174,7 +174,7 @@ app.use('/collector-assets', express.static(COLLECTOR_ASSETS_DIR));
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
 // 统一鉴权：除登录与静态资源外，所有 /api 路由必须携带有效 Token
-app.use('/api', authMiddleware({ publicPaths: ['/api/auth/login'] }));
+app.use('/api', authMiddleware({ publicPaths: ['/api/auth/login', '/api/schema'] }));
 
 // 表单 Schema 配置 API（视频网发布端与可视化构建器）
 app.get('/api/schema', (req, res) => {

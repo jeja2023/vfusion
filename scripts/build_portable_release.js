@@ -114,26 +114,32 @@ echo ===================================================
 echo   视汇通用跨隔离网数据交换与汇聚中台 (v0.10.0)
 echo ===================================================
 echo 1. 正在启动 [视频网数据采集/发布终端] (Port 4001)...
-start "视汇-视频网发布终端(4001)" "%~dp0启动视频网发布终端(4001).bat"
+start "视汇-视频网发布终端" "%~dp0启动视频网发布终端.bat"
 
 echo 2. 正在启动 [内网数据汇聚与管理中台] (Port 4002)...
-start "视汇-内网数据中台(4002)" "%~dp0启动内网数据中台(4002).bat"
+start "视汇-内网数据中台" "%~dp0启动内网数据中台.bat"
 
 echo.
-echo 双端服务已成功分别在两个独立的命令行窗口中启动！
+echo 双端服务已成功在两个独立的命令行窗口中启动！
 echo - 本机视频网终端: http://localhost:4001
 echo - 本机内网中台: http://localhost:4002
 echo.
 pause
 `;
 
-writeBatFileSync(path.join(PORTABLE_DIR, '启动视频网发布终端(4001).bat'), batCollector);
-writeBatFileSync(path.join(PORTABLE_DIR, '启动内网数据中台(4002).bat'), batCore);
+// 清理带括号的旧批处理文件
+['启动视频网发布终端(4001).bat', '启动内网数据中台(4002).bat'].forEach(oldFile => {
+  if (fs.existsSync(path.join(PORTABLE_DIR, oldFile))) fs.unlinkSync(path.join(PORTABLE_DIR, oldFile));
+  if (fs.existsSync(path.join(ROOT_DIR, oldFile))) fs.unlinkSync(path.join(ROOT_DIR, oldFile));
+});
+
+writeBatFileSync(path.join(PORTABLE_DIR, '启动视频网发布终端.bat'), batCollector);
+writeBatFileSync(path.join(PORTABLE_DIR, '启动内网数据中台.bat'), batCore);
 writeBatFileSync(path.join(PORTABLE_DIR, '一键双端双开启动.bat'), batAll);
 
 // 在根目录也留一份快捷启动脚本方便开发与部署
-writeBatFileSync(path.join(ROOT_DIR, '启动视频网发布终端(4001).bat'), batCollector);
-writeBatFileSync(path.join(ROOT_DIR, '启动内网数据中台(4002).bat'), batCore);
+writeBatFileSync(path.join(ROOT_DIR, '启动视频网发布终端.bat'), batCollector);
+writeBatFileSync(path.join(ROOT_DIR, '启动内网数据中台.bat'), batCore);
 writeBatFileSync(path.join(ROOT_DIR, '一键双端双开启动.bat'), batAll);
 
 // 4. 压缩打包为绿色 ZIP 压缩文件

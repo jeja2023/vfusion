@@ -76,8 +76,8 @@
     .stat-info .num { font-size: 1.5rem; font-weight: 800; color: var(--text-main); margin-top: 0.2rem; white-space: nowrap; }
     .stat-icon-wrapper { width: 38px; height: 38px; border-radius: 8px; background: #f1f5f9; color: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
-    .main-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1.25rem; flex: 1; }
-    @media (max-width: 1024px) { .main-grid { grid-template-columns: 1fr; } }
+    .main-grid { display: grid; grid-template-columns: 1fr 280px; gap: 1rem; flex: 1; min-height: 0; }
+    @media (max-width: 1100px) { .main-grid { grid-template-columns: 1fr; } }
 
     .split-layout { display: grid; grid-template-columns: 0.95fr 1.05fr; gap: 1.25rem; flex: 1; }
     @media (max-width: 960px) { .split-layout { grid-template-columns: 1fr; } }
@@ -120,11 +120,15 @@
     .form-field-item label { font-size: 0.8rem; font-weight: 600; color: var(--text-sub); }
     .form-field-item input, .form-field-item select { padding: 0.45rem 0.65rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.825rem; }
 
-    .table-container { overflow-x: hidden; max-height: calc(100vh - 280px); overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; }
-    table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 0.825rem; text-align: left; }
-    th, td { padding: 0.45rem 0.6rem; border: 1px solid var(--border-color); color: var(--text-main); white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
-    th { background: #f8fafc; color: var(--text-muted); font-weight: 700; position: sticky; top: 0; z-index: 2; }
-    th.col-idx, td.col-idx { width: 45px; text-align: center; font-weight: 600; color: var(--text-muted); background: #f8fafc; }
+    .table-container { overflow-x: auto; max-height: calc(100vh - 280px); overflow-y: auto; border: 1px solid var(--border-color); border-radius: 10px; background: #ffffff; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.835rem; text-align: left; }
+    th, td { padding: 0.65rem 0.85rem; border-bottom: 1px solid var(--border-color); border-right: 1px dashed #f1f5f9; color: var(--text-main); white-space: nowrap; vertical-align: middle; }
+    th:last-child, td:last-child { border-right: none; }
+    th { background: #f8fafc; color: var(--text-muted); font-weight: 700; position: sticky; top: 0; z-index: 2; border-bottom: 2px solid var(--border-color); }
+    th.col-idx, td.col-idx { width: 50px; text-align: center; font-weight: 600; color: var(--text-muted); background: #f8fafc; }
+    tbody tr { transition: background-color 0.15s ease; }
+    tbody tr:nth-child(even) { background-color: #fdfdfe; }
+    tbody tr:hover { background-color: #f1f5f9; }
 
     #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
     .toast { pointer-events: auto; padding: 0.75rem 1.25rem; border-radius: 8px; font-size: 0.875rem; font-weight: 600; background: #ffffff; color: var(--text-main); border: 1px solid var(--border-color); box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 0.6rem; animation: toastIn 0.25s ease forwards; white-space: nowrap; }
@@ -376,16 +380,16 @@
             <table>
               <thead>
                 <tr>
-                  <th class="col-idx" style="width:45px;">序号</th>
-                  <th style="width:145px;">事件单据编号</th>
-                  <th style="width:130px;">提交时间</th>
-                  <th style="width:110px;">录入人员</th>
-                  <th style="width:75px;">发生地点</th>
-                  <th style="width:70px;">交通方式</th>
-                  <th style="width:75px;">涉事人员</th>
-                  <th style="width:75px;">现场照片</th>
+                  <th class="col-idx">序号</th>
+                  <th>事件单据编号</th>
+                  <th>提交时间</th>
+                  <th>录入人员</th>
+                  <th>发生地点</th>
+                  <th>交通方式</th>
+                  <th>涉事人员</th>
+                  <th>现场照片凭证</th>
                   <th>AI 提取算法特征</th>
-                  <th style="width:115px; text-align:right;">操作动作</th>
+                  <th style="text-align:right;">操作动作</th>
                 </tr>
               </thead>
               <tbody id="eventTableBody">
@@ -974,28 +978,28 @@
       tbody.innerHTML = filtered.map((item, idx) => {
         const p = item.payload || {};
         
-        // 优雅短化呈现 AI 算法提取特征，增加 Tooltip 完整提示
-        const aiBadges = (item.ai_tags || ['AI识别通过']).map(t => {
+        // 优雅极简短化呈现 AI 算法提取特征，增加 Tooltip 完整提示
+        const aiBadges = (item.ai_tags || ['AI识别']).map(t => {
           let badgeText = t;
           let badgeStyle = 'background:#f0f9ff; color:#0284c7; border-color:#bae6fd;';
           if (t.includes('MD5+HMAC')) {
-            badgeText = '防篡改校验通过';
+            badgeText = 'HMAC防篡改';
             badgeStyle = 'background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe;';
           } else if (t.includes('YOLOv8')) {
-            badgeText = 'YOLOv8特征提取';
+            badgeText = 'YOLOv8';
             badgeStyle = 'background:#f0fdf4; color:#15803d; border-color:#bbf7d0;';
           } else if (t.includes('FaceNet')) {
-            badgeText = 'FaceNet人像识别';
+            badgeText = 'FaceNet';
             badgeStyle = 'background:#faf5ff; color:#7e22ce; border-color:#e9d5ff;';
           } else if (t.includes('AI交通工具')) {
-            badgeText = `${t.replace('AI交通工具识别: ', '')}`;
+            badgeText = 'AI识别';
             badgeStyle = 'background:#fff7ed; color:#c2410c; border-color:#ffedd5;';
           }
-          return `<span class="ai-tag-badge" style="font-size:0.725rem; padding:0.2rem 0.5rem; ${badgeStyle} border-radius:4px; white-space:nowrap;" title="${t}">${badgeText}</span>`;
+          return `<span class="ai-tag-badge" style="font-size:0.7rem; padding:0.15rem 0.4rem; ${badgeStyle} border-radius:4px; white-space:nowrap; font-weight:600;" title="${t}">${badgeText}</span>`;
         }).join('');
 
         const imgsHtml = (item.files || []).map(f => 
-          `<img src="${f.url}" style="width:36px; height:36px; object-fit:cover; border-radius:6px; border:1px solid var(--border-color); cursor:pointer; transition:transform 0.15s;" onclick="event.stopPropagation(); openImageLightbox('${f.url}', '现场存照凭证放大预览 (${f.filename || '001.jpg'})')" title="点击在弹窗中放大查看">`
+          `<img src="${f.url}" style="width:34px; height:34px; object-fit:cover; border-radius:6px; border:1px solid var(--border-color); cursor:pointer; transition:transform 0.15s;" onclick="event.stopPropagation(); openImageLightbox('${f.url}', '现场存照凭证放大预览 (${f.filename || '001.jpg'})')" title="点击在弹窗中放大查看">`
         ).join(' ');
 
         const personStr = p.person_name 
@@ -1005,17 +1009,17 @@
         return `
           <tr style="cursor:pointer;" onclick="openEventDrawer('${item.event_id}')">
             <td class="col-idx">${idx + 1}</td>
-            <td><strong style="color:var(--primary); font-family:monospace;">${item.event_id}</strong></td>
-            <td><code style="font-size:0.775rem;">${new Date(item.submit_time || item.timestamp).toLocaleString()}</code></td>
-            <td><span style="font-weight:600;">${item.operator || '-'}</span></td>
-            <td>${p.location || '-'}</td>
-            <td><span class="ai-tag-badge" style="background:#f0f9ff; color:#0369a1; border-color:#bae6fd;">${p.transportation || '-'}</span></td>
+            <td><strong style="color:var(--primary); font-family:monospace; font-size:0.875rem;">${item.event_id}</strong></td>
+            <td><code style="font-size:0.8rem; color:var(--text-sub);">${new Date(item.submit_time || item.timestamp).toLocaleString()}</code></td>
+            <td><span style="font-weight:600; color:var(--text-main);">${item.operator || '-'}</span></td>
+            <td><span style="font-weight:500;">${p.location || '-'}</span></td>
+            <td><span class="ai-tag-badge" style="background:#f0f9ff; color:#0369a1; border-color:#bae6fd; font-weight:600;">${p.transportation || '-'}</span></td>
             <td>${personStr}</td>
-            <td><div style="display:flex; gap:0.25rem;">${imgsHtml || '-'}</div></td>
-            <td><div style="display:flex; gap:0.35rem; flex-wrap:wrap; min-width:180px; max-width:280px;">${aiBadges}</div></td>
+            <td><div style="display:flex; gap:0.3rem;">${imgsHtml || '-'}</div></td>
+            <td><div style="display:flex; gap:0.25rem; flex-wrap:wrap; align-items:center; max-width:140px;">${aiBadges}</div></td>
             <td style="text-align:right; white-space:nowrap;">
-              <button class="btn btn-diode" style="padding:0.25rem 0.55rem; font-size:0.75rem;" onclick="event.stopPropagation(); openEventDrawer('${item.event_id}')">详情</button>
-              <button class="btn btn-export" style="padding:0.25rem 0.55rem; font-size:0.75rem; margin-left:0.25rem;" onclick="event.stopPropagation(); downloadEventZip('${item.event_id}')">Zip存照</button>
+              <button class="btn btn-diode" style="padding:0.3rem 0.65rem; font-size:0.775rem;" onclick="event.stopPropagation(); openEventDrawer('${item.event_id}')">详情</button>
+              <button class="btn btn-export" style="padding:0.3rem 0.65rem; font-size:0.775rem; margin-left:0.35rem;" onclick="event.stopPropagation(); downloadEventZip('${item.event_id}')">Zip存照</button>
             </td>
           </tr>
         `;

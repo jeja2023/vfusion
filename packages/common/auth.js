@@ -68,45 +68,30 @@ function buildDefaultUsers() {
     return random;
   };
 
+  const adminUsername = process.env.VFUSION_ADMIN_USERNAME || 'admin';
+
   const users = [
     {
       id: 101,
-      username: 'admin',
+      username: adminUsername,
       name: '系统超级管理员',
-      password: hashPassword(resolvePwd('VFUSION_ADMIN_PASSWORD', 'admin')),
+      password: hashPassword(resolvePwd('VFUSION_ADMIN_PASSWORD', adminUsername)),
       role: 'admin',
-      status: 'ACTIVE',
-      created_at: new Date().toISOString()
-    },
-    {
-      id: 102,
-      username: 'operator',
-      name: '视频网业务操作员',
-      password: hashPassword(resolvePwd('VFUSION_OPERATOR_PASSWORD', 'operator')),
-      role: 'operator',
-      status: 'ACTIVE',
-      created_at: new Date().toISOString()
-    },
-    {
-      id: 103,
-      username: 'auditor',
-      name: '安全合规审计员',
-      password: hashPassword(resolvePwd('VFUSION_AUDITOR_PASSWORD', 'auditor')),
-      role: 'auditor',
       status: 'ACTIVE',
       created_at: new Date().toISOString()
     }
   ];
 
   if (Object.keys(generated).length > 0) {
-    console.log('\n==================== VFusion 初始账号 ====================');
-    console.log(' 检测到首次初始化，已为下列账号生成随机初始密码。');
+    console.log('\n==================== VFusion 内网端初始账号 ====================');
+    console.log(` 检测到首次初始化，已为超级管理员 [${adminUsername}] 账号生成随机初始密码。`);
     console.log(' 请立即登录并修改，此密码仅显示这一次：');
     for (const [account, pwd] of Object.entries(generated)) {
       console.log(`   ${account.padEnd(10)} : ${pwd}`);
     }
-    console.log(' 也可通过环境变量预设: VFUSION_ADMIN_PASSWORD 等');
-    console.log('==========================================================\n');
+    console.log(' 也可通过环境变量预设: VFUSION_ADMIN_USERNAME 与 VFUSION_ADMIN_PASSWORD');
+    console.log(' 其他业务/审计账号请在登录控制台后由管理员账号手动创建。');
+    console.log('=================================================================\n');
   }
 
   return users;

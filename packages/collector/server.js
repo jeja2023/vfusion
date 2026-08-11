@@ -105,11 +105,10 @@ function readCollectorDb() {
       return random;
     };
 
+    const collectorAdminUsername = process.env.VFUSION_COLLECTOR_ADMIN_USERNAME || 'admin';
     const defaultDb = {
       users: [
-        { id: 1, username: 'admin', password: hashPassword(initialPwd('VFUSION_COLLECTOR_ADMIN_PASSWORD', 'admin')), name: '视频网管理员', role: 'admin', status: 'active' },
-        { id: 2, username: 'operator', password: hashPassword(initialPwd('VFUSION_COLLECTOR_OPERATOR_PASSWORD', 'operator')), name: '视频网操作员', role: 'operator', status: 'active' },
-        { id: 3, username: 'auditor', password: hashPassword(initialPwd('VFUSION_COLLECTOR_AUDITOR_PASSWORD', 'auditor')), name: '视频网审计员', role: 'auditor', status: 'active' }
+        { id: 1, username: collectorAdminUsername, password: hashPassword(initialPwd('VFUSION_COLLECTOR_ADMIN_PASSWORD', collectorAdminUsername)), name: '视频网管理员', role: 'admin', status: 'active' }
       ],
       audit_logs: [
         { id: 1, timestamp: new Date().toISOString(), type: 'SYSTEM_INIT', message: '视频网采集端完成首次初始化', status: 'INFO' }
@@ -118,10 +117,12 @@ function readCollectorDb() {
 
     if (Object.keys(generated).length > 0) {
       console.log('\n=============== VFusion 视频网端初始账号 ===============');
-      console.log(' 首次初始化，已生成随机初始密码，仅显示这一次：');
+      console.log(` 首次初始化，已为超级管理员 [${collectorAdminUsername}] 账号生成随机初始密码，仅显示这一次：`);
       for (const [account, pwd] of Object.entries(generated)) {
         console.log(`   ${account.padEnd(10)} : ${pwd}`);
       }
+      console.log(' 也可通过环境变量预设: VFUSION_COLLECTOR_ADMIN_USERNAME 与 VFUSION_COLLECTOR_ADMIN_PASSWORD');
+      console.log(' 其他业务/审计账号请在登录控制台后由管理员账号手动创建。');
       console.log('=========================================================\n');
     }
 

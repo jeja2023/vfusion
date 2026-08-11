@@ -184,7 +184,7 @@ function bindPublishFormSubmit() {
       const result = await res.json();
 
       if (result.success) {
-        showToast('数据摆渡包已成功生成并自动投递！');
+        showToast(result.message || '数据摆渡包已成功生成！');
         const logCard = document.getElementById('logCard');
         const logCode = document.getElementById('logCode');
         if (logCard) logCard.style.display = 'block';

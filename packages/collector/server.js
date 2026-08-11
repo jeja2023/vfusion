@@ -534,30 +534,35 @@ app.post('/api/publish', (req, res) => {
         status: 'PACKED'
       });
 
-      addCollectorAuditLog('INGEST', `成功打包投递单据: ${result.pkgName}.zip (应用租户: ${appId}, 操作员: ${operator})`, 'SUCCESS');
-
       // 如果配置并启用了第三方远程 FTP 服务器，自动将生成的 Zip 包上传至 FTP
+      let ftpNotice = ' (远程 FTP 未开启，包已存入本地网闸目录)';
       try {
         if (fs.existsSync(SECURITY_CONFIG_FILE)) {
           const sec = JSON.parse(fs.readFileSync(SECURITY_CONFIG_FILE, 'utf8'));
           if (sec && sec.ftp_enabled && sec.ftp_host) {
-            await uploadToRemoteFtp(result.zipPath, `${result.pkgName}.zip`, sec);
-            addCollectorAuditLog('FTP_UPLOAD', `同步推送单据至远程 FTP 服务器 [${sec.ftp_host}:${sec.ftp_port || 21}${sec.ftp_remote_dir || '/'}/${result.pkgName}.zip] 成功`, 'SUCCESS');
+            try {
+              const ftpRes = await uploadToRemoteFtp(result.zipPath, `${result.pkgName}.zip`, sec);
+              const remoteName = (ftpRes && ftpRes.remoteFileName) ? ftpRes.remoteFileName : `${result.pkgName}.zip`;
+              ftpNotice = ` (已自动同步推送至 FTP 文件: ${remoteName})`;
+              addCollectorAuditLog('FTP_UPLOAD', `同步推送单据至远程 FTP 服务器 [${sec.ftp_host}:${sec.ftp_port || 21}${sec.ftp_remote_dir || '/'}/${remoteName}] 成功`, 'SUCCESS');
+            } catch (ftpErr) {
+              console.error('[VFusion Collector] 同步远程 FTP 异常:', ftpErr);
+              ftpNotice = ` (推送远程 FTP 失败: ${ftpErr.message})`;
+              addCollectorAuditLog('ERROR', `推送到远程 FTP 服务器失败: ${ftpErr.message}`, 'WARN');
+            }
           }
         }
-      } catch (ftpErr) {
-        console.error('[VFusion Collector] 同步远程 FTP 异常:', ftpErr);
-        addCollectorAuditLog('ERROR', `推送到远程 FTP 服务器失败: ${ftpErr.message}`, 'WARN');
-      }
+      } catch (e) {}
 
       res.json({
         success: true,
-        message: '数据已成功打包并投递至网闸/FTP发送目录',
+        message: '数据摆渡包已成功生成！' + ftpNotice,
         data: {
           pkgName: result.pkgName,
           zipPath: result.zipPath,
           size: result.size,
-          info: result.info
+          info: result.info,
+          ftpNotice: ftpNotice
         }
       });
     } catch (error) {

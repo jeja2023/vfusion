@@ -865,7 +865,6 @@ app.post('/api/simulate-diode', (req, res) => {
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
-const os = require('os');
 function getLocalIps() {
   const interfaces = os.networkInterfaces();
   const ips = [];

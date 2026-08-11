@@ -79,15 +79,15 @@ input, select, textarea { background: #ffffff; border: 1px solid var(--border-co
 input:focus, select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12); }
 
 /* Toggle Switch Styles */
-.toggle-switch-wrapper { display: flex; align-items: center; justify-content: space-between; background: #ffffff; border: 1px solid var(--border-color); border-radius: 6px; padding: 0.3rem 0.6rem; height: 33px; }
-.toggle-switch-wrapper:hover { border-color: var(--primary); }
-.toggle-switch-text { font-size: 0.8rem; font-weight: 600; color: var(--text-main); }
-.toggle-switch { position: relative; display: inline-block; width: 36px; height: 18px; flex-shrink: 0; }
+.toggle-switch-wrapper { display: flex; align-items: center; justify-content: space-between; background: #ffffff; border: 1px solid var(--border-color); border-radius: 6px; padding: 0.25rem 0.6rem; height: 30px; }
+.toggle-switch-wrapper:hover { border-color: #16a34a; }
+.toggle-switch-text { font-size: 0.775rem; font-weight: 600; color: var(--text-main); }
+.toggle-switch { position: relative; display: inline-flex; align-items: center; width: 36px; height: 18px; flex-shrink: 0; }
 .toggle-switch input { opacity: 0; width: 0; height: 0; }
-.toggle-slider { position: absolute; cursor: pointer; inset: 0; background-color: #cbd5e1; transition: .25s ease; border-radius: 20px; }
-.toggle-slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background-color: white; transition: .25s ease; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
-input:checked + .toggle-slider { background-color: var(--primary); }
-input:checked + .toggle-slider:before { transform: translateX(18px); }
+.toggle-slider { position: absolute; cursor: pointer; inset: 0; background-color: #cbd5e1; transition: all .2s ease-in-out; border-radius: 20px; }
+.toggle-slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; top: 50%; transform: translateY(-50%); background-color: #ffffff; transition: all .2s ease-in-out; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+input:checked + .toggle-slider { background-color: #16a34a; }
+input:checked + .toggle-slider:before { transform: translate(18px, -50%); }
 
 .split-layout { display: grid; grid-template-columns: 0.95fr 1.05fr; gap: 1.25rem; flex: 1; }
 @media (max-width: 960px) { .split-layout { grid-template-columns: 1fr; } }

@@ -641,6 +641,33 @@
 
       const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 19);
 
+      // 任务管理与任务代号域
+      const taskGroup = document.createElement('div');
+      taskGroup.className = 'form-group full-width';
+      taskGroup.style.cssText = 'background:#f8fafc; border:1px solid var(--border-color); padding:0.75rem 1rem; border-radius:10px; margin-bottom:0.25rem; display:grid; grid-template-columns: 1.1fr 0.9fr; gap:0.85rem;';
+      
+      const defaultTaskCode = 'TASK_' + new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 12);
+      const savedTaskName = existingValues['task_name'] || '厂区周界安防例行巡检';
+      const savedTaskCode = existingValues['task_code'] || defaultTaskCode;
+
+      taskGroup.innerHTML = `
+        <div>
+          <label style="color:var(--text-main); font-weight:700; font-size:0.825rem; display:flex; align-items:center; gap:0.35rem;">
+            <svg class="icon-svg" viewBox="0 0 24 24" style="color:var(--primary);"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            所属任务名称 <span class="req">*</span>
+          </label>
+          <input type="text" name="task_name" required placeholder="如: 厂区周界巡检 / 北门安全排查" value="${savedTaskName}" style="width:100%; margin-top:0.25rem;">
+        </div>
+        <div>
+          <label style="color:var(--text-main); font-weight:700; font-size:0.825rem; display:flex; align-items:center; gap:0.35rem;">
+            <svg class="icon-svg" viewBox="0 0 24 24" style="color:var(--primary);"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            关联任务编号 <span class="req">*</span>
+          </label>
+          <input type="text" name="task_code" required placeholder="任务唯一代号 (如: TASK_20260811_01)" value="${savedTaskCode}" style="width:100%; margin-top:0.25rem; font-family:monospace; color:var(--primary); font-weight:600;">
+        </div>
+      `;
+      grid.appendChild(taskGroup);
+
       // 总是显眼呈现涉事人员历史档案快速提取控件
       const pGroup = document.createElement('div');
       pGroup.className = 'form-group full-width';

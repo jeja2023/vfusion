@@ -363,7 +363,10 @@
           </div>
 
           <div class="filter-bar">
-            <input type="text" id="filterKeyword" placeholder="搜索事件编号/地点/涉事人员/操作员..." oninput="renderEvents()">
+            <input type="text" id="filterKeyword" placeholder="搜索任务名称/事件编号/地点/涉事人员/操作员..." oninput="renderEvents()">
+            <select id="filterTask" onchange="renderEvents()">
+              <option value="">所有任务名称 (全量)</option>
+            </select>
             <select id="filterType" onchange="renderEvents()">
               <option value="">所有交通方式</option>
               <option value="步行">步行</option>
@@ -381,6 +384,7 @@
                 <tr>
                   <th class="col-idx">序号</th>
                   <th>事件单据编号</th>
+                  <th>所属任务名称 / 关联编号</th>
                   <th>提交时间</th>
                   <th>录入人员</th>
                   <th>发生地点</th>
@@ -943,6 +947,17 @@
         if (evtJson.success) {
           eventsData = evtJson.data;
           document.getElementById('statEvents').innerText = eventsData.length;
+
+          // 动态刷新任务下拉过滤列表
+          const taskSelect = document.getElementById('filterTask');
+          const currentVal = taskSelect.value;
+          const tasksSet = new Set(eventsData.map(e => e.task_name).filter(Boolean));
+          let taskOptsHtml = '<option value="">所有任务名称 (全量)</option>';
+          tasksSet.forEach(tName => {
+            taskOptsHtml += `<option value="${tName}" ${currentVal === tName ? 'selected' : ''}>${tName}</option>`;
+          });
+          taskSelect.innerHTML = taskOptsHtml;
+
           renderEvents();
         }
         if (logJson.success) {
@@ -955,22 +970,26 @@
     function renderEvents() {
       const tbody = document.getElementById('eventTableBody');
       const kw = document.getElementById('filterKeyword').value.toLowerCase();
+      const task = document.getElementById('filterTask').value;
       const type = document.getElementById('filterType').value;
 
       const filtered = eventsData.filter(e => {
         const payload = e.payload || {};
         const matchKw = !kw || 
           e.event_id.toLowerCase().includes(kw) || 
+          (e.task_name && e.task_name.toLowerCase().includes(kw)) ||
+          (e.task_code && e.task_code.toLowerCase().includes(kw)) ||
           (payload.location && payload.location.toLowerCase().includes(kw)) || 
           (payload.person_name && payload.person_name.toLowerCase().includes(kw)) || 
           (payload.person_id_card && payload.person_id_card.toLowerCase().includes(kw)) || 
           (e.operator && e.operator.toLowerCase().includes(kw));
+        const matchTask = !task || e.task_name === task;
         const matchType = !type || payload.transportation === type;
-        return matchKw && matchType;
+        return matchKw && matchTask && matchType;
       });
 
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:3rem; color:var(--text-muted);">未找到匹配的单据事件数据</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:3rem; color:var(--text-muted);">未找到匹配的单据事件数据</td></tr>`;
         return;
       }
 
@@ -1009,6 +1028,10 @@
           <tr style="cursor:pointer;" onclick="openEventDrawer('${item.event_id}')">
             <td class="col-idx">${idx + 1}</td>
             <td><strong style="color:var(--primary); font-family:monospace; font-size:0.875rem;">${item.event_id}</strong></td>
+            <td>
+              <strong style="color:var(--text-main); font-weight:700; font-size:0.825rem; display:block;">${item.task_name || '厂区周界例行巡检'}</strong>
+              <code style="font-size:0.725rem; color:#64748b; font-family:monospace;">${item.task_code || 'TASK_DEFAULT'}</code>
+            </td>
             <td><code style="font-size:0.8rem; color:var(--text-sub);">${new Date(item.submit_time || item.timestamp).toLocaleString()}</code></td>
             <td><span style="font-weight:600; color:var(--text-main);">${item.operator || '-'}</span></td>
             <td><span style="font-weight:500;">${p.location || '-'}</span></td>

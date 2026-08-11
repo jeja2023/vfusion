@@ -29,13 +29,15 @@ const DEFAULT_FORM_SCHEMA = {
   ]
 };
 
-function createInfoJson({ appId, bizType, eventId, operator, operatorUsername, operatorName, submitTime, payload, files }) {
+function createInfoJson({ appId, bizType, eventId, taskName, taskCode, operator, operatorUsername, operatorName, submitTime, payload, files }) {
   const nowStr = submitTime || new Date().toISOString();
   return {
     version: "2.0.0",
     app_id: appId,
     biz_type: bizType,
     event_id: eventId,
+    task_name: taskName || '厂区周界安防例行巡检',
+    task_code: taskCode || 'TASK_DEFAULT',
     timestamp: nowStr,
     submit_time: nowStr,
     operator: operator || `${operatorName || '操作员'} (${operatorUsername || 'operator'})`,

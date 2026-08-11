@@ -284,6 +284,8 @@ app.post('/api/publish', (req, res) => {
     try {
       const appId = (fields.app_id && fields.app_id[0]) || 'sys_gate_security';
       const bizType = (fields.biz_type && fields.biz_type[0]) || 'person_snapshot';
+      const taskName = (fields.task_name && fields.task_name[0]) || '厂区周界安防例行巡检';
+      const taskCode = (fields.task_code && fields.task_code[0]) || `TASK_${Date.now()}`;
       const operatorUsername = (fields.operator_username && fields.operator_username[0]) || 'operator';
       const operatorName = (fields.operator_name && fields.operator_name[0]) || '视频网操作员';
       const operator = (fields.operator && fields.operator[0]) || `${operatorName} (${operatorUsername})`;
@@ -292,7 +294,7 @@ app.post('/api/publish', (req, res) => {
 
       const payload = {};
       for (const [key, value] of Object.entries(fields)) {
-        if (!['app_id', 'biz_type', 'operator', 'operator_username', 'operator_name', 'submit_time', 'event_id'].includes(key)) {
+        if (!['app_id', 'biz_type', 'task_name', 'task_code', 'operator', 'operator_username', 'operator_name', 'submit_time', 'event_id'].includes(key)) {
           payload[key] = Array.isArray(value) ? value[0] : value;
         }
       }
@@ -343,6 +345,8 @@ app.post('/api/publish', (req, res) => {
         appId,
         bizType,
         eventId,
+        taskName,
+        taskCode,
         operator,
         operatorUsername,
         operatorName,

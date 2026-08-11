@@ -46,6 +46,8 @@ class SQLiteStorageEngine {
           app_id TEXT,
           biz_type TEXT,
           event_id TEXT UNIQUE,
+          task_name TEXT,
+          task_code TEXT,
           timestamp TEXT,
           operator TEXT,
           payload TEXT,
@@ -57,6 +59,9 @@ class SQLiteStorageEngine {
           created_at TEXT
         )
       `);
+      // 平滑数据库迁移：补全 task_name 和 task_code 字段
+      this.db.run(`ALTER TABLE events ADD COLUMN task_name TEXT`, () => {});
+      this.db.run(`ALTER TABLE events ADD COLUMN task_code TEXT`, () => {});
 
       // 2. 系统安全审计日志表
       this.db.run(`
@@ -110,14 +115,16 @@ class SQLiteStorageEngine {
   saveEvent(record) {
     if (this.isNative && this.db) {
       const stmt = this.db.prepare(`
-        INSERT OR REPLACE INTO events (id, app_id, biz_type, event_id, timestamp, operator, payload, files, zip_hash, signature, ai_tags, status, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT OR REPLACE INTO events (id, app_id, biz_type, event_id, task_name, task_code, timestamp, operator, payload, files, zip_hash, signature, ai_tags, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       stmt.run(
         record.id || Date.now(),
         record.app_id || 'sys_gate_security',
         record.biz_type || 'GENERAL',
         record.event_id,
+        record.task_name || '默认安防巡检任务',
+        record.task_code || 'TASK_DEFAULT',
         record.timestamp,
         record.operator,
         JSON.stringify(record.payload || {}),

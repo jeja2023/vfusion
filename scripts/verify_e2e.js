@@ -22,6 +22,8 @@ async function testE2E() {
     app_id: 'sys_gate_security',
     biz_type: 'person_snapshot',
     event_id: 'EVT_20260810_0001',
+    task_name: '厂区北门例行周界巡检',
+    task_code: 'TASK_20260810_01',
     operator: '张三',
     location: '厂区北门',
     transportation: '步行',

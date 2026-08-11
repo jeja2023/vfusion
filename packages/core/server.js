@@ -296,7 +296,9 @@ async function processPackageFile(fileName, isRetry = false) {
       addAuditLog('IDEMPOTENCY', `事件 ${info.event_id} 已存在，幂等归档`, 'WARN');
       fs.rmSync(extractDir, { recursive: true, force: true });
     } else {
-      const eventAssetsSubDir = path.join(ASSETS_DIR, info.event_id);
+      const taskCode = info.task_code || 'TASK_DEFAULT';
+      const taskName = info.task_name || '厂区周界安防例行巡检';
+      const eventAssetsSubDir = path.join(ASSETS_DIR, 'tasks', taskCode, info.event_id);
       if (!fs.existsSync(eventAssetsSubDir)) fs.mkdirSync(eventAssetsSubDir, { recursive: true });
 
       const extractedImagesDir = path.join(extractDir, 'images');
@@ -308,7 +310,7 @@ async function processPackageFile(fileName, isRetry = false) {
           const srcImg = path.join(extractedImagesDir, imgName);
           const destImg = path.join(eventAssetsSubDir, imgName);
           fs.copyFileSync(srcImg, destImg);
-          fileRecords.push({ filename: imgName, url: `/assets/${info.event_id}/${imgName}` });
+          fileRecords.push({ filename: imgName, url: `/assets/tasks/${taskCode}/${info.event_id}/${imgName}` });
         }
       }
 
@@ -319,6 +321,8 @@ async function processPackageFile(fileName, isRetry = false) {
         app_id: info.app_id,
         biz_type: info.biz_type,
         event_id: info.event_id,
+        task_name: taskName,
+        task_code: taskCode,
         timestamp: info.timestamp || info.submit_time || new Date().toISOString(),
         submit_time: info.submit_time || info.timestamp || new Date().toISOString(),
         operator: info.operator || `${info.operator_name || '操作员'} (${info.operator_username || 'operator'})`,

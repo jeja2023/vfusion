@@ -65,13 +65,20 @@ fs.copyFileSync(path.join(ROOT_DIR, 'package.json'), path.join(PORTABLE_DIR, 'pa
 fs.copyFileSync(path.join(ROOT_DIR, 'README.md'), path.join(PORTABLE_DIR, 'README.md'));
 fs.copyFileSync(path.join(ROOT_DIR, '更新日志.md'), path.join(PORTABLE_DIR, '更新日志.md'));
 
+const iconv = require('iconv-lite');
+
+function writeBatFileSync(filePath, content) {
+  const gbkBuffer = iconv.encode(content, 'gbk');
+  fs.writeFileSync(filePath, gbkBuffer);
+}
+
 // 3. 生成一键双击批处理脚本 (.bat)
 console.log('[2/4] 正在生成 Windows 一键启动双击批处理脚本 (.bat)...');
 
-const batCollector = `\uFEFF@echo off
-@chcp 65001 >nul
-setlocal enabledelayedexpansion
+const batCollector = `@echo off
+setlocal
 cd /d "%~dp0"
+
 if exist "%~dp0node.exe" (
   set "NODE_BIN=%~dp0node.exe"
 ) else (
@@ -83,14 +90,14 @@ echo ===================================================
 echo   正在启动 [视汇 - 视频网数据采集/发布终端] ...
 echo   端口: 4001
 echo ===================================================
-"!NODE_BIN!" packages/collector/server.js
+"%NODE_BIN%" packages/collector/server.js
 pause
 `;
 
-const batCore = `\uFEFF@echo off
-@chcp 65001 >nul
-setlocal enabledelayedexpansion
+const batCore = `@echo off
+setlocal
 cd /d "%~dp0"
+
 if exist "%~dp0node.exe" (
   set "NODE_BIN=%~dp0node.exe"
 ) else (
@@ -102,14 +109,14 @@ echo ===================================================
 echo   正在启动 [视汇 - 内网数据汇聚与管理中台] ...
 echo   端口: 4002
 echo ===================================================
-"!NODE_BIN!" packages/core/server.js
+"%NODE_BIN%" packages/core/server.js
 pause
 `;
 
-const batAll = `\uFEFF@echo off
-@chcp 65001 >nul
-setlocal enabledelayedexpansion
+const batAll = `@echo off
+setlocal
 cd /d "%~dp0"
+
 if exist "%~dp0node.exe" (
   set "NODE_BIN=%~dp0node.exe"
 ) else (
@@ -121,9 +128,9 @@ echo ===================================================
 echo   视汇通用跨隔离网数据交换与汇聚中台 (v0.10.0)
 echo ===================================================
 echo 1. 正在启动 [视频网数据采集/发布终端] (Port 4001)...
-start "视汇-视频网发布终端(4001)" cmd /k ""!NODE_BIN!" packages/collector/server.js"
+start "视汇-视频网发布终端(4001)" cmd /k ""%NODE_BIN%" packages/collector/server.js"
 echo 2. 正在启动 [内网数据汇聚与管理中台] (Port 4002)...
-start "视汇-内网数据汇聚与管理中台(4002)" cmd /k ""!NODE_BIN!" packages/core/server.js"
+start "视汇-内网数据汇聚与管理中台(4002)" cmd /k ""%NODE_BIN%" packages/core/server.js"
 echo.
 echo 双端服务已在后台启动完成！
 echo - 本机视频网终端: http://localhost:4001
@@ -132,14 +139,14 @@ echo.
 pause
 `;
 
-fs.writeFileSync(path.join(PORTABLE_DIR, '启动视频网发布终端(4001).bat'), batCollector, 'utf8');
-fs.writeFileSync(path.join(PORTABLE_DIR, '启动内网数据中台(4002).bat'), batCore, 'utf8');
-fs.writeFileSync(path.join(PORTABLE_DIR, '一键双端双开启动.bat'), batAll, 'utf8');
+writeBatFileSync(path.join(PORTABLE_DIR, '启动视频网发布终端(4001).bat'), batCollector);
+writeBatFileSync(path.join(PORTABLE_DIR, '启动内网数据中台(4002).bat'), batCore);
+writeBatFileSync(path.join(PORTABLE_DIR, '一键双端双开启动.bat'), batAll);
 
 // 在根目录也留一份快捷启动脚本方便开发与部署
-fs.writeFileSync(path.join(ROOT_DIR, '启动视频网发布终端(4001).bat'), batCollector, 'utf8');
-fs.writeFileSync(path.join(ROOT_DIR, '启动内网数据中台(4002).bat'), batCore, 'utf8');
-fs.writeFileSync(path.join(ROOT_DIR, '一键双端双开启动.bat'), batAll, 'utf8');
+writeBatFileSync(path.join(ROOT_DIR, '启动视频网发布终端(4001).bat'), batCollector);
+writeBatFileSync(path.join(ROOT_DIR, '启动内网数据中台(4002).bat'), batCore);
+writeBatFileSync(path.join(ROOT_DIR, '一键双端双开启动.bat'), batAll);
 
 // 4. 压缩打包为绿色 ZIP 压缩文件
 console.log('[3/4] 正在将绿色免安装包打包压缩为 Zip ...');

@@ -1,17 +1,17 @@
-ï»¿@echo off
-@chcp 65001 >nul
-setlocal enabledelayedexpansion
+@echo off
+setlocal
 cd /d "%~dp0"
+
 if exist "%~dp0node.exe" (
   set "NODE_BIN=%~dp0node.exe"
 ) else (
   set "NODE_BIN=node"
 )
 
-title è§†æ±‡ - è§†é¢‘ç½‘æ•°æ®é‡‡é›†ä¸å‘å¸ƒç»ˆç«¯ (v0.10.0)
+title ÊÓ»ã - ÊÓÆµÍøÊı¾İ²É¼¯Óë·¢²¼ÖÕ¶Ë (v0.10.0)
 echo ===================================================
-echo   æ­£åœ¨å¯åŠ¨ [è§†æ±‡ - è§†é¢‘ç½‘æ•°æ®é‡‡é›†/å‘å¸ƒç»ˆç«¯] ...
-echo   ç«¯å£: 4001
+echo   ÕıÔÚÆô¶¯ [ÊÓ»ã - ÊÓÆµÍøÊı¾İ²É¼¯/·¢²¼ÖÕ¶Ë] ...
+echo   ¶Ë¿Ú: 4001
 echo ===================================================
-"!NODE_BIN!" packages/collector/server.js
+"%NODE_BIN%" packages/collector/server.js
 pause

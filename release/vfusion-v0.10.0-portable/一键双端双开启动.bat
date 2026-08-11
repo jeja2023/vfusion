@@ -1,24 +1,24 @@
-ï»¿@echo off
-@chcp 65001 >nul
-setlocal enabledelayedexpansion
+@echo off
+setlocal
 cd /d "%~dp0"
+
 if exist "%~dp0node.exe" (
   set "NODE_BIN=%~dp0node.exe"
 ) else (
   set "NODE_BIN=node"
 )
 
-title è§†æ±‡ (VFusion v0.10.0) - ä¸€é”®åŒç«¯æœåŠ¡å¯åŠ¨å™¨
+title ÊÓ»ã (VFusion v0.10.0) - Ò»¼üË«¶Ë·şÎñÆô¶¯Æ÷
 echo ===================================================
-echo   è§†æ±‡é€šç”¨è·¨éš”ç¦»ç½‘æ•°æ®äº¤æ¢ä¸æ±‡èšä¸­å° (v0.10.0)
+echo   ÊÓ»ãÍ¨ÓÃ¿ç¸ôÀëÍøÊı¾İ½»»»Óë»ã¾ÛÖĞÌ¨ (v0.10.0)
 echo ===================================================
-echo 1. æ­£åœ¨å¯åŠ¨ [è§†é¢‘ç½‘æ•°æ®é‡‡é›†/å‘å¸ƒç»ˆç«¯] (Port 4001)...
-start "è§†æ±‡-è§†é¢‘ç½‘å‘å¸ƒç»ˆç«¯(4001)" cmd /k ""!NODE_BIN!" packages/collector/server.js"
-echo 2. æ­£åœ¨å¯åŠ¨ [å†…ç½‘æ•°æ®æ±‡èšä¸ç®¡ç†ä¸­å°] (Port 4002)...
-start "è§†æ±‡-å†…ç½‘æ•°æ®æ±‡èšä¸ç®¡ç†ä¸­å°(4002)" cmd /k ""!NODE_BIN!" packages/core/server.js"
+echo 1. ÕıÔÚÆô¶¯ [ÊÓÆµÍøÊı¾İ²É¼¯/·¢²¼ÖÕ¶Ë] (Port 4001)...
+start "ÊÓ»ã-ÊÓÆµÍø·¢²¼ÖÕ¶Ë(4001)" cmd /k ""%NODE_BIN%" packages/collector/server.js"
+echo 2. ÕıÔÚÆô¶¯ [ÄÚÍøÊı¾İ»ã¾ÛÓë¹ÜÀíÖĞÌ¨] (Port 4002)...
+start "ÊÓ»ã-ÄÚÍøÊı¾İ»ã¾ÛÓë¹ÜÀíÖĞÌ¨(4002)" cmd /k ""%NODE_BIN%" packages/core/server.js"
 echo.
-echo åŒç«¯æœåŠ¡å·²åœ¨åå°å¯åŠ¨å®Œæˆï¼
-echo - æœ¬æœºè§†é¢‘ç½‘ç»ˆç«¯: http://localhost:4001
-echo - æœ¬æœºå†…ç½‘ä¸­å°: http://localhost:4002
+echo Ë«¶Ë·şÎñÒÑÔÚºóÌ¨Æô¶¯Íê³É£¡
+echo - ±¾»úÊÓÆµÍøÖÕ¶Ë: http://localhost:4001
+echo - ±¾»úÄÚÍøÖĞÌ¨: http://localhost:4002
 echo.
 pause

@@ -358,8 +358,8 @@ async function processPackageFile(fileName, isRetry = false) {
       writeDb(db);
       coreSqlite.saveEvent(newRecord);
 
-      if (info.payload && info.payload.threat_level === '高') {
-        addSystemAlert('[高风险告警]', `单据编号 ${info.event_id} 属于高风险事件 (${info.payload.location || '未知地点'})`, 'ERROR');
+      if (info.payload && info.payload.event_id) {
+        addSystemAlert('[新单据通知]', `单据编号 ${info.event_id} 已成功摆渡入库 (${info.payload.location || '未知地点'})`, 'INFO');
       }
 
       dispatchWebhooks(newRecord);
@@ -544,22 +544,22 @@ app.get('/api/events', (req, res) => {
 app.get('/api/analytics', (req, res) => {
   const db = readDb();
   const events = db.events;
-  const threatStats = { 高: 0, 中: 0, 低: 0 };
+  const transportStats = {};
   const typeStats = {};
 
   const hourlyTrends = Array(24).fill(0);
   events.forEach(e => {
     const p = e.payload || {};
-    const threat = p.threat_level || '低';
-    const type = p.event_type || '其他';
-    threatStats[threat] = (threatStats[threat] || 0) + 1;
+    const trans = p.transportation || '其他';
+    const type = p.biz_type || '通用单据';
+    transportStats[trans] = (transportStats[trans] || 0) + 1;
     typeStats[type] = (typeStats[type] || 0) + 1;
 
-    const hour = new Date(e.timestamp).getHours();
+    const hour = new Date(e.timestamp || e.created_at).getHours();
     hourlyTrends[hour] = (hourlyTrends[hour] || 0) + 1;
   });
 
-  res.json({ success: true, data: { threatStats, typeStats, hourlyTrends, totalCount: events.length } });
+  res.json({ success: true, data: { transportStats, typeStats, hourlyTrends, totalCount: events.length } });
 });
 
 app.get('/api/webhooks', (req, res) => {

@@ -364,18 +364,15 @@
           </div>
 
           <div class="filter-bar">
-            <input type="text" id="filterKeyword" placeholder="搜索事件编号/地点/操作员..." oninput="renderEvents()">
+            <input type="text" id="filterKeyword" placeholder="搜索事件编号/地点/涉事人员/操作员..." oninput="renderEvents()">
             <select id="filterType" onchange="renderEvents()">
-              <option value="">所有事件类型</option>
-              <option value="人员抓拍">人员抓拍</option>
-              <option value="车辆抓拍">车辆抓拍</option>
-              <option value="未戴安全帽">未戴安全帽</option>
-            </select>
-            <select id="filterThreat" onchange="renderEvents()">
-              <option value="">所有威胁等级</option>
-              <option value="高">高</option>
-              <option value="中">中</option>
-              <option value="低">低</option>
+              <option value="">所有交通方式</option>
+              <option value="步行">步行</option>
+              <option value="自行车/电动车">自行车/电动车</option>
+              <option value="小型客车">小型客车</option>
+              <option value="大型客车">大型客车</option>
+              <option value="货车">货车</option>
+              <option value="轨道交通">轨道交通</option>
             </select>
           </div>
 
@@ -406,18 +403,18 @@
         
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; padding:1rem 0;">
           <div style="text-align:center;">
-            <h4 style="font-size:0.875rem; margin-bottom:0.75rem; color:var(--text-sub);">事件威胁等级占比</h4>
+            <h4 style="font-size:0.875rem; margin-bottom:0.75rem; color:var(--text-sub);">交通方式分布统计占比</h4>
             <svg width="200" height="200" viewBox="0 0 42 42">
               <circle cx="21" cy="21" r="15.91549430918954" fill="#fff"></circle>
               <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#e2e8f0" stroke-width="5"></circle>
-              <circle id="donutHigh" cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#dc2626" stroke-width="5" stroke-dasharray="30 70" stroke-dashoffset="25"></circle>
-              <circle id="donutMed" cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#d97706" stroke-width="5" stroke-dasharray="40 60" stroke-dashoffset="95"></circle>
+              <circle id="donutHigh" cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#2563eb" stroke-width="5" stroke-dasharray="40 60" stroke-dashoffset="25"></circle>
+              <circle id="donutMed" cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#0284c7" stroke-width="5" stroke-dasharray="30 70" stroke-dashoffset="85"></circle>
               <circle id="donutLow" cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#16a34a" stroke-width="5" stroke-dasharray="30 70" stroke-dashoffset="55"></circle>
             </svg>
             <div style="margin-top:0.75rem; font-size:0.825rem; display:flex; justify-content:center; gap:1rem;">
-              <span style="color:#dc2626;">■ 高风险</span>
-              <span style="color:#d97706;">■ 中风险</span>
-              <span style="color:#16a34a;">■ 低风险</span>
+              <span style="color:#2563eb;">■ 陆路交通</span>
+              <span style="color:#0284c7;">■ 步行/骑行</span>
+              <span style="color:#16a34a;">■ 其他/航空</span>
             </div>
           </div>
 
@@ -877,14 +874,12 @@
       const listEl = document.getElementById('eventList');
       const kw = document.getElementById('filterKeyword').value.toLowerCase();
       const type = document.getElementById('filterType').value;
-      const threat = document.getElementById('filterThreat').value;
 
       const filtered = eventsData.filter(e => {
         const payload = e.payload || {};
-        const matchKw = !kw || e.event_id.toLowerCase().includes(kw) || (payload.location && payload.location.toLowerCase().includes(kw));
-        const matchType = !type || payload.event_type === type;
-        const matchThreat = !threat || payload.threat_level === threat;
-        return matchKw && matchType && matchThreat;
+        const matchKw = !kw || e.event_id.toLowerCase().includes(kw) || (payload.location && payload.location.toLowerCase().includes(kw)) || (e.operator && e.operator.toLowerCase().includes(kw));
+        const matchType = !type || payload.transportation === type;
+        return matchKw && matchType;
       });
 
       if (filtered.length === 0) {
@@ -894,7 +889,6 @@
 
       listEl.innerHTML = filtered.map(item => {
         const p = item.payload || {};
-        const threatLevel = p.threat_level || '低';
 
         const payloadItems = Object.entries(p).map(([k, v]) => 
           `<div><span class="meta-label">${k}：</span><span class="meta-val">${v}</span></div>`
@@ -916,12 +910,11 @@
               <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:nowrap;">
                 ${aiBadges}
                 <button class="btn btn-export" style="padding:0.25rem 0.6rem; font-size:0.75rem;" onclick="event.stopPropagation(); downloadEventZip('${item.event_id}')">导出存照 Zip</button>
-                <div class="badge-level ${threatLevel}">威胁等级: ${threatLevel}</div>
               </div>
             </div>
             
             <div class="meta-grid">
-              <div><span class="meta-label">发生时间：</span><span class="meta-val">${new Date(item.timestamp).toLocaleString()}</span></div>
+              <div><span class="meta-label">提交时间：</span><span class="meta-val">${new Date(item.submit_time || item.timestamp).toLocaleString()}</span></div>
               <div><span class="meta-label">录入人员：</span><span class="meta-val">${item.operator}</span></div>
               ${payloadItems}
             </div>

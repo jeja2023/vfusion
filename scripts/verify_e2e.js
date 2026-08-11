@@ -24,8 +24,7 @@ async function testE2E() {
     event_id: 'EVT_20260810_0001',
     operator: '张三',
     location: '厂区北门',
-    event_type: '人员抓拍',
-    threat_level: '高',
+    transportation: '步行',
     remark: '例行巡检抓拍测试'
   };
 
@@ -110,8 +109,7 @@ async function testE2E() {
     console.log(`最新录入事件详情:`);
     console.log(` - 事件编号: ${latest.event_id}`);
     console.log(` - 发生地点: ${latest.payload.location}`);
-    console.log(` - 事件类型: ${latest.payload.event_type}`);
-    console.log(` - 威胁等级: ${latest.payload.threat_level}`);
+    console.log(` - 交通方式: ${latest.payload.transportation}`);
     console.log(` - 照片附件: ${latest.files.map(f => f.url).join(', ')}`);
     console.log(` - 包 Hash (Zip MD5): ${latest.zip_hash}`);
   }

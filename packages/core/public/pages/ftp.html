@@ -1,75 +1,75 @@
-<div class="card">
-  <div class="card-header">
+<div class="card" style="padding:1rem 1.25rem;">
+  <div class="card-header" style="margin-bottom:0.65rem; padding-bottom:0.5rem;">
     <div>
-      <h2>
+      <h2 style="font-size:0.95rem;">
         <svg class="icon-svg" viewBox="0 0 24 24" style="color:var(--primary);"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
         第三方 FTP 服务器通道配置
       </h2>
-      <p>配置数据中台自动连接第三方 FTP 服务器的 IP、端口、账号鉴权、远程目录与包前缀过滤</p>
+      <p style="font-size:0.75rem;">配置数据中台自动连接第三方 FTP 服务器的 IP、端口、账号鉴权、远程目录与包前缀过滤</p>
     </div>
-    <div style="display:flex; gap:0.5rem; align-items:center;">
-      <button class="btn btn-diode" onclick="testCoreFtpServerConnection()">
+    <div style="display:flex; gap:0.4rem; align-items:center;">
+      <button class="btn btn-diode" style="padding:0.35rem 0.65rem; font-size:0.775rem;" onclick="testCoreFtpServerConnection()">
         <svg class="icon-svg" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
         在线测试 FTP 连通性
       </button>
-      <button class="btn btn-primary" onclick="saveCoreFtpChannelConfig()">
+      <button class="btn btn-primary" style="padding:0.35rem 0.65rem; font-size:0.775rem;" onclick="saveCoreFtpChannelConfig()">
         <svg class="icon-svg" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
         保存 FTP 通道配置
       </button>
     </div>
   </div>
 
-  <div style="background:var(--bg-main); border:1px solid var(--border-color); border-radius:10px; padding:1.25rem; margin-top:0.25rem;">
-    <div class="form-grid">
+  <div style="background:var(--bg-main); border:1px solid var(--border-color); border-radius:8px; padding:0.75rem 0.9rem;">
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:0.5rem 0.75rem;">
       <div class="form-group">
-        <label>FTP 远程通道状态</label>
-        <select id="coreFtpEnableSelect">
+        <label style="font-size:0.775rem;">FTP 远程通道状态</label>
+        <select id="coreFtpEnableSelect" style="padding:0.35rem 0.55rem; font-size:0.8rem;">
           <option value="false">关闭远程 FTP (使用本地目录/网闸模拟)</option>
           <option value="true">开启远程 FTP (自动连接抓取与下载入库)</option>
         </select>
       </div>
 
       <div class="form-group">
-        <label>FTP 服务器 IP 地址 / 域名 (Host)</label>
-        <input type="text" id="coreFtpHostInput" placeholder="例如: 192.168.1.100">
+        <label style="font-size:0.775rem;">FTP 服务器 IP / 域名 (Host)</label>
+        <input type="text" id="coreFtpHostInput" placeholder="例如: 192.168.1.100" style="padding:0.35rem 0.55rem; font-size:0.8rem;">
       </div>
 
       <div class="form-group">
-        <label>FTP 服务端口号 (Port)</label>
-        <input type="number" id="coreFtpPortInput" placeholder="默认: 21" value="21">
+        <label style="font-size:0.775rem;">FTP 服务端口号 (Port)</label>
+        <input type="number" id="coreFtpPortInput" placeholder="默认: 21" value="21" style="padding:0.35rem 0.55rem; font-size:0.8rem;">
       </div>
 
       <div class="form-group">
-        <label>FTP 登录用户名 (Username)</label>
-        <input type="text" id="coreFtpUserInput" placeholder="例如: vfusion_user">
+        <label style="font-size:0.775rem;">单据包识别匹配前缀 (Prefix)</label>
+        <input type="text" id="corePkgPrefixInput" placeholder="默认: vfusion_" value="vfusion_" style="padding:0.35rem 0.55rem; font-size:0.8rem;">
       </div>
 
       <div class="form-group">
-        <label>FTP 登录密码 (Password)</label>
-        <input type="password" id="coreFtpPasswordInput" placeholder="输入 FTP 登录密码">
+        <label style="font-size:0.775rem;">FTP 登录用户名 (Username)</label>
+        <input type="text" id="coreFtpUserInput" placeholder="例如: vfusion_user" style="padding:0.35rem 0.55rem; font-size:0.8rem;">
       </div>
 
       <div class="form-group">
-        <label>FTP 远程专用路径目录 (Remote Dir)</label>
-        <input type="text" id="coreFtpRemoteDirInput" placeholder="例如: /vfusion_packages" value="/vfusion_packages">
+        <label style="font-size:0.775rem;">FTP 登录密码 (Password)</label>
+        <input type="password" id="coreFtpPasswordInput" placeholder="输入 FTP 密码" style="padding:0.35rem 0.55rem; font-size:0.8rem;">
       </div>
 
       <div class="form-group">
-        <label>单据包识别匹配前缀 (Prefix Filter)</label>
-        <input type="text" id="corePkgPrefixInput" placeholder="默认: vfusion_" value="vfusion_">
+        <label style="font-size:0.775rem;">FTP 远程专用路径目录 (Remote Dir)</label>
+        <input type="text" id="coreFtpRemoteDirInput" placeholder="例如: /vfusion_packages" value="/vfusion_packages" style="padding:0.35rem 0.55rem; font-size:0.8rem;">
       </div>
 
       <div class="form-group">
-        <label>FTP 传输文件后缀 (Ext Filter / Policy)</label>
-        <select id="coreFtpExtSelect">
-          <option value=".jpg">.jpg (强安全网闸伪装模式 - 仅放行 .jpg 文件)</option>
+        <label style="font-size:0.775rem;">FTP 传输文件后缀 (Ext Filter)</label>
+        <select id="coreFtpExtSelect" style="padding:0.35rem 0.55rem; font-size:0.8rem;">
+          <option value=".jpg">.jpg (强安全网闸伪装模式 - 仅放行 .jpg)</option>
           <option value=".zip">.zip (标准 Zip 压缩包模式)</option>
         </select>
       </div>
 
-      <div class="form-group">
-        <label>下载后自动清理远程文件 (Auto Clean)</label>
-        <select id="coreFtpDeleteSelect">
+      <div class="form-group" style="grid-column: span 1 / -1;">
+        <label style="font-size:0.775rem;">下载后自动清理远程文件 (Auto Clean)</label>
+        <select id="coreFtpDeleteSelect" style="padding:0.35rem 0.55rem; font-size:0.8rem;">
           <option value="true">开启 (推荐，下载入库后自动删除远程包防重复)</option>
           <option value="false">关闭 (保留远程 FTP 文件)</option>
         </select>
@@ -77,47 +77,47 @@
     </div>
   </div>
 
-  <div id="coreFtpTestStatusBox" style="margin-top:1rem; display:none; padding:0.85rem 1rem; border-radius:8px; font-size:0.85rem; font-family:monospace; line-height:1.5;"></div>
+  <div id="coreFtpTestStatusBox" style="margin-top:0.5rem; display:none; padding:0.6rem 0.85rem; border-radius:6px; font-size:0.8rem; font-family:monospace; line-height:1.4;"></div>
 </div>
 
 <!-- FTP 自动轮询拉取控制面板 -->
-<div class="card" style="margin-top:1.25rem;">
-  <div class="card-header">
+<div class="card" style="margin-top:0.75rem; padding:1rem 1.25rem;">
+  <div class="card-header" style="margin-bottom:0.65rem; padding-bottom:0.5rem;">
     <div>
-      <h2>
+      <h2 style="font-size:0.95rem;">
         <svg class="icon-svg" viewBox="0 0 24 24" style="color:var(--primary);"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
         FTP 远程自动轮询拉取
       </h2>
-      <p>配置内网端定时自动从远程 FTP 服务器拉取数据包并入库处理</p>
+      <p style="font-size:0.75rem;">配置内网端定时自动从远程 FTP 服务器拉取数据包并入库处理</p>
     </div>
-    <div style="display:flex; gap:0.5rem; align-items:center;">
-      <button class="btn btn-diode" onclick="manualFtpPull()">
+    <div style="display:flex; gap:0.4rem; align-items:center;">
+      <button class="btn btn-diode" style="padding:0.35rem 0.65rem; font-size:0.775rem;" onclick="manualFtpPull()">
         <svg class="icon-svg" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         手动拉取一次
       </button>
-      <button class="btn btn-primary" onclick="saveFtpPollInterval()">
+      <button class="btn btn-primary" style="padding:0.35rem 0.65rem; font-size:0.775rem;" onclick="saveFtpPollInterval()">
         <svg class="icon-svg" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
         保存轮询设置
       </button>
     </div>
   </div>
 
-  <div style="background:var(--bg-main); border:1px solid var(--border-color); border-radius:10px; padding:1.25rem; margin-top:0.25rem;">
-    <div class="form-grid">
-      <div class="form-group">
-        <label>自动轮询间隔 (秒)</label>
-        <input type="number" id="ftpPollIntervalInput" placeholder="0 = 停止, 10 = 每10秒拉取一次" value="10" min="0" max="3600">
-        <small style="color:var(--text-sub); margin-top:0.25rem; display:block;">设置为 0 则停止自动轮询；建议设置 10~30 秒</small>
+  <div style="background:var(--bg-main); border:1px solid var(--border-color); border-radius:8px; padding:0.75rem 0.9rem;">
+    <div style="display:grid; grid-template-columns: 240px 1fr; gap:0.85rem; align-items:center;">
+      <div class="form-group" style="margin:0;">
+        <label style="font-size:0.775rem;">自动轮询间隔 (秒)</label>
+        <input type="number" id="ftpPollIntervalInput" placeholder="0 = 停止, 10 = 每10秒" value="10" min="0" max="3600" style="padding:0.35rem 0.55rem; font-size:0.8rem;">
+        <small style="color:var(--text-sub); font-size:0.725rem; margin-top:2px;">0=停止轮询；建议 10~30 秒</small>
       </div>
 
-      <div class="form-group">
-        <label>轮询引擎状态</label>
-        <div id="ftpPollStatusDisplay" style="padding:0.6rem 0.85rem; background:var(--bg-card); border:1px solid var(--border-color); border-radius:8px; font-size:0.85rem; line-height:1.6; min-height: 80px;">
+      <div class="form-group" style="margin:0;">
+        <label style="font-size:0.775rem;">轮询引擎实时状态</label>
+        <div id="ftpPollStatusDisplay" style="padding:0.45rem 0.75rem; background:var(--bg-card); border:1px solid var(--border-color); border-radius:6px; font-size:0.8rem; line-height:1.5; min-height:48px; display:flex; align-items:center;">
           <span style="color:var(--text-sub);">加载中...</span>
         </div>
       </div>
     </div>
   </div>
 
-  <div id="ftpPullResultBox" style="margin-top:1rem; display:none; padding:0.85rem 1rem; border-radius:8px; font-size:0.85rem; font-family:monospace; line-height:1.5;"></div>
+  <div id="ftpPullResultBox" style="margin-top:0.5rem; display:none; padding:0.6rem 0.85rem; border-radius:6px; font-size:0.8rem; font-family:monospace; line-height:1.4;"></div>
 </div>

@@ -384,7 +384,8 @@
                 <tr>
                   <th class="col-idx">序号</th>
                   <th>事件单据编号</th>
-                  <th>所属任务名称 / 关联编号</th>
+                  <th>所属任务名称</th>
+                  <th>关联任务编号</th>
                   <th>提交时间</th>
                   <th>录入人员</th>
                   <th style="min-width:140px;">发生地点</th>
@@ -395,7 +396,7 @@
                 </tr>
               </thead>
               <tbody id="eventTableBody">
-                <tr><td colspan="10" style="text-align:center; padding:3rem; color:var(--text-muted);">暂无摆渡汇聚事件单据</td></tr>
+                <tr><td colspan="11" style="text-align:center; padding:3rem; color:var(--text-muted);">暂无摆渡汇聚事件单据</td></tr>
               </tbody>
             </table>
           </div>
@@ -988,7 +989,7 @@
       });
 
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:3rem; color:var(--text-muted);">未找到匹配的单据事件数据</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:3rem; color:var(--text-muted);">未找到匹配的单据事件数据</td></tr>`;
         return;
       }
 
@@ -1007,10 +1008,8 @@
           <tr style="cursor:pointer;" onclick="openEventDrawer('${item.event_id}')">
             <td class="col-idx">${idx + 1}</td>
             <td><strong style="color:var(--primary); font-family:monospace; font-size:0.875rem;">${item.event_id}</strong></td>
-            <td>
-              <strong style="color:var(--text-main); font-weight:700; font-size:0.825rem; display:block;">${item.task_name || '厂区周界例行巡检'}</strong>
-              <code style="font-size:0.725rem; color:#64748b; font-family:monospace;">${item.task_code || 'TASK_DEFAULT'}</code>
-            </td>
+            <td><strong style="color:var(--text-main); font-weight:700; font-size:0.825rem;">${item.task_name || '厂区周界例行巡检'}</strong></td>
+            <td><code style="font-size:0.75rem; color:#64748b; font-family:monospace;">${item.task_code || 'TASK_DEFAULT'}</code></td>
             <td><code style="font-size:0.8rem; color:var(--text-sub);">${new Date(item.submit_time || item.timestamp).toLocaleString()}</code></td>
             <td><span style="font-weight:600; color:var(--text-main);">${item.operator || '-'}</span></td>
             <td style="min-width:140px; max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${p.location || '-'}"><span style="font-weight:500;">${p.location || '-'}</span></td>

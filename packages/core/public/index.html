@@ -297,6 +297,10 @@
         <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
         系统审计日志
       </button>
+      <button class="tab-btn" id="tabBtn-personnel" onclick="switchTab('tab-personnel')">
+        <svg class="icon-svg" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 1 0 7.75"/></svg>
+        涉事人员档案库
+      </button>
       <button class="tab-btn" id="tabBtn-users" onclick="switchTab('tab-users')">
         <svg class="icon-svg" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 1 0 7.75"/></svg>
         用户与权限管理
@@ -524,6 +528,23 @@
           <table>
             <thead><tr><th class="col-idx">序号</th><th>时间戳</th><th>操作类别</th><th>描述明细</th><th>状态</th></tr></thead>
             <tbody id="auditTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 页签：涉事人员档案库 -->
+    <div id="tab-personnel" class="tab-content">
+      <div class="card">
+        <div class="card-title">
+          <span>涉事人员档案库 (单向摆渡跨网自动归档)</span>
+          <button class="btn btn-diode" onclick="loadPersonnelArchive()">刷新人员档案</button>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead><tr><th class="col-idx">序号</th><th>姓名</th><th>身份证号码</th><th>户籍地址</th><th>最新出现时间</th><th>关联事件单据</th></tr></thead>
+            <tbody id="personnelTableBody"></tbody>
           </table>
         </div>
       </div>
@@ -805,9 +826,32 @@
       if (tabId === 'tab-builder') loadSchema();
       if (tabId === 'tab-webhooks') loadWebhooks();
       if (tabId === 'tab-audits') loadFullAuditLogs();
+      if (tabId === 'tab-personnel') loadPersonnelArchive();
       if (tabId === 'tab-users') loadUsers();
       if (tabId === 'tab-errors') loadErrors();
       if (tabId === 'tab-system') loadSystemHealth();
+    }
+
+    async function loadPersonnelArchive() {
+      try {
+        const res = await fetch('/api/personnel');
+        const json = await res.json();
+        const tbody = document.getElementById('personnelTableBody');
+        if (!json.success || json.data.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">暂无涉事人员跨网同步档案</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = json.data.map((item, idx) => `
+          <tr>
+            <td class="col-idx">${idx + 1}</td>
+            <td><strong>${item.name || '未知'}</strong></td>
+            <td><code>${item.id_card || '-'}</code></td>
+            <td>${item.domicile || '-'}</td>
+            <td><code>${item.last_seen ? new Date(item.last_seen).toLocaleString() : '-'}</code></td>
+            <td><code>${item.last_event_id || '-'}</code></td>
+          </tr>
+        `).join('');
+      } catch (e) {}
     }
 
     async function fetchData() {

@@ -152,6 +152,12 @@ app.get('/api/auth/me', (req, res) => {
   res.json({ success: true, data: { id: user.id, username: user.username, name: user.name, role: user.role } });
 });
 
+// 涉事人员库 API (内网端同步归档)
+app.get('/api/personnel', (req, res) => {
+  const db = readDb();
+  res.json({ success: true, data: db.personnel || [] });
+});
+
 // 系统告警通知 API
 app.get('/api/alerts', (req, res) => {
   const db = readDb();
@@ -324,6 +330,26 @@ async function processPackageFile(fileName, isRetry = false) {
       };
 
       newRecord.ai_tags = runAiPipeline(newRecord);
+
+      // 如果数据包负荷中包含涉事人员信息，自动同步归档至内网人员库
+      const p = info.payload || {};
+      if (p.person_name || p.person_id_card) {
+        if (!db.personnel) db.personnel = [];
+        const existingIdx = db.personnel.findIndex(per => (p.person_id_card && per.id_card === p.person_id_card) || (p.person_name && per.name === p.person_name));
+        const personRec = {
+          id: Date.now(),
+          name: p.person_name || '未知',
+          id_card: p.person_id_card || '',
+          domicile: p.person_domicile || '',
+          last_seen: info.timestamp || new Date().toISOString(),
+          last_event_id: info.event_id
+        };
+        if (existingIdx >= 0) {
+          db.personnel[existingIdx] = { ...db.personnel[existingIdx], ...personRec };
+        } else {
+          db.personnel.unshift(personRec);
+        }
+      }
 
       db.events.unshift(newRecord);
       writeDb(db);

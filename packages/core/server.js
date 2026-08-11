@@ -483,7 +483,7 @@ async function scanLoop() {
     if (!fs.existsSync(ftpInDir)) fs.mkdirSync(ftpInDir, { recursive: true });
     const prefix = getPkgPrefix();
     const files = fs.readdirSync(ftpInDir);
-    const zipFiles = files.filter(f => f.startsWith(prefix) && f.endsWith('.zip') && !f.endsWith('.tmp'));
+    const zipFiles = files.filter(f => f.startsWith(prefix) && (f.endsWith('.zip') || f.endsWith('.jpg')) && !f.endsWith('.tmp'));
     for (const fileName of zipFiles) {
       try { await processPackageFile(fileName, false); } catch (e) {}
     }
@@ -649,7 +649,7 @@ function setAutoDiodeInterval(seconds) {
         const prefix = getPkgPrefix();
         if (!fs.existsSync(ftpOutDir)) fs.mkdirSync(ftpOutDir, { recursive: true });
         if (!fs.existsSync(ftpInDir)) fs.mkdirSync(ftpInDir, { recursive: true });
-        const files = fs.readdirSync(ftpOutDir).filter(f => f.startsWith(prefix) && f.endsWith('.zip') && !f.endsWith('.tmp'));
+        const files = fs.readdirSync(ftpOutDir).filter(f => f.startsWith(prefix) && (f.endsWith('.zip') || f.endsWith('.jpg')) && !f.endsWith('.tmp'));
         for (const f of files) {
           fs.copyFileSync(path.join(ftpOutDir, f), path.join(ftpInDir, f));
         }
@@ -695,7 +695,7 @@ app.get('/api/events/:event_id/download', (req, res) => {
   }
   try {
     const archiveFiles = fs.readdirSync(ARCHIVE_DIR);
-    const matched = archiveFiles.find(f => f.includes(event_id) && f.endsWith('.zip'));
+    const matched = archiveFiles.find(f => f.includes(event_id) && (f.endsWith('.zip') || f.endsWith('.jpg')));
     if (!matched) {
       // 不做任意兜底：返回其他事件的归档包会造成跨单据数据泄露
       return res.status(404).json({ success: false, error: '未找到该单据对应的 Zip 归档文件' });
@@ -984,7 +984,7 @@ app.get('/api/events/export', (req, res) => {
 
 app.get('/api/errors', (req, res) => {
   try {
-    const files = fs.readdirSync(ERROR_DIR).filter(f => f.endsWith('.zip'));
+    const files = fs.readdirSync(ERROR_DIR).filter(f => (f.endsWith('.zip') || f.endsWith('.jpg')) && !f.endsWith('.tmp'));
     const errList = files.map(f => {
       const stat = fs.statSync(path.join(ERROR_DIR, f));
       return { filename: f, size: stat.size, mtime: stat.mtime };
@@ -1041,7 +1041,7 @@ app.get('/api/system/health', (req, res) => {
         total_events: db.events.length,
         archive_size_bytes: getFolderSize(ARCHIVE_DIR),
         assets_size_bytes: getFolderSize(ASSETS_DIR),
-        error_count: fs.existsSync(ERROR_DIR) ? fs.readdirSync(ERROR_DIR).length : 0,
+        error_count: fs.existsSync(ERROR_DIR) ? fs.readdirSync(ERROR_DIR).filter(f => (f.endsWith('.zip') || f.endsWith('.jpg')) && !f.endsWith('.tmp')).length : 0,
         system_os: `${os.type()} ${os.release()}`,
         storage_status: 'HEALTHY'
       }
@@ -1084,7 +1084,7 @@ app.post('/api/simulate-diode', requireRole('admin'), (req, res) => {
     const prefix = getPkgPrefix();
     if (!fs.existsSync(ftpOutDir)) fs.mkdirSync(ftpOutDir, { recursive: true });
     if (!fs.existsSync(ftpInDir)) fs.mkdirSync(ftpInDir, { recursive: true });
-    const files = fs.readdirSync(ftpOutDir).filter(f => f.startsWith(prefix) && f.endsWith('.zip') && !f.endsWith('.tmp'));
+    const files = fs.readdirSync(ftpOutDir).filter(f => f.startsWith(prefix) && (f.endsWith('.zip') || f.endsWith('.jpg')) && !f.endsWith('.tmp'));
     let copiedCount = 0;
     for (const f of files) {
       const src = path.join(ftpOutDir, f);

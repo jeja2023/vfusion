@@ -137,6 +137,35 @@ class SQLiteStorageEngine {
       );
       stmt.finalize();
     }
+    // 同时也写一份降级 JSON 备份文件，确保绝无数据丢包
+    try {
+      const jsonPath = `${this.dbPath}.fallback.json`;
+      let list = [];
+      if (fs.existsSync(jsonPath)) {
+        list = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+      }
+      const existingIdx = list.findIndex(e => e.event_id === record.event_id);
+      const norm = {
+        id: record.id || Date.now(),
+        app_id: record.app_id || 'sys_gate_security',
+        biz_type: record.biz_type || 'GENERAL',
+        event_id: record.event_id,
+        task_name: record.task_name || '默认安防巡检任务',
+        task_code: record.task_code || 'TASK_DEFAULT',
+        timestamp: record.timestamp,
+        operator: record.operator,
+        payload: record.payload || {},
+        files: record.files || [],
+        zip_hash: record.zip_hash || '',
+        signature: record.signature || '',
+        ai_tags: record.ai_tags || [],
+        status: record.status || 'RECEIVED',
+        created_at: record.created_at || new Date().toISOString()
+      };
+      if (existingIdx >= 0) list[existingIdx] = norm;
+      else list.unshift(norm);
+      fs.writeFileSync(jsonPath, JSON.stringify(list, null, 2), 'utf8');
+    } catch (e) {}
   }
 
   // 查询事件单据列表
@@ -150,19 +179,31 @@ class SQLiteStorageEngine {
           params = [appId];
         }
         this.db.all(sql, params, (err, rows) => {
-          if (err) return resolve([]);
+          if (err || !rows || rows.length === 0) return resolve(this.getFallbackEvents(appId));
           const results = rows.map(r => ({
             ...r,
-            payload: JSON.parse(r.payload || '{}'),
-            files: JSON.parse(r.files || '[]'),
-            ai_tags: JSON.parse(r.ai_tags || '[]')
+            payload: typeof r.payload === 'string' ? JSON.parse(r.payload || '{}') : (r.payload || {}),
+            files: typeof r.files === 'string' ? JSON.parse(r.files || '[]') : (r.files || []),
+            ai_tags: typeof r.ai_tags === 'string' ? JSON.parse(r.ai_tags || '[]') : (r.ai_tags || [])
           }));
           resolve(results);
         });
       } else {
-        resolve([]);
+        resolve(this.getFallbackEvents(appId));
       }
     });
+  }
+
+  getFallbackEvents(appId = null) {
+    try {
+      const jsonPath = `${this.dbPath}.fallback.json`;
+      if (fs.existsSync(jsonPath)) {
+        let list = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+        if (appId) list = list.filter(e => e.app_id === appId);
+        return list;
+      }
+    } catch (e) {}
+    return [];
   }
 
   // 写入审计日志

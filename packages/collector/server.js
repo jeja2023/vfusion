@@ -28,6 +28,11 @@ if (!fs.existsSync(COLLECTOR_SCHEMA_FILE)) {
   writeJsonAtomic(COLLECTOR_SCHEMA_FILE, DEFAULT_FORM_SCHEMA);
 }
 
+const COLLECTOR_ASSETS_DIR = path.join(STORAGE_ROOT, 'collector_assets');
+if (!fs.existsSync(COLLECTOR_ASSETS_DIR)) fs.mkdirSync(COLLECTOR_ASSETS_DIR, { recursive: true });
+
+app.use('/collector-assets', express.static(COLLECTOR_ASSETS_DIR));
+
 const SQLiteStorageEngine = require('../common/db_sqlite');
 
 const collectorSqlite = new SQLiteStorageEngine(path.join(STORAGE_ROOT, 'vfusion_collector.db'));
@@ -319,6 +324,10 @@ app.post('/api/publish', (req, res) => {
       }
 
       const fileList = [];
+      const savedFileRecords = [];
+      const eventAssetDir = path.join(COLLECTOR_ASSETS_DIR, eventId);
+      if (!fs.existsSync(eventAssetDir)) fs.mkdirSync(eventAssetDir, { recursive: true });
+
       if (files.images) {
         const rawFiles = Array.isArray(files.images) ? files.images : [files.images];
         for (let i = 0; i < rawFiles.length; i++) {
@@ -328,6 +337,12 @@ app.post('/api/publish', (req, res) => {
           fileList.push({
             path: fileObj.filepath,
             filename: filename
+          });
+          const localDest = path.join(eventAssetDir, filename);
+          try { fs.copyFileSync(fileObj.filepath, localDest); } catch (e) {}
+          savedFileRecords.push({
+            filename: filename,
+            url: `/collector-assets/${eventId}/${filename}`
           });
         }
       }
@@ -356,6 +371,23 @@ app.post('/api/publish', (req, res) => {
         schema: currentSchema
       });
 
+      // 保存至视频网端本地历史数据库
+      collectorSqlite.saveEvent({
+        id: Date.now(),
+        app_id: appId,
+        biz_type: bizType,
+        event_id: eventId,
+        task_name: taskName,
+        task_code: taskCode,
+        timestamp: submitTime,
+        operator: operator,
+        payload: payload,
+        files: savedFileRecords,
+        zip_hash: result.pkgName,
+        signature: '',
+        status: 'PACKED'
+      });
+
       addCollectorAuditLog('INGEST', `成功打包投递单据: ${result.pkgName}.zip (应用租户: ${appId}, 操作员: ${operator})`, 'SUCCESS');
 
       res.json({
@@ -374,6 +406,16 @@ app.post('/api/publish', (req, res) => {
       res.status(500).json({ success: false, error: error.message });
     }
   });
+});
+
+// 视频网端：获取本人/本终端历史已发布提交记录 API
+app.get('/api/published-history', async (req, res) => {
+  try {
+    const events = await collectorSqlite.getEvents();
+    res.json({ success: true, data: events });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 app.listen(PORT, () => {

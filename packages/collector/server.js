@@ -506,9 +506,27 @@ app.get('/api/published-history', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+const os = require('os');
+function getLocalIps() {
+  const interfaces = os.networkInterfaces();
+  const ips = [];
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        ips.push(iface.address);
+      }
+    }
+  }
+  return ips;
+}
+
+app.listen(PORT, '0.0.0.0', () => {
+  const localIps = getLocalIps();
   console.log(`===================================================`);
-  console.log(` 视频网数据采集/发布终端 (VFusion Collector v0.9.15) 已启动`);
-  console.log(` 运行地址: http://localhost:${PORT}`);
+  console.log(` 视频网数据采集/发布终端 (VFusion Collector v0.10.0) 已启动`);
+  console.log(` 本机访问地址: http://localhost:${PORT}`);
+  localIps.forEach(ip => {
+    console.log(` 局域网/其他电脑访问地址: http://${ip}:${PORT}`);
+  });
   console.log(`===================================================`);
 });

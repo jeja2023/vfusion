@@ -51,7 +51,7 @@ try {
     execSync(`cp -R "${path.join(ROOT_DIR, 'node_modules')}" "${path.join(PORTABLE_DIR, 'node_modules')}"`, { stdio: 'ignore' });
   }
 } catch (e) {
-  console.warn('复制 node_modules 注意事项:', e.message);
+  copyDirSync(path.join(ROOT_DIR, 'node_modules'), path.join(PORTABLE_DIR, 'node_modules'));
 }
 
 // 复制 Node.js 绿色二进制文件 (保证目标电脑未安装 Node 也能零配置秒级双击启动)
@@ -70,7 +70,8 @@ fs.copyFileSync(path.join(ROOT_DIR, '更新日志.md'), path.join(PORTABLE_DIR, 
 const iconv = require('iconv-lite');
 
 function writeBatFileSync(filePath, content) {
-  const gbkBuffer = iconv.encode(content, 'gbk');
+  const crlfContent = content.replace(/\r?\n/g, '\r\n');
+  const gbkBuffer = iconv.encode(crlfContent, 'gbk');
   fs.writeFileSync(filePath, gbkBuffer);
 }
 

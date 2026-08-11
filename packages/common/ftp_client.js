@@ -8,14 +8,19 @@ const fs = require('fs');
 async function getFtpClient(config) {
   const client = new ftp.Client(config.timeout || 10000);
   client.ftp.verbose = false;
-  await client.access({
-    host: config.ftp_host || '127.0.0.1',
-    port: parseInt(config.ftp_port || 21),
-    user: config.ftp_user || 'anonymous',
-    password: config.ftp_password || '',
-    secure: config.ftp_secure || false
-  });
-  return client;
+  try {
+    await client.access({
+      host: config.ftp_host || '127.0.0.1',
+      port: parseInt(config.ftp_port || 21),
+      user: config.ftp_user || 'anonymous',
+      password: config.ftp_password || '',
+      secure: config.ftp_secure || false
+    });
+    return client;
+  } catch (err) {
+    client.close();
+    throw err;
+  }
 }
 
 /**

@@ -40,10 +40,10 @@ async function runTest() {
   console.log('[3/3] 清理临时测试文件...');
   fs.rmSync(testDir, { recursive: true, force: true });
 
-  console.log('=== ✅ VFusion 单元测试成功通过！ ===');
+  console.log('=== VFusion 单元测试成功通过！ ===');
 }
 
 runTest().catch(err => {
-  console.error('❌ 测试失败:', err);
+  console.error('测试失败:', err);
   process.exit(1);
 });

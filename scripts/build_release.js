@@ -44,5 +44,5 @@ const storageDir = path.join(DIST_DIR, 'storage');
 });
 
 console.log('===================================================');
-console.log(` ✅ 编译完成！部署包输出位置: ${DIST_DIR}`);
+console.log(` 编译完成！部署包输出位置: ${DIST_DIR}`);
 console.log('===================================================');

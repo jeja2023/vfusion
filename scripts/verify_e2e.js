@@ -102,7 +102,7 @@ async function testE2E() {
     });
   });
 
-  console.log(`\n=== 🎉 E2E 测试结果 ===`);
+  console.log(`\n=== E2E 测试结果 ===`);
   console.log(`内网中台已成功解析并入库的事件数量: ${eventsRes.data.length}`);
   if (eventsRes.data.length > 0) {
     const latest = eventsRes.data[0];
@@ -117,9 +117,9 @@ async function testE2E() {
   // 清理临时样本文件
   if (fs.existsSync(testImgPath)) fs.unlinkSync(testImgPath);
 
-  console.log('\n=== ✅ 端到端单据传输与解析流程完全成功！ ===');
+  console.log('\n=== 端到端单据传输与解析流程完全成功！ ===');
 }
 
 testE2E().catch(err => {
-  console.error('❌ E2E 测试异常:', err);
+  console.error('E2E 测试异常:', err);
 });

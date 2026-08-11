@@ -641,7 +641,7 @@
             </div>
 
             <div style="background:#f8fafc; padding:1rem; border-radius:10px; border:1px solid var(--border-color);">
-              <h4 style="font-size:0.875rem; font-weight:700; color:var(--text-main); margin-bottom:0.5rem;">🔐 HMAC 签名秘钥在线轮换</h4>
+              <h4 style="font-size:0.875rem; font-weight:700; color:var(--text-main); margin-bottom:0.5rem;">HMAC 签名秘钥在线轮换</h4>
               <div style="display:flex; gap:0.5rem; flex-direction:column;">
                 <span style="font-size:0.825rem; color:var(--text-sub);">当前秘钥: <strong id="currentKeyMasked">vfus****2026</strong></span>
                 <input type="text" id="newHmacSecretInput" placeholder="输入新签名秘钥" style="padding:0.4rem 0.65rem; border:1px solid var(--border-color); border-radius:6px; font-size:0.825rem;">
@@ -943,16 +943,16 @@
           let badgeText = t;
           let badgeStyle = 'background:#f0f9ff; color:#0284c7; border-color:#bae6fd;';
           if (t.includes('MD5+HMAC')) {
-            badgeText = '🛡️ 防篡改校验通过';
+            badgeText = '防篡改校验通过';
             badgeStyle = 'background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe;';
           } else if (t.includes('YOLOv8')) {
-            badgeText = '🎯 YOLOv8特征提取';
+            badgeText = 'YOLOv8特征提取';
             badgeStyle = 'background:#f0fdf4; color:#15803d; border-color:#bbf7d0;';
           } else if (t.includes('FaceNet')) {
-            badgeText = '👤 FaceNet人像识别';
+            badgeText = 'FaceNet人像识别';
             badgeStyle = 'background:#faf5ff; color:#7e22ce; border-color:#e9d5ff;';
           } else if (t.includes('AI交通工具')) {
-            badgeText = `🚗 ${t.replace('AI交通工具识别: ', '')}`;
+            badgeText = `${t.replace('AI交通工具识别: ', '')}`;
             badgeStyle = 'background:#fff7ed; color:#c2410c; border-color:#ffedd5;';
           }
           return `<span class="ai-tag-badge" style="font-size:0.725rem; padding:0.2rem 0.5rem; ${badgeStyle} border-radius:4px; white-space:nowrap;" title="${t}">${badgeText}</span>`;

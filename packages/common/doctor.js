@@ -69,9 +69,9 @@ async function runDoctor() {
   // 4. 诊断结果汇总
   console.log('\n===================================================');
   if (issueCount === 0) {
-    console.log(' ✅ 诊断完成: VFusion 系统环境完全健康，无异常！');
+    console.log(' 诊断完成: VFusion 系统环境完全健康，无异常！');
   } else {
-    console.log(` ⚠️ 诊断完成: 发现 ${issueCount} 处提示，建议启动相关服务。`);
+    console.log(` 诊断完成: 发现 ${issueCount} 处提示，建议启动相关服务。`);
   }
   console.log('===================================================\n');
 }

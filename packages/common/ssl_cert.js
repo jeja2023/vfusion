@@ -36,7 +36,7 @@ function ensureSslCertificates(certDir) {
   fs.writeFileSync(keyPath, privateKey, 'utf8');
   fs.writeFileSync(certPath, certPem, 'utf8');
 
-  console.log('[VFusion SSL] ✅ 自签名 TLS 证书对已自动成功就绪!');
+  console.log('[VFusion SSL] 自签名 TLS 证书对已自动成功就绪!');
 
   return {
     cert: Buffer.from(certPem),

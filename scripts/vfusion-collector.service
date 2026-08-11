@@ -1,0 +1,15 @@
+[Unit]
+Description=VFusion Collector Video Network Terminal
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/vfusion
+ExecStart=/usr/bin/node /opt/vfusion/packages/collector/server.js
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production PORT=4001
+
+[Install]
+WantedBy=multi-user.target

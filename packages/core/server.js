@@ -9,10 +9,15 @@ const { unpackAndVerifyPackage } = require('../common/unpacker');
 const { DEFAULT_FORM_SCHEMA, getHmacSecret, setHmacSecret } = require('../common/protocol');
 const { hashPassword, DEFAULT_USERS, generateToken, verifyToken } = require('../common/auth');
 
+const SQLiteStorageEngine = require('../common/db_sqlite');
+const { runAiInferencePipeline } = require('../common/ai_pipeline');
+const { ensureSslCertificates } = require('../common/ssl_cert');
+
 const app = express();
 const PORT = process.env.PORT || 4002;
 
 const STORAGE_ROOT = path.resolve(__dirname, '../../storage');
+const coreSqlite = new SQLiteStorageEngine(path.join(STORAGE_ROOT, 'vfusion_core.db'));
 const FTP_OUT_DIR = path.join(STORAGE_ROOT, 'ftp_out');
 const FTP_IN_DIR = path.join(STORAGE_ROOT, 'ftp_in');
 const ARCHIVE_DIR = path.join(STORAGE_ROOT, 'archive');
@@ -81,8 +86,9 @@ function addAuditLog(type, message, status = 'INFO') {
     message,
     status
   });
-  if (db.audit_logs.length > 200) db.audit_logs = db.audit_logs.slice(0, 200);
+  if (db.audit_logs.length > 500) db.audit_logs = db.audit_logs.slice(0, 500);
   writeDb(db);
+  coreSqlite.addAuditLog(type, message, status);
 }
 
 function addSystemAlert(title, message, level = 'WARN') {
@@ -100,16 +106,7 @@ function addSystemAlert(title, message, level = 'WARN') {
 }
 
 function runAiPipeline(eventRecord) {
-  const tags = ['AI防篡改: 验证通过', 'AI画像度: 99.4%'];
-  const payload = eventRecord.payload || {};
-  if (payload.event_type === '车辆抓拍' || (payload.plate_no)) {
-    tags.push(`AI车牌识别: ${payload.plate_no || '京A·88888'}`);
-  } else if (payload.event_type === '未戴安全帽') {
-    tags.push('AI警告: 违规未戴安全帽');
-  } else {
-    tags.push('AI人像识别: 已比对档案库');
-  }
-  return tags;
+  return runAiInferencePipeline(eventRecord);
 }
 
 // 身份认证 API
@@ -330,6 +327,7 @@ async function processPackageFile(fileName, isRetry = false) {
 
       db.events.unshift(newRecord);
       writeDb(db);
+      coreSqlite.saveEvent(newRecord);
 
       if (info.payload && info.payload.threat_level === '高') {
         addSystemAlert('[高风险告警]', `单据编号 ${info.event_id} 属于高风险事件 (${info.payload.location || '未知地点'})`, 'ERROR');

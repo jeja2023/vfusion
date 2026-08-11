@@ -1,6 +1,6 @@
 {
   "name": "vfusion",
-  "version": "0.9.6",
+  "version": "0.9.7",
   "private": true,
   "description": "VFusion (视汇) - 通用跨隔离网数据交换与汇聚平台",
   "workspaces": [
@@ -19,6 +19,7 @@
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "formidable": "^3.5.2",
+    "sqlite3": "^6.0.1",
     "unzipper": "^0.12.3"
   }
 }

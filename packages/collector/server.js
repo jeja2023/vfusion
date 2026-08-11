@@ -28,6 +28,10 @@ if (!fs.existsSync(COLLECTOR_SCHEMA_FILE)) {
   writeJsonAtomic(COLLECTOR_SCHEMA_FILE, DEFAULT_FORM_SCHEMA);
 }
 
+const SQLiteStorageEngine = require('../common/db_sqlite');
+
+const collectorSqlite = new SQLiteStorageEngine(path.join(STORAGE_ROOT, 'vfusion_collector.db'));
+
 // 初始化视频网本地数据库（用户与审计日志）
 function readCollectorDb() {
   if (!fs.existsSync(COLLECTOR_DB_FILE)) {
@@ -67,6 +71,7 @@ function addCollectorAuditLog(type, message, status = 'SUCCESS') {
   db.audit_logs.unshift(newLog);
   if (db.audit_logs.length > 500) db.audit_logs = db.audit_logs.slice(0, 500);
   saveCollectorDb(db);
+  collectorSqlite.addAuditLog(type, message, status);
 }
 
 app.use(cors());

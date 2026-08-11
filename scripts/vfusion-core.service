@@ -1,0 +1,15 @@
+[Unit]
+Description=VFusion Core Air-Gapped Data Exchange Hub
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/vfusion
+ExecStart=/usr/bin/node /opt/vfusion/packages/core/server.js
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production PORT=4002
+
+[Install]
+WantedBy=multi-user.target

@@ -664,6 +664,15 @@
     </div>
   </div>
 
+  <!-- 照片放大弹窗 Modal Lightbox -->
+  <div id="imageLightboxOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.85); backdrop-filter:blur(6px); z-index:1100; align-items:center; justify-content:center;" onclick="closeImageLightbox()">
+    <div style="position:relative; max-width:85vw; max-height:85vh; display:flex; flex-direction:column; align-items:center; background:#ffffff; border-radius:12px; padding:1.25rem; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);" onclick="event.stopPropagation()">
+      <button onclick="closeImageLightbox()" style="position:absolute; top:-12px; right:-12px; width:32px; height:32px; border-radius:50%; background:#ef4444; color:#ffffff; border:none; font-size:1.1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:bold; box-shadow:0 4px 6px -1px rgba(0,0,0,0.3);">✕</button>
+      <img id="lightboxImg" src="" style="max-width:80vw; max-height:75vh; object-fit:contain; border-radius:8px; border:1px solid #e2e8f0; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);">
+      <div id="lightboxCaption" style="margin-top:0.75rem; font-size:0.875rem; font-weight:600; color:var(--text-main);">现场照片大图凭证</div>
+    </div>
+  </div>
+
   <script>
     let currentUser = null;
     let eventsData = [];
@@ -712,10 +721,26 @@
       setTimeout(() => toast.remove(), 3000);
     }
 
-    // 支持 Esc 快捷键关闭抽屉弹窗
+    // 支持 Esc 快捷键关闭抽屉弹窗与照片大图弹窗
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeDrawer();
+      if (e.key === 'Escape') {
+        closeDrawer();
+        closeImageLightbox();
+      }
     });
+
+    function openImageLightbox(url, title = '现场照片大图凭证') {
+      const overlay = document.getElementById('imageLightboxOverlay');
+      const img = document.getElementById('lightboxImg');
+      const caption = document.getElementById('lightboxCaption');
+      img.src = url;
+      caption.innerText = title;
+      overlay.style.display = 'flex';
+    }
+
+    function closeImageLightbox() {
+      document.getElementById('imageLightboxOverlay').style.display = 'none';
+    }
 
     async function checkAuth() {
       const storedUser = localStorage.getItem('vfusion_user');
@@ -912,9 +937,29 @@
 
       tbody.innerHTML = filtered.map((item, idx) => {
         const p = item.payload || {};
-        const aiBadges = (item.ai_tags || ['AI识别通过']).map(t => `<span class="ai-tag-badge" style="font-size:0.7rem; padding:0.15rem 0.4rem; white-space:nowrap;">${t}</span>`).join(' ');
+        
+        // 优雅短化呈现 AI 算法提取特征，增加 Tooltip 完整提示
+        const aiBadges = (item.ai_tags || ['AI识别通过']).map(t => {
+          let badgeText = t;
+          let badgeStyle = 'background:#f0f9ff; color:#0284c7; border-color:#bae6fd;';
+          if (t.includes('MD5+HMAC')) {
+            badgeText = '🛡️ 防篡改校验通过';
+            badgeStyle = 'background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe;';
+          } else if (t.includes('YOLOv8')) {
+            badgeText = '🎯 YOLOv8特征提取';
+            badgeStyle = 'background:#f0fdf4; color:#15803d; border-color:#bbf7d0;';
+          } else if (t.includes('FaceNet')) {
+            badgeText = '👤 FaceNet人像识别';
+            badgeStyle = 'background:#faf5ff; color:#7e22ce; border-color:#e9d5ff;';
+          } else if (t.includes('AI交通工具')) {
+            badgeText = `🚗 ${t.replace('AI交通工具识别: ', '')}`;
+            badgeStyle = 'background:#fff7ed; color:#c2410c; border-color:#ffedd5;';
+          }
+          return `<span class="ai-tag-badge" style="font-size:0.725rem; padding:0.2rem 0.5rem; ${badgeStyle} border-radius:4px; white-space:nowrap;" title="${t}">${badgeText}</span>`;
+        }).join('');
+
         const imgsHtml = (item.files || []).map(f => 
-          `<img src="${f.url}" style="width:36px; height:36px; object-fit:cover; border-radius:4px; border:1px solid var(--border-color); cursor:pointer;" onclick="event.stopPropagation(); window.open('${f.url}')" title="点击查看原图">`
+          `<img src="${f.url}" style="width:36px; height:36px; object-fit:cover; border-radius:6px; border:1px solid var(--border-color); cursor:pointer; transition:transform 0.15s;" onclick="event.stopPropagation(); openImageLightbox('${f.url}', '现场存照凭证放大预览 (${f.filename || '001.jpg'})')" title="点击在弹窗中放大查看">`
         ).join(' ');
 
         const personStr = p.person_name 
@@ -931,7 +976,7 @@
             <td><span class="ai-tag-badge" style="background:#f0f9ff; color:#0369a1; border-color:#bae6fd;">${p.transportation || '-'}</span></td>
             <td>${personStr}</td>
             <td><div style="display:flex; gap:0.25rem;">${imgsHtml || '-'}</div></td>
-            <td><div style="display:flex; gap:0.25rem; flex-wrap:wrap; max-width:220px;">${aiBadges}</div></td>
+            <td><div style="display:flex; gap:0.35rem; flex-wrap:wrap; min-width:180px; max-width:280px;">${aiBadges}</div></td>
             <td style="text-align:right; white-space:nowrap;">
               <button class="btn btn-diode" style="padding:0.25rem 0.55rem; font-size:0.75rem;" onclick="event.stopPropagation(); openEventDrawer('${item.event_id}')">详情</button>
               <button class="btn btn-export" style="padding:0.25rem 0.55rem; font-size:0.75rem; margin-left:0.25rem;" onclick="event.stopPropagation(); downloadEventZip('${item.event_id}')">Zip存照</button>

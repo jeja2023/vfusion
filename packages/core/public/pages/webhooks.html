@@ -1,0 +1,26 @@
+<div class="card">
+  <div class="card-title"><span>第三方系统消息分发</span></div>
+
+  <div class="split-layout">
+    <!-- 左栏：注册订阅节点 -->
+    <div class="split-col">
+      <h3 style="font-size:0.925rem; font-weight:700; color:var(--text-main);">+ 注册新订阅节点</h3>
+      <div class="builder-form">
+        <div class="form-field-item"><label>系统名称 (例如 办公OA系统)</label><input type="text" id="hookName" placeholder="例如 办公OA系统"></div>
+        <div class="form-field-item"><label>接口回调地址 (URL)</label><input type="text" id="hookUrl" placeholder="http://192.168.1.50/api/vfusion-callback"></div>
+        <button class="btn btn-primary" style="padding:0.5rem; justify-content:center;" onclick="addWebhookNode()">+ 添加订阅节点</button>
+      </div>
+    </div>
+
+    <!-- 右栏：订阅节点列表 -->
+    <div class="split-col">
+      <h3 style="font-size:0.925rem; font-weight:700; color:var(--text-main);">已注册第三方订阅节点</h3>
+      <div class="table-container">
+        <table>
+          <thead><tr><th class="col-idx">序号</th><th>系统名称</th><th>回调地址</th><th>操作</th></tr></thead>
+          <tbody id="webhookTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

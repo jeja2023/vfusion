@@ -1,0 +1,4 @@
+/* History Page Styles */
+.filter-bar { display: flex; gap: 0.65rem; margin-bottom: 1rem; flex-wrap: wrap; flex-shrink: 0; }
+.filter-bar input, .filter-bar select { background: #ffffff; border: 1px solid var(--border-color); color: var(--text-main); padding: 0.45rem 0.75rem; border-radius: 8px; font-size: 0.825rem; outline: none; white-space: nowrap; }
+.filter-bar input { flex: 1; min-width: 180px; }

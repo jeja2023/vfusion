@@ -82,6 +82,7 @@ function addCollectorAuditLog(type, message, status = 'SUCCESS') {
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+app.get('/favicon.ico', (req, res) => res.status(204).end());
 
 // 涉事人员库 API
 app.get('/api/personnel', (req, res) => {
@@ -420,7 +421,7 @@ app.get('/api/published-history', async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`===================================================`);
-  console.log(` 视频网数据采集/发布终端 (VFusion Collector v0.9.5) 已启动`);
+  console.log(` 视频网数据采集/发布终端 (VFusion Collector v0.9.15) 已启动`);
   console.log(` 运行地址: http://localhost:${PORT}`);
   console.log(`===================================================`);
 });

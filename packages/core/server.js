@@ -53,6 +53,7 @@ try {
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+app.get('/favicon.ico', (req, res) => res.status(204).end());
 app.use('/assets', express.static(ASSETS_DIR));
 
 function readDb() {
@@ -759,7 +760,7 @@ app.post('/api/simulate-diode', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`===================================================`);
-  console.log(` 内网数据汇聚与管理中台 (VFusion Core v0.9.5) 已启动`);
+  console.log(` 内网数据汇聚与管理中台 (VFusion Core v0.9.15) 已启动`);
   console.log(` 运行地址: http://localhost:${PORT}`);
   console.log(`===================================================`);
 });

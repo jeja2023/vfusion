@@ -1,6 +1,6 @@
 {
   "name": "vfusion",
-  "version": "0.9.13",
+  "version": "0.9.16",
   "private": true,
   "description": "VFusion (视汇) - 通用跨隔离网数据交换与汇聚平台",
   "workspaces": [

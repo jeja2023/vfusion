@@ -1,0 +1,39 @@
+<div class="card">
+  <div class="card-title">
+    <span>系统安全审计日志</span>
+    <button class="btn btn-export" onclick="exportAuditLogsCsv()">导出审计日志 (CSV)</button>
+  </div>
+  
+  <div class="filter-bar">
+    <input type="text" id="auditKeyword" placeholder="搜索审计事件/描述信息..." oninput="loadFullAuditLogs()">
+    <select id="auditStatusFilter" onchange="loadFullAuditLogs()">
+      <option value="">所有状态级别</option>
+      <option value="SUCCESS">成功 (SUCCESS)</option>
+      <option value="INFO">信息 (INFO)</option>
+      <option value="WARN">警告 (WARN)</option>
+      <option value="ERROR">错误 (ERROR)</option>
+    </select>
+  </div>
+
+  <div class="table-container">
+    <table>
+      <thead><tr><th class="col-idx">序号</th><th>时间戳</th><th>操作类别</th><th>描述明细</th><th>状态</th></tr></thead>
+      <tbody id="auditTableBody"></tbody>
+    </table>
+  </div>
+  <div class="pagination-bar" id="auditPagination">
+    <div class="pagination-info">
+      <span>共 <strong id="auditTotalCount">0</strong> 条日志</span>
+      <span>第 <strong id="auditCurrentPageText">1</strong> / <strong id="auditTotalPagesText">1</strong> 页</span>
+    </div>
+    <div class="pagination-controls">
+      <select id="auditPageSizeSelect" onchange="changeAuditPageSize(this.value)">
+        <option value="10">10 条/页</option>
+        <option value="20">20 条/页</option>
+        <option value="50">50 条/页</option>
+      </select>
+      <button class="btn-page" id="auditPrevBtn" onclick="prevAuditPage()">上一页</button>
+      <button class="btn-page" id="auditNextBtn" onclick="nextAuditPage()">下一页</button>
+    </div>
+  </div>
+</div>

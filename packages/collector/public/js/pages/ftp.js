@@ -5,7 +5,11 @@ async function loadCollectorFtpConfig() {
     const json = await res.json();
     if (json.success && json.data) {
       const d = json.data;
-      if (document.getElementById('collFtpEnableSelect')) document.getElementById('collFtpEnableSelect').value = String(d.ftp_enabled || false);
+      if (document.getElementById('collFtpEnableToggle')) {
+        const isEnable = !!d.ftp_enabled;
+        document.getElementById('collFtpEnableToggle').checked = isEnable;
+        if (document.getElementById('collFtpEnableText')) document.getElementById('collFtpEnableText').innerText = isEnable ? '开启远程 FTP' : '关闭远程 FTP';
+      }
       if (document.getElementById('collFtpHostInput')) document.getElementById('collFtpHostInput').value = d.ftp_host || '';
       if (document.getElementById('collFtpPortInput')) document.getElementById('collFtpPortInput').value = d.ftp_port || 21;
       if (document.getElementById('collFtpUserInput')) document.getElementById('collFtpUserInput').value = d.ftp_user || '';
@@ -21,7 +25,7 @@ async function loadCollectorFtpConfig() {
 
 function getCollectorFtpFormValues() {
   return {
-    ftp_enabled: document.getElementById('collFtpEnableSelect').value === 'true',
+    ftp_enabled: document.getElementById('collFtpEnableToggle') ? document.getElementById('collFtpEnableToggle').checked : false,
     ftp_host: document.getElementById('collFtpHostInput').value.trim(),
     ftp_port: parseInt(document.getElementById('collFtpPortInput').value) || 21,
     ftp_user: document.getElementById('collFtpUserInput').value.trim(),

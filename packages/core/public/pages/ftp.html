@@ -23,10 +23,13 @@
     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:0.5rem 0.75rem;">
       <div class="form-group">
         <label style="font-size:0.775rem;">FTP 远程通道状态</label>
-        <select id="coreFtpEnableSelect" style="padding:0.35rem 0.55rem; font-size:0.8rem;">
-          <option value="false">关闭远程 FTP (使用本地目录/网闸模拟)</option>
-          <option value="true">开启远程 FTP (自动连接抓取与下载入库)</option>
-        </select>
+        <div class="toggle-switch-wrapper">
+          <span class="toggle-switch-text" id="coreFtpEnableText">关闭远程 FTP</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="coreFtpEnableToggle" onchange="document.getElementById('coreFtpEnableText').innerText = this.checked ? '开启远程 FTP' : '关闭远程 FTP'">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
       </div>
 
       <div class="form-group">
@@ -67,12 +70,15 @@
         </select>
       </div>
 
-      <div class="form-group" style="grid-column: span 1 / -1;">
+      <div class="form-group">
         <label style="font-size:0.775rem;">下载后自动清理远程文件 (Auto Clean)</label>
-        <select id="coreFtpDeleteSelect" style="padding:0.35rem 0.55rem; font-size:0.8rem;">
-          <option value="true">开启 (推荐，下载入库后自动删除远程包防重复)</option>
-          <option value="false">关闭 (保留远程 FTP 文件)</option>
-        </select>
+        <div class="toggle-switch-wrapper">
+          <span class="toggle-switch-text" id="coreFtpDeleteText">开启清理 (推荐)</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="coreFtpDeleteToggle" onchange="document.getElementById('coreFtpDeleteText').innerText = this.checked ? '开启清理 (推荐)' : '关闭清理 (保留文件)'">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
       </div>
     </div>
   </div>

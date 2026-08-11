@@ -4,7 +4,11 @@ async function loadCoreFtpConfig() {
     const secJson = await res.json();
     if (secJson.success && secJson.data) {
       const d = secJson.data;
-      if (document.getElementById('coreFtpEnableSelect')) document.getElementById('coreFtpEnableSelect').value = String(d.ftp_enabled || false);
+      if (document.getElementById('coreFtpEnableToggle')) {
+        const isEnable = !!d.ftp_enabled;
+        document.getElementById('coreFtpEnableToggle').checked = isEnable;
+        if (document.getElementById('coreFtpEnableText')) document.getElementById('coreFtpEnableText').innerText = isEnable ? '开启远程 FTP' : '关闭远程 FTP';
+      }
       if (document.getElementById('coreFtpHostInput')) document.getElementById('coreFtpHostInput').value = d.ftp_host || '';
       if (document.getElementById('coreFtpPortInput')) document.getElementById('coreFtpPortInput').value = d.ftp_port || 21;
       if (document.getElementById('coreFtpUserInput')) document.getElementById('coreFtpUserInput').value = d.ftp_user || '';
@@ -12,7 +16,11 @@ async function loadCoreFtpConfig() {
       if (document.getElementById('coreFtpRemoteDirInput')) document.getElementById('coreFtpRemoteDirInput').value = d.ftp_remote_dir || '/vfusion_packages';
       if (document.getElementById('corePkgPrefixInput')) document.getElementById('corePkgPrefixInput').value = d.pkg_prefix || 'vfusion_';
       if (document.getElementById('coreFtpExtSelect')) document.getElementById('coreFtpExtSelect').value = d.ftp_file_ext || '.jpg';
-      if (document.getElementById('coreFtpDeleteSelect')) document.getElementById('coreFtpDeleteSelect').value = String(d.ftp_delete_after_download !== false);
+      if (document.getElementById('coreFtpDeleteToggle')) {
+        const isDelete = d.ftp_delete_after_download !== false;
+        document.getElementById('coreFtpDeleteToggle').checked = isDelete;
+        if (document.getElementById('coreFtpDeleteText')) document.getElementById('coreFtpDeleteText').innerText = isDelete ? '开启清理 (推荐)' : '关闭清理 (保留文件)';
+      }
     }
   } catch (e) {
     console.error('加载内网端 FTP 配置失败:', e);
@@ -24,7 +32,7 @@ async function loadCoreFtpConfig() {
 
 function getCoreFtpFormValues() {
   return {
-    ftp_enabled: document.getElementById('coreFtpEnableSelect').value === 'true',
+    ftp_enabled: document.getElementById('coreFtpEnableToggle') ? document.getElementById('coreFtpEnableToggle').checked : false,
     ftp_host: document.getElementById('coreFtpHostInput').value.trim(),
     ftp_port: parseInt(document.getElementById('coreFtpPortInput').value) || 21,
     ftp_user: document.getElementById('coreFtpUserInput').value.trim(),
@@ -32,7 +40,7 @@ function getCoreFtpFormValues() {
     ftp_remote_dir: document.getElementById('coreFtpRemoteDirInput').value.trim() || '/vfusion_packages',
     pkg_prefix: document.getElementById('corePkgPrefixInput').value.trim() || 'vfusion_',
     ftp_file_ext: document.getElementById('coreFtpExtSelect') ? document.getElementById('coreFtpExtSelect').value : '.jpg',
-    ftp_delete_after_download: document.getElementById('coreFtpDeleteSelect').value === 'true'
+    ftp_delete_after_download: document.getElementById('coreFtpDeleteToggle') ? document.getElementById('coreFtpDeleteToggle').checked : true
   };
 }
 

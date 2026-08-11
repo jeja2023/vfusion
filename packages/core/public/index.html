@@ -387,7 +387,7 @@
                   <th>所属任务名称 / 关联编号</th>
                   <th>提交时间</th>
                   <th>录入人员</th>
-                  <th>发生地点</th>
+                  <th style="min-width:140px;">发生地点</th>
                   <th>交通方式</th>
                   <th>涉事人员</th>
                   <th>现场照片凭证</th>
@@ -1013,13 +1013,12 @@
             </td>
             <td><code style="font-size:0.8rem; color:var(--text-sub);">${new Date(item.submit_time || item.timestamp).toLocaleString()}</code></td>
             <td><span style="font-weight:600; color:var(--text-main);">${item.operator || '-'}</span></td>
-            <td style="max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${p.location || '-'}"><span style="font-weight:500;">${p.location || '-'}</span></td>
+            <td style="min-width:140px; max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${p.location || '-'}"><span style="font-weight:500;">${p.location || '-'}</span></td>
             <td><span class="ai-tag-badge" style="background:#f0f9ff; color:#0369a1; border-color:#bae6fd; font-weight:600;">${p.transportation || '-'}</span></td>
             <td>${personStr}</td>
             <td><div style="display:flex; gap:0.3rem;">${imgsHtml || '-'}</div></td>
             <td style="text-align:left; white-space:nowrap;">
-              <button class="btn btn-diode" style="padding:0.3rem 0.65rem; font-size:0.775rem;" onclick="event.stopPropagation(); openEventDrawer('${item.event_id}')">详情</button>
-              <button class="btn btn-export" style="padding:0.3rem 0.65rem; font-size:0.775rem; margin-left:0.35rem;" onclick="event.stopPropagation(); downloadEventZip('${item.event_id}')">Zip存照</button>
+              <button class="btn btn-diode" style="padding:0.35rem 0.75rem; font-size:0.775rem;" onclick="event.stopPropagation(); openEventDrawer('${item.event_id}')">详情</button>
             </td>
           </tr>
         `;

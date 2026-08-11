@@ -17,11 +17,15 @@ const DEFAULT_FORM_SCHEMA = {
   version: "2.0.0",
   title: "通用事件信息采集表单",
   fields: [
-    { key: "event_type", label: "事件类型", type: "select", options: ["人员抓拍", "车辆抓拍", "未戴安全帽"], required: true, searchable: true, show_in_table: true },
-    { key: "location", label: "发生地点", type: "text", required: true, searchable: true, show_in_table: true },
-    { key: "threat_level", label: "威胁等级", type: "radio", options: ["高", "中", "低"], required: true, searchable: true, show_in_table: true },
-    { key: "description", label: "事件详细描述", type: "textarea", required: false, searchable: false, show_in_table: false },
-    { key: "device_id", label: "抓拍设备编号", type: "text", required: true, searchable: true, show_in_table: true }
+    { key: "event_time", label: "事件时间", type: "text", required: true, searchable: true, show_in_table: true },
+    { key: "transportation", label: "交通方式", type: "select", options: ["步行", "自行车/电动车", "小型客车", "大型客车", "货车", "轨道交通", "水路/航空", "其他"], required: true, searchable: true, show_in_table: true },
+    { key: "location", label: "地点", type: "text", required: true, searchable: true, show_in_table: true },
+    { key: "longitude", label: "经度", type: "text", required: false, searchable: true, show_in_table: true },
+    { key: "latitude", label: "纬度", type: "text", required: false, searchable: true, show_in_table: true },
+    { key: "description", label: "事件描述", type: "textarea", required: false, searchable: false, show_in_table: false },
+    { key: "person_name", label: "涉事人员姓名", type: "text", required: false, searchable: true, show_in_table: true },
+    { key: "person_id_card", label: "涉事人员身份证号码", type: "text", required: false, searchable: true, show_in_table: true },
+    { key: "person_domicile", label: "涉事人员户籍地址", type: "text", required: false, searchable: false, show_in_table: false }
   ]
 };
 

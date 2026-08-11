@@ -598,6 +598,7 @@
     async function loadSchema() {
       const appId = document.getElementById('appIdSelect').value;
       try {
+        await loadPersonnelList();
         const res = await fetch(`/api/schema?app_id=${appId}`);
         const json = await res.json();
         if (json.success) {
@@ -608,9 +609,59 @@
       } catch (err) { console.error('加载 Schema 失败:', err); }
     }
 
+    let registeredPersonnel = [];
+
+    async function loadPersonnelList() {
+      try {
+        const res = await fetch('/api/personnel');
+        const json = await res.json();
+        if (json.success) registeredPersonnel = json.data || [];
+      } catch (e) {}
+    }
+
+    function autoFillPersonnel(valIdx) {
+      if (valIdx === '') return;
+      const idx = parseInt(valIdx);
+      const person = registeredPersonnel[idx];
+      if (!person) return;
+
+      const nameInput = document.querySelector('input[name="person_name"]');
+      const idInput = document.querySelector('input[name="person_id_card"]');
+      const domicileInput = document.querySelector('input[name="person_domicile"]');
+
+      if (nameInput) nameInput.value = person.name || '';
+      if (idInput) idInput.value = person.id_card || '';
+      if (domicileInput) domicileInput.value = person.domicile || '';
+
+      showToast(`已提取并填入人员: ${person.name} (${person.id_card})`);
+    }
+
     function renderDynamicForm(fields) {
       const grid = document.getElementById('dynamicFormGrid');
       grid.innerHTML = '';
+
+      // 添加“提取已登记人员”快捷组件
+      const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 19);
+
+      if (registeredPersonnel.length > 0) {
+        const pGroup = document.createElement('div');
+        pGroup.className = 'form-group full-width';
+        const optsHtml = registeredPersonnel.map((p, idx) => 
+          `<option value="${idx}">${p.name} - ${p.id_card} (${p.domicile || '户籍未填'})</option>`
+        ).join('');
+
+        pGroup.innerHTML = `
+          <label style="color:var(--primary); font-weight:700; display:flex; align-items:center; gap:0.4rem;">
+            <svg class="icon-svg" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            涉事人员快速提取与填入 (历史档案)
+          </label>
+          <select style="border-color:var(--primary); background:#f0f9ff;" onchange="autoFillPersonnel(this.value)">
+            <option value="">-- 点击选择提取已有人员档案 (自动填入姓名/身份证/户籍) --</option>
+            ${optsHtml}
+          </select>
+        `;
+        grid.appendChild(pGroup);
+      }
 
       (fields || []).forEach(field => {
         const group = document.createElement('div');
@@ -631,7 +682,8 @@
         } else if (field.type === 'textarea') {
           inputHtml = `<textarea name="${field.key}" placeholder="请输入${field.label}" ${field.required ? 'required' : ''}></textarea>`;
         } else {
-          inputHtml = `<input type="text" name="${field.key}" placeholder="请输入${field.label}" ${field.required ? 'required' : ''}>`;
+          const defaultVal = field.key === 'event_time' ? nowStr : '';
+          inputHtml = `<input type="text" name="${field.key}" value="${defaultVal}" placeholder="请输入${field.label}" ${field.required ? 'required' : ''}>`;
         }
 
         group.innerHTML = `

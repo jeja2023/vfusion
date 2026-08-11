@@ -78,6 +78,32 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// 涉事人员库 API
+app.get('/api/personnel', (req, res) => {
+  const db = readCollectorDb();
+  res.json({ success: true, data: db.personnel || [] });
+});
+
+app.post('/api/personnel', (req, res) => {
+  const { name, id_card, domicile } = req.body;
+  if (!name || !id_card) return res.status(400).json({ success: false, error: '姓名与身份证号不能为空' });
+
+  const db = readCollectorDb();
+  if (!db.personnel) db.personnel = [];
+
+  const existingIdx = db.personnel.findIndex(p => p.id_card === id_card || p.name === name);
+  const personRecord = { id: Date.now(), name, id_card, domicile: domicile || '' };
+
+  if (existingIdx >= 0) {
+    db.personnel[existingIdx] = { ...db.personnel[existingIdx], ...personRecord };
+  } else {
+    db.personnel.unshift(personRecord);
+  }
+
+  saveCollectorDb(db);
+  res.json({ success: true, message: '人员档案保存成功', data: personRecord });
+});
+
 // 登录 API
 app.post('/api/auth/login', (req, res) => {
   const { username, password } = req.body;
@@ -266,6 +292,25 @@ app.post('/api/publish', (req, res) => {
         if (!['app_id', 'biz_type', 'operator', 'event_id'].includes(key)) {
           payload[key] = Array.isArray(value) ? value[0] : value;
         }
+      }
+
+      // 如果填写了涉事人员姓名与身份证，自动追加入库到人员档案
+      if (payload.person_name || payload.person_id_card) {
+        const db = readCollectorDb();
+        if (!db.personnel) db.personnel = [];
+        const existingIdx = db.personnel.findIndex(p => (payload.person_id_card && p.id_card === payload.person_id_card) || (payload.person_name && p.name === payload.person_name));
+        const personRec = {
+          id: Date.now(),
+          name: payload.person_name || '未知',
+          id_card: payload.person_id_card || '',
+          domicile: payload.person_domicile || ''
+        };
+        if (existingIdx >= 0) {
+          db.personnel[existingIdx] = { ...db.personnel[existingIdx], ...personRec };
+        } else {
+          db.personnel.unshift(personRec);
+        }
+        saveCollectorDb(db);
       }
 
       const fileList = [];

@@ -233,10 +233,6 @@
         </div>
       </div>
       <div class="header-actions">
-        <select id="appIdSelect" onchange="switchAppTenant()" style="padding:0.45rem 0.75rem; border-radius:8px; border:1px solid var(--border-color); font-weight:600; font-size:0.85rem; background:#ffffff; white-space:nowrap; flex-shrink:0;">
-          <option value="sys_gate_security">门禁安防系统 (sys_gate_security)</option>
-          <option value="sys_factory_monitor">厂区巡检系统 (sys_factory_monitor)</option>
-        </select>
 
         <div class="alert-bell-wrapper">
           <button class="btn btn-diode" style="padding:0.45rem 0.55rem;" onclick="toggleAlertDropdown()">
@@ -801,12 +797,7 @@
       }
     }
 
-    function switchAppTenant() {
-      const appId = document.getElementById('appIdSelect').value;
-      showToast(`切换至应用租户: ${appId}`);
-      fetchData();
-      if (document.getElementById('tab-builder').classList.contains('active')) loadSchema();
-    }
+
 
     async function handleLogin(e) {
       e.preventDefault();
@@ -940,7 +931,7 @@
     }
 
     async function fetchData() {
-      const appId = document.getElementById('appIdSelect').value;
+      const appId = 'sys_gate_security';
       try {
         const [evtRes, logRes] = await Promise.all([fetch(`/api/events?app_id=${appId}`), fetch('/api/audit-logs')]);
         const evtJson = await evtRes.json();
@@ -1257,7 +1248,7 @@
     }
 
     async function loadSchema() {
-      const appId = document.getElementById('appIdSelect').value;
+      const appId = 'sys_gate_security';
       const res = await fetch(`/api/schema?app_id=${appId}`);
       const json = await res.json();
       if (json.success) { currentSchema = json.data; renderSchemaFields(); }
@@ -1300,7 +1291,7 @@
     function removeSchemaField(idx) { currentSchema.fields.splice(idx, 1); renderSchemaFields(); showToast('已移除字段', 'error'); }
 
     async function saveSchemaConfig() {
-      const appId = document.getElementById('appIdSelect').value;
+      const appId = 'sys_gate_security';
       currentSchema.app_id = appId;
       const res = await fetch('/api/schema', {
         method: 'POST',

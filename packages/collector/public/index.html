@@ -185,10 +185,6 @@
         </div>
       </div>
       <div class="header-right">
-        <select id="appIdSelect" onchange="switchAppTenant()" style="padding:0.45rem 0.75rem; border-radius:8px; border:1px solid var(--border-color); font-weight:600; font-size:0.85rem; background:#ffffff; white-space:nowrap; flex-shrink:0;">
-          <option value="sys_gate_security">门禁安防系统 (sys_gate_security)</option>
-          <option value="sys_factory_monitor">厂区巡检系统 (sys_factory_monitor)</option>
-        </select>
         <div class="net-tag">
           <div class="net-dot"></div>
           视频网采集端
@@ -445,11 +441,7 @@
       }
     }
 
-    function switchAppTenant() {
-      const appId = document.getElementById('appIdSelect').value;
-      showToast(`已切换至应用租户: ${appId}`);
-      loadSchema();
-    }
+
 
     async function handleLogin(e) {
       e.preventDefault();
@@ -596,7 +588,7 @@
     }
 
     async function loadSchema() {
-      const appId = document.getElementById('appIdSelect').value;
+      const appId = 'sys_gate_security';
       try {
         await loadPersonnelList();
         const res = await fetch(`/api/schema?app_id=${appId}`);
@@ -748,7 +740,7 @@
     }
 
     async function saveSchemaConfig() {
-      const appId = document.getElementById('appIdSelect').value;
+      const appId = 'sys_gate_security';
       currentSchema.app_id = appId;
       const res = await fetch('/api/schema', {
         method: 'POST',
@@ -807,7 +799,7 @@
       btn.innerHTML = '正在计算摘要校验与数字签名并封装数据包...';
 
       const formData = new FormData(e.target);
-      const appId = document.getElementById('appIdSelect').value;
+      const appId = 'sys_gate_security';
       formData.append('app_id', appId);
       formData.append('event_id', 'EVT_' + Date.now());
 

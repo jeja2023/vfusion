@@ -1000,7 +1000,7 @@
         ).join(' ');
 
         const personStr = p.person_name 
-          ? `<strong style="color:var(--primary); cursor:pointer; text-decoration:underline;" onclick="event.stopPropagation(); showPersonDetailModal('${encodeURIComponent(JSON.stringify(p))}')" title="点击弹窗查看涉事人员完整档案">${p.person_name}</strong>`
+          ? `<strong style="color:var(--primary); cursor:pointer; text-decoration:none;" onclick="event.stopPropagation(); showPersonDetailModal('${encodeURIComponent(JSON.stringify(p))}')" title="点击弹窗查看涉事人员完整档案">${p.person_name}</strong>`
           : '<span style="color:var(--text-muted);">-</span>';
 
         return `

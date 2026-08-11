@@ -638,6 +638,13 @@
 
     function renderDynamicForm(fields) {
       const grid = document.getElementById('dynamicFormGrid');
+
+      // 暂存用户在输入框中已填写的输入值，防止重绘时丢字
+      const existingValues = {};
+      grid.querySelectorAll('input, select, textarea').forEach(el => {
+        if (el.name && el.value) existingValues[el.name] = el.value;
+      });
+
       grid.innerHTML = '';
 
       // 添加“提取已登记人员”快捷组件
@@ -667,23 +674,24 @@
         const group = document.createElement('div');
         group.className = 'form-group' + (field.type === 'textarea' ? ' full-width' : '');
 
+        const curVal = existingValues[field.key] !== undefined ? existingValues[field.key] : (field.key === 'event_time' ? nowStr : '');
+
         let inputHtml = '';
         if (field.type === 'select') {
-          const optsHtml = field.options.map(opt => `<option value="${opt}">${opt}</option>`).join('');
+          const optsHtml = field.options.map(opt => `<option value="${opt}" ${curVal === opt ? 'selected' : ''}>${opt}</option>`).join('');
           inputHtml = `<select name="${field.key}" ${field.required ? 'required' : ''}>${optsHtml}</select>`;
         } else if (field.type === 'radio') {
           const optsHtml = field.options.map((opt, idx) => `
             <label class="radio-label">
-              <input type="radio" name="${field.key}" value="${opt}" ${idx === 0 ? 'checked' : ''}>
+              <input type="radio" name="${field.key}" value="${opt}" ${curVal ? (curVal === opt ? 'checked' : '') : (idx === 0 ? 'checked' : '')}>
               ${opt}
             </label>
           `).join('');
           inputHtml = `<div class="radio-group">${optsHtml}</div>`;
         } else if (field.type === 'textarea') {
-          inputHtml = `<textarea name="${field.key}" placeholder="请输入${field.label}" ${field.required ? 'required' : ''}></textarea>`;
+          inputHtml = `<textarea name="${field.key}" placeholder="请输入${field.label}" ${field.required ? 'required' : ''}>${curVal}</textarea>`;
         } else {
-          const defaultVal = field.key === 'event_time' ? nowStr : '';
-          inputHtml = `<input type="text" name="${field.key}" value="${defaultVal}" placeholder="请输入${field.label}" ${field.required ? 'required' : ''}>`;
+          inputHtml = `<input type="text" name="${field.key}" value="${curVal}" placeholder="请输入${field.label}" ${field.required ? 'required' : ''}>`;
         }
 
         group.innerHTML = `
@@ -828,7 +836,6 @@
     });
 
     checkAuth();
-    setInterval(loadSchema, 6000);
   </script>
 </body>
 </html>

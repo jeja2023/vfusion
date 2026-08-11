@@ -388,7 +388,7 @@
                   <th>涉事人员</th>
                   <th>现场照片凭证</th>
                   <th>AI 提取算法特征</th>
-                  <th style="text-align:right;">操作动作</th>
+                  <th style="text-align:left;">操作</th>
                 </tr>
               </thead>
               <tbody id="eventTableBody">
@@ -1016,7 +1016,7 @@
             <td>${personStr}</td>
             <td><div style="display:flex; gap:0.3rem;">${imgsHtml || '-'}</div></td>
             <td><div style="display:flex; gap:0.25rem; flex-wrap:wrap; align-items:center; max-width:140px;">${aiBadges}</div></td>
-            <td style="text-align:right; white-space:nowrap;">
+            <td style="text-align:left; white-space:nowrap;">
               <button class="btn btn-diode" style="padding:0.3rem 0.65rem; font-size:0.775rem;" onclick="event.stopPropagation(); openEventDrawer('${item.event_id}')">详情</button>
               <button class="btn btn-export" style="padding:0.3rem 0.65rem; font-size:0.775rem; margin-left:0.35rem;" onclick="event.stopPropagation(); downloadEventZip('${item.event_id}')">Zip存照</button>
             </td>

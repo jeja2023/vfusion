@@ -91,7 +91,8 @@ function renderDynamicForm(fields) {
 
   (fields || []).forEach(field => {
     const group = document.createElement('div');
-    group.className = 'form-group' + (field.type === 'textarea' ? ' full-width' : '');
+    const isFullWidth = field.type === 'textarea' || field.key === 'location' || field.key === 'person_domicile';
+    group.className = 'form-group' + (isFullWidth ? ' full-width' : '');
 
     const curVal = existingValues[field.key] !== undefined ? existingValues[field.key] : (field.key === 'event_time' ? nowStr : '');
 
@@ -112,7 +113,7 @@ function renderDynamicForm(fields) {
       `).join('');
       inputHtml = `<div class="radio-group">${optsHtml}</div>`;
     } else if (field.type === 'textarea') {
-      inputHtml = `<textarea name="${safeKey}" placeholder="请输入${safeLabel}" ${field.required ? 'required' : ''}>${safeVal}</textarea>`;
+      inputHtml = `<textarea name="${safeKey}" placeholder="请输入${safeLabel}" style="height:60px; min-height:54px;" ${field.required ? 'required' : ''}>${safeVal}</textarea>`;
     } else {
       inputHtml = `<input type="text" name="${safeKey}" value="${safeVal}" placeholder="请输入${safeLabel}" ${field.required ? 'required' : ''}>`;
     }
@@ -126,28 +127,117 @@ function renderDynamicForm(fields) {
 }
 
 function handleFileSelect(e) {
-  selectedFiles = Array.from(e.target.files);
+  selectedFiles = Array.from(e.target.files).slice(0, 1);
   renderFilePreviews();
 }
 
 function renderFilePreviews() {
-  const container = document.getElementById('previewContainer');
-  if (!container) return;
-  container.innerHTML = '';
+  const promptEl = document.getElementById('uploadPrompt');
+  const previewEl = document.getElementById('uploadPreviewContent');
+  const uploadZone = document.getElementById('uploadZone');
+  if (!promptEl || !previewEl) return;
 
-  selectedFiles.forEach((file, idx) => {
-    const wrapper = document.createElement('div');
-    wrapper.className = 'preview-wrapper';
-    wrapper.innerHTML = `
-      <img class="preview-thumb" src="${URL.createObjectURL(file)}">
-      <button type="button" class="preview-delete-btn" onclick="removeSelectedFile(${idx})">✕</button>
-    `;
-    container.appendChild(wrapper);
+  initUploadZoneDragAndDrop();
+
+  if (selectedFiles.length === 0) {
+    promptEl.style.display = 'block';
+    previewEl.style.display = 'none';
+    previewEl.innerHTML = '';
+    if (uploadZone) {
+      uploadZone.style.padding = '1.25rem';
+      uploadZone.style.background = '#f8fafc';
+      uploadZone.style.borderColor = '#93c5fd';
+    }
+    return;
+  }
+
+  const file = selectedFiles[0];
+  const imgUrl = URL.createObjectURL(file);
+  promptEl.style.display = 'none';
+  previewEl.style.display = 'flex';
+  previewEl.style.width = '100%';
+  previewEl.style.height = '100%';
+  if (uploadZone) {
+    uploadZone.style.padding = '0';
+    uploadZone.style.background = '#0f172a';
+    uploadZone.style.borderColor = '#3b82f6';
+  }
+
+  previewEl.innerHTML = `
+    <div style="position:relative; width:100%; height:100%; min-height:280px; display:flex; align-items:center; justify-content:center; overflow:hidden; background:#0f172a; border-radius:10px;">
+      <!-- 毛玻璃背景 Layer -->
+      <div style="position:absolute; inset:0; background-image:url('${imgUrl}'); background-size:cover; background-position:center; filter:blur(20px) brightness(0.45); transform:scale(1.1); pointer-events:none;"></div>
+      
+      <!-- 主图：自动等比缩放适配容器 (object-fit: contain) -->
+      <img src="${imgUrl}" 
+           title="点击放大预览" 
+           style="position:relative; z-index:1; max-width:96%; max-height:calc(100% - 56px); width:auto; height:auto; object-fit:contain; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.5); cursor:pointer; transition:transform 0.2s ease;" 
+           onmouseover="this.style.transform='scale(1.02)'" 
+           onmouseout="this.style.transform='scale(1.0)'" 
+           onclick="event.stopPropagation(); if(typeof openImageLightbox === 'function') openImageLightbox('${imgUrl}', '现场凭证抓拍大图: ${escapeHtml(file.name)}')">
+      
+      <!-- 底部浮层信息栏 -->
+      <div style="position:absolute; bottom:0; left:0; right:0; z-index:2; background:linear-gradient(to top, rgba(15,23,42,0.95) 0%, rgba(15,23,42,0.7) 75%, transparent 100%); backdrop-filter:blur(8px); padding:0.6rem 0.9rem; border-radius:0 0 10px 10px; display:flex; justify-content:space-between; align-items:center; color:#ffffff;">
+        <div style="display:flex; flex-direction:column; text-align:left; overflow:hidden; padding-right:0.5rem;">
+          <span style="font-size:0.85rem; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</span>
+          <span style="font-size:0.725rem; color:#cbd5e1; font-weight:500;">${(file.size / 1024).toFixed(1)} KB · 自动等比缩放适配就绪</span>
+        </div>
+        <div style="display:flex; gap:0.4rem; flex-shrink:0;">
+          <button type="button" class="btn" style="padding:0.3rem 0.6rem; font-size:0.75rem; white-space:nowrap; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25); color:#fff; cursor:pointer;" onclick="event.stopPropagation(); if(typeof openImageLightbox === 'function') openImageLightbox('${imgUrl}', '现场凭证抓拍大图: ${escapeHtml(file.name)}')">
+            🔍 放大
+          </button>
+          <button type="button" class="btn btn-danger" style="padding:0.3rem 0.75rem; font-size:0.75rem; white-space:nowrap; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.3);" onclick="event.stopPropagation(); removeSelectedFile(0)">
+            更换照片
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function initUploadZoneDragAndDrop() {
+  const uploadZone = document.getElementById('uploadZone');
+  if (!uploadZone || uploadZone.dataset.dragInit) return;
+  uploadZone.dataset.dragInit = 'true';
+
+  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    uploadZone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    }, false);
   });
+
+  ['dragenter', 'dragover'].forEach(eventName => {
+    uploadZone.addEventListener(eventName, () => {
+      uploadZone.classList.add('drag-over');
+    }, false);
+  });
+
+  ['dragleave', 'drop'].forEach(eventName => {
+    uploadZone.addEventListener(eventName, () => {
+      uploadZone.classList.remove('drag-over');
+    }, false);
+  });
+
+  uploadZone.addEventListener('drop', (e) => {
+    const dt = e.dataTransfer;
+    const files = dt ? dt.files : null;
+    if (files && files.length > 0) {
+      const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+      if (imageFiles.length > 0) {
+        selectedFiles = [imageFiles[0]];
+        renderFilePreviews();
+      } else {
+        if (typeof showToast === 'function') showToast('请上传有效的图片凭证文件！', 'error');
+      }
+    }
+  }, false);
 }
 
 function removeSelectedFile(idx) {
-  selectedFiles.splice(idx, 1);
+  selectedFiles = [];
+  const photoInput = document.getElementById('photoInput');
+  if (photoInput) photoInput.value = '';
   renderFilePreviews();
 }
 
@@ -192,9 +282,8 @@ function bindPublishFormSubmit() {
         if (logCard) logCard.scrollIntoView({ behavior: 'smooth' });
 
         e.target.reset();
-        const previewCont = document.getElementById('previewContainer');
-        if (previewCont) previewCont.innerHTML = '';
         selectedFiles = [];
+        renderFilePreviews();
 
         await loadPersonnelList();
         if (typeof currentSchema !== 'undefined' && currentSchema.fields) {

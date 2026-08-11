@@ -101,7 +101,7 @@ const auditStatusMap = {
 };
 
 async function loadPageTemplates() {
-  const pages = ['events', 'analytics', 'builder', 'ftp', 'webhooks', 'audits', 'personnel', 'users', 'errors', 'system'];
+  const pages = ['events', 'builder', 'ftp', 'webhooks', 'audits', 'personnel', 'users', 'errors', 'system'];
   await Promise.all(pages.map(async (p) => {
     try {
       const res = await fetch(`pages/${p}.html`);
@@ -271,19 +271,13 @@ async function markAlertsRead() {
   }
 }
 
-function toggleFullscreenDashboard() {
-  document.body.classList.toggle('fullscreen-mode');
-  showToast(document.body.classList.contains('fullscreen-mode') ? '已进入安防指挥大屏模式' : '已退出大屏模式');
-}
-
 function switchTab(tabId) {
-  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.nav-item, .tab-btn').forEach(btn => btn.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
   if (event && event.currentTarget) event.currentTarget.classList.add('active');
   const targetTab = document.getElementById(tabId);
   if (targetTab) targetTab.classList.add('active');
 
-  if (tabId === 'tab-analytics' && typeof loadAnalytics === 'function') loadAnalytics();
   if (tabId === 'tab-builder' && typeof loadSchema === 'function') loadSchema();
   if (tabId === 'tab-ftp' && typeof loadCoreFtpConfig === 'function') loadCoreFtpConfig();
   if (tabId === 'tab-webhooks' && typeof loadWebhooks === 'function') loadWebhooks();

@@ -176,7 +176,7 @@ function handleLogout() {
 }
 
 function switchTab(tabId) {
-  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.nav-item, .tab-btn').forEach(btn => btn.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
   if (event && event.currentTarget) event.currentTarget.classList.add('active');
   const targetTab = document.getElementById(tabId);

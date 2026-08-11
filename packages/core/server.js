@@ -798,27 +798,6 @@ app.get('/api/events', (req, res) => {
   res.json({ success: true, data: list });
 });
 
-app.get('/api/analytics', (req, res) => {
-  const db = readDb();
-  const events = db.events;
-  const transportStats = {};
-  const typeStats = {};
-
-  const hourlyTrends = Array(24).fill(0);
-  events.forEach(e => {
-    const p = e.payload || {};
-    const trans = p.transportation || '其他';
-    const type = p.biz_type || '通用单据';
-    transportStats[trans] = (transportStats[trans] || 0) + 1;
-    typeStats[type] = (typeStats[type] || 0) + 1;
-
-    const hour = new Date(e.timestamp || e.created_at).getHours();
-    hourlyTrends[hour] = (hourlyTrends[hour] || 0) + 1;
-  });
-
-  res.json({ success: true, data: { transportStats, typeStats, hourlyTrends, totalCount: events.length } });
-});
-
 app.get('/api/webhooks', (req, res) => {
   res.json({ success: true, data: readWebhooks() });
 });

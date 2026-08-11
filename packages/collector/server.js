@@ -176,6 +176,36 @@ app.get('/favicon.ico', (req, res) => res.status(204).end());
 // 统一鉴权：除登录与静态资源外，所有 /api 路由必须携带有效 Token
 app.use('/api', authMiddleware({ publicPaths: ['/api/auth/login'] }));
 
+// 表单 Schema 配置 API（视频网发布端与可视化构建器）
+app.get('/api/schema', (req, res) => {
+  const { app_id } = req.query;
+  const targetFile = app_id ? path.join(STORAGE_ROOT, `schema_${app_id}.json`) : COLLECTOR_SCHEMA_FILE;
+  try {
+    const fileToRead = fs.existsSync(targetFile) ? targetFile : (fs.existsSync(COLLECTOR_SCHEMA_FILE) ? COLLECTOR_SCHEMA_FILE : null);
+    if (fileToRead && fs.existsSync(fileToRead)) {
+      res.json({ success: true, data: JSON.parse(fs.readFileSync(fileToRead, 'utf8')) });
+    } else {
+      res.json({ success: true, data: DEFAULT_FORM_SCHEMA });
+    }
+  } catch (e) {
+    res.json({ success: true, data: DEFAULT_FORM_SCHEMA });
+  }
+});
+
+app.post('/api/schema', (req, res) => {
+  try {
+    const newSchema = req.body;
+    const appId = newSchema.app_id || 'sys_gate_security';
+    const targetFile = path.join(STORAGE_ROOT, `schema_${appId}.json`);
+    writeJsonAtomic(targetFile, newSchema);
+    writeJsonAtomic(COLLECTOR_SCHEMA_FILE, newSchema);
+    addCollectorAuditLog('SCHEMA_UPDATE', `视频网端表单 Schema 已更新 (App: ${appId}, 包含 ${newSchema.fields ? newSchema.fields.length : 0} 个字段)`, 'SUCCESS');
+    res.json({ success: true, message: '视频网端表单 Schema 更新成功' });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // 涉事人员库 API
 app.get('/api/personnel', (req, res) => {
   const db = readCollectorDb();

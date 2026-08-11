@@ -35,9 +35,9 @@
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
-    html, body { height: 100%; overflow-x: hidden; }
-    body { background-color: var(--bg-main); color: var(--text-main); padding: 1.25rem 2rem; display: flex; flex-direction: column; transition: background-color 0.3s ease; }
-    .container { max-width: 100%; width: 100%; margin: 0 auto; display: flex; flex-direction: column; flex: 1; }
+    html, body { height: 100vh; max-height: 100vh; overflow: hidden; margin: 0; padding: 0; }
+    body { background-color: var(--bg-main); color: var(--text-main); padding: 1rem 1.5rem; display: flex; flex-direction: column; height: 100vh; max-height: 100vh; overflow: hidden; transition: background-color 0.3s ease; }
+    .container { max-width: 100%; width: 100%; margin: 0 auto; display: flex; flex-direction: column; flex: 1; height: calc(100vh - 2rem); overflow: hidden; }
 
     header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 0.85rem; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.75rem; flex-shrink: 0; }
     .brand { display: flex; align-items: center; gap: 1rem; flex-shrink: 0; }
@@ -67,8 +67,8 @@
     .tab-btn:hover { color: var(--primary); background: #ffffff; }
     .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); background: #ffffff; box-shadow: var(--shadow-sm); }
 
-    .tab-content { display: none; flex: 1; }
-    .tab-content.active { display: flex; flex-direction: column; }
+    .tab-content { display: none; flex: 1; overflow: hidden; }
+    .tab-content.active { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
 
     .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1rem; flex-shrink: 0; }
     .stat-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow-sm); }
@@ -84,7 +84,7 @@
 
     .split-col { display: flex; flex-direction: column; gap: 0.85rem; }
 
-    .card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem 1.5rem; box-shadow: var(--shadow-md); margin-bottom: 1rem; flex: 1; display: flex; flex-direction: column; }
+    .card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem 1.5rem; box-shadow: var(--shadow-md); margin-bottom: 0.5rem; flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
     .card-title { font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; flex-shrink: 0; }
 
     .filter-bar { display: flex; gap: 0.65rem; margin-bottom: 1rem; flex-wrap: wrap; flex-shrink: 0; }

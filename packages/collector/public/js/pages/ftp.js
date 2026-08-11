@@ -11,6 +11,7 @@ async function loadCollectorFtpConfig() {
       if (document.getElementById('collFtpPasswordInput')) document.getElementById('collFtpPasswordInput').value = d.ftp_password || '';
       if (document.getElementById('collFtpRemoteDirInput')) document.getElementById('collFtpRemoteDirInput').value = d.ftp_remote_dir || '/vfusion_packages';
       if (document.getElementById('collPkgPrefixInput')) document.getElementById('collPkgPrefixInput').value = d.pkg_prefix || 'vfusion_';
+      if (document.getElementById('collFtpExtSelect')) document.getElementById('collFtpExtSelect').value = d.ftp_file_ext || '.jpg';
     }
   } catch (e) {
     console.error('加载视频网端 FTP 配置失败:', e);
@@ -25,7 +26,8 @@ function getCollectorFtpFormValues() {
     ftp_user: document.getElementById('collFtpUserInput').value.trim(),
     ftp_password: document.getElementById('collFtpPasswordInput').value,
     ftp_remote_dir: document.getElementById('collFtpRemoteDirInput').value.trim() || '/vfusion_packages',
-    pkg_prefix: document.getElementById('collPkgPrefixInput').value.trim() || 'vfusion_'
+    pkg_prefix: document.getElementById('collPkgPrefixInput').value.trim() || 'vfusion_',
+    ftp_file_ext: document.getElementById('collFtpExtSelect') ? document.getElementById('collFtpExtSelect').value : '.jpg'
   };
 }
 

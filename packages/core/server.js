@@ -864,7 +864,8 @@ app.get('/api/config/security', requireRole('admin'), (req, res) => {
         ftp_delete_after_download: sec.ftp_delete_after_download !== false,
         ftp_in_dir: sec.ftp_in_dir || getFtpInDir(),
         ftp_out_dir: sec.ftp_out_dir || getFtpOutDir(),
-        pkg_prefix: sec.pkg_prefix || getPkgPrefix()
+        pkg_prefix: sec.pkg_prefix || getPkgPrefix(),
+        ftp_file_ext: sec.ftp_file_ext || '.jpg'
       }
     });
   } catch (e) {
@@ -882,7 +883,8 @@ app.get('/api/config/security', requireRole('admin'), (req, res) => {
         ftp_delete_after_download: true,
         ftp_in_dir: getFtpInDir(),
         ftp_out_dir: getFtpOutDir(),
-        pkg_prefix: getPkgPrefix()
+        pkg_prefix: getPkgPrefix(),
+        ftp_file_ext: '.jpg'
       }
     });
   }
@@ -890,7 +892,7 @@ app.get('/api/config/security', requireRole('admin'), (req, res) => {
 
 app.post('/api/config/security', requireRole('admin'), (req, res) => {
   const {
-    hmac_secret, auto_diode_interval, ftp_in_dir, ftp_out_dir, pkg_prefix,
+    hmac_secret, auto_diode_interval, ftp_in_dir, ftp_out_dir, pkg_prefix, ftp_file_ext,
     ftp_enabled, ftp_host, ftp_port, ftp_user, ftp_password, ftp_remote_dir, ftp_delete_after_download
   } = req.body;
   try {
@@ -917,6 +919,7 @@ app.post('/api/config/security', requireRole('admin'), (req, res) => {
     if (typeof ftp_in_dir === 'string') sec.ftp_in_dir = ftp_in_dir;
     if (typeof ftp_out_dir === 'string') sec.ftp_out_dir = ftp_out_dir;
     if (typeof pkg_prefix === 'string') sec.pkg_prefix = pkg_prefix;
+    if (typeof ftp_file_ext === 'string') sec.ftp_file_ext = ftp_file_ext;
 
     writeJsonAtomic(SECURITY_CONFIG_FILE, sec);
 

@@ -11,6 +11,7 @@ async function loadCoreFtpConfig() {
       if (document.getElementById('coreFtpPasswordInput')) document.getElementById('coreFtpPasswordInput').value = d.ftp_password || '';
       if (document.getElementById('coreFtpRemoteDirInput')) document.getElementById('coreFtpRemoteDirInput').value = d.ftp_remote_dir || '/vfusion_packages';
       if (document.getElementById('corePkgPrefixInput')) document.getElementById('corePkgPrefixInput').value = d.pkg_prefix || 'vfusion_';
+      if (document.getElementById('coreFtpExtSelect')) document.getElementById('coreFtpExtSelect').value = d.ftp_file_ext || '.jpg';
       if (document.getElementById('coreFtpDeleteSelect')) document.getElementById('coreFtpDeleteSelect').value = String(d.ftp_delete_after_download !== false);
     }
   } catch (e) {
@@ -30,6 +31,7 @@ function getCoreFtpFormValues() {
     ftp_password: document.getElementById('coreFtpPasswordInput').value,
     ftp_remote_dir: document.getElementById('coreFtpRemoteDirInput').value.trim() || '/vfusion_packages',
     pkg_prefix: document.getElementById('corePkgPrefixInput').value.trim() || 'vfusion_',
+    ftp_file_ext: document.getElementById('coreFtpExtSelect') ? document.getElementById('coreFtpExtSelect').value : '.jpg',
     ftp_delete_after_download: document.getElementById('coreFtpDeleteSelect').value === 'true'
   };
 }

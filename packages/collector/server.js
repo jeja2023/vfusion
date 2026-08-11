@@ -551,14 +551,15 @@ app.get('/api/config/ftp', (req, res) => {
           ftp_user: sec.ftp_user || '',
           ftp_password: sec.ftp_password ? '********' : '',
           ftp_remote_dir: sec.ftp_remote_dir || '/vfusion_packages',
-          pkg_prefix: sec.pkg_prefix || 'vfusion_'
+          pkg_prefix: sec.pkg_prefix || 'vfusion_',
+          ftp_file_ext: sec.ftp_file_ext || '.jpg'
         }
       });
     }
   } catch (e) {}
   res.json({
     success: true,
-    data: { ftp_enabled: false, ftp_host: '', ftp_port: 21, ftp_user: '', ftp_password: '', ftp_remote_dir: '/vfusion_packages', pkg_prefix: 'vfusion_' }
+    data: { ftp_enabled: false, ftp_host: '', ftp_port: 21, ftp_user: '', ftp_password: '', ftp_remote_dir: '/vfusion_packages', pkg_prefix: 'vfusion_', ftp_file_ext: '.jpg' }
   });
 });
 
@@ -568,7 +569,7 @@ app.post('/api/config/ftp', requireRole('admin'), (req, res) => {
     if (fs.existsSync(SECURITY_CONFIG_FILE)) {
       sec = JSON.parse(fs.readFileSync(SECURITY_CONFIG_FILE, 'utf8'));
     }
-    const { ftp_enabled, ftp_host, ftp_port, ftp_user, ftp_password, ftp_remote_dir, pkg_prefix } = req.body;
+    const { ftp_enabled, ftp_host, ftp_port, ftp_user, ftp_password, ftp_remote_dir, pkg_prefix, ftp_file_ext } = req.body;
     if (typeof ftp_enabled === 'boolean') sec.ftp_enabled = ftp_enabled;
     if (typeof ftp_host === 'string') sec.ftp_host = ftp_host;
     if (typeof ftp_port === 'number' || typeof ftp_port === 'string') sec.ftp_port = parseInt(ftp_port) || 21;
@@ -578,6 +579,7 @@ app.post('/api/config/ftp', requireRole('admin'), (req, res) => {
     }
     if (typeof ftp_remote_dir === 'string') sec.ftp_remote_dir = ftp_remote_dir;
     if (typeof pkg_prefix === 'string') sec.pkg_prefix = pkg_prefix;
+    if (typeof ftp_file_ext === 'string') sec.ftp_file_ext = ftp_file_ext;
 
     writeJsonAtomic(SECURITY_CONFIG_FILE, sec);
     addCollectorAuditLog('FTP_CONFIG', `视频网端配置第三方 FTP 服务器 (${sec.ftp_enabled ? '已启用' : '未启用'}, Host: ${sec.ftp_host}:${sec.ftp_port})`, 'SUCCESS');

@@ -60,6 +60,14 @@
       </div>
 
       <div class="form-group">
+        <label>FTP 传输文件后缀 (Ext Filter / Policy)</label>
+        <select id="coreFtpExtSelect">
+          <option value=".jpg">.jpg (强安全网闸伪装模式 - 仅放行 .jpg 文件)</option>
+          <option value=".zip">.zip (标准 Zip 压缩包模式)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
         <label>下载后自动清理远程文件 (Auto Clean)</label>
         <select id="coreFtpDeleteSelect">
           <option value="true">开启 (推荐，下载入库后自动删除远程包防重复)</option>

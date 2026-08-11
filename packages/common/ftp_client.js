@@ -47,14 +47,24 @@ async function uploadToRemoteFtp(localFilePath, remoteFileName, config) {
   try {
     const remoteDir = config.ftp_remote_dir || '/';
     await client.ensureDir(remoteDir);
-    const remotePath = path.posix.join(remoteDir, remoteFileName);
+
+    // 根据配置判定后缀伪装：若网闸策略设为 .jpg (默认)，将文件名后缀转为 .jpg
+    const targetExt = (config && config.ftp_file_ext) || '.jpg';
+    let finalRemoteName = remoteFileName;
+    if (targetExt === '.jpg' && finalRemoteName.endsWith('.zip')) {
+      finalRemoteName = finalRemoteName.slice(0, -4) + '.jpg';
+    } else if (targetExt === '.zip' && finalRemoteName.endsWith('.jpg')) {
+      finalRemoteName = finalRemoteName.slice(0, -4) + '.zip';
+    }
+
+    const remotePath = path.posix.join(remoteDir, finalRemoteName);
     const tmpRemotePath = `${remotePath}.tmp`;
 
-    // 采用原子写入方式：先上传 .tmp，再重命名为 .zip，规避内网并发未传完即被抓取
+    // 采用原子写入方式：先上传 .tmp，再重命名为目标后缀 (.jpg 或 .zip)，规避并发未传完即被抓取
     await client.uploadFrom(localFilePath, tmpRemotePath);
     await client.rename(tmpRemotePath, remotePath);
     client.close();
-    return { success: true, remotePath };
+    return { success: true, remotePath, remoteFileName: finalRemoteName };
   } catch (err) {
     client.close();
     throw err;
@@ -73,11 +83,11 @@ async function downloadFromRemoteFtp(localDownloadDir, config, prefix = 'vfusion
     await client.ensureDir(remoteDir);
     const list = await client.list();
 
-    // 只过滤符合视汇前缀 (如 vfusion_) 且为 .zip 的文件，忽略第三方其他无关系文件
+    // 过滤符合视汇前缀 (如 vfusion_) 且后缀为 .jpg 或 .zip 的数据包（支持强网闸 .jpg 伪装策略）
     const targetFiles = list.filter(item =>
       (item.isFile || item.type === 1) &&
       item.name.startsWith(prefix) &&
-      item.name.endsWith('.zip') &&
+      (item.name.endsWith('.jpg') || item.name.endsWith('.zip')) &&
       !item.name.endsWith('.tmp')
     );
 

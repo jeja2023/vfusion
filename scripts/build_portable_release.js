@@ -52,6 +52,15 @@ try {
   console.warn('复制 node_modules 注意事项:', e.message);
 }
 
+// 复制 Node.js 绿色二进制文件 (保证目标电脑未安装 Node 也能零配置秒级双击启动)
+console.log('[1.5/4] 正在内置 Node.js 绿色运行引擎 (node.exe)...');
+try {
+  fs.copyFileSync(process.execPath, path.join(PORTABLE_DIR, 'node.exe'));
+  console.log('✓ 成功嵌入独立 Node.exe 运行引擎');
+} catch (e) {
+  console.warn('警告: 嵌入 node.exe 失败:', e.message);
+}
+
 fs.copyFileSync(path.join(ROOT_DIR, 'package.json'), path.join(PORTABLE_DIR, 'package.json'));
 fs.copyFileSync(path.join(ROOT_DIR, 'README.md'), path.join(PORTABLE_DIR, 'README.md'));
 fs.copyFileSync(path.join(ROOT_DIR, '更新日志.md'), path.join(PORTABLE_DIR, '更新日志.md'));
@@ -59,38 +68,62 @@ fs.copyFileSync(path.join(ROOT_DIR, '更新日志.md'), path.join(PORTABLE_DIR, 
 // 3. 生成一键双击批处理脚本 (.bat)
 console.log('[2/4] 正在生成 Windows 一键启动双击批处理脚本 (.bat)...');
 
-const batCollector = `@echo off
-chcp 65001 >nul
+const batCollector = `\uFEFF@echo off
+@chcp 65001 >nul
+setlocal enabledelayedexpansion
+cd /d "%~dp0"
+if exist "%~dp0node.exe" (
+  set "NODE_BIN=%~dp0node.exe"
+) else (
+  set "NODE_BIN=node"
+)
+
 title 视汇 - 视频网数据采集与发布终端 (v0.10.0)
 echo ===================================================
 echo   正在启动 [视汇 - 视频网数据采集/发布终端] ...
 echo   端口: 4001
 echo ===================================================
-node packages/collector/server.js
+"!NODE_BIN!" packages/collector/server.js
 pause
 `;
 
-const batCore = `@echo off
-chcp 65001 >nul
+const batCore = `\uFEFF@echo off
+@chcp 65001 >nul
+setlocal enabledelayedexpansion
+cd /d "%~dp0"
+if exist "%~dp0node.exe" (
+  set "NODE_BIN=%~dp0node.exe"
+) else (
+  set "NODE_BIN=node"
+)
+
 title 视汇 - 内网数据汇聚与管理中台 (v0.10.0)
 echo ===================================================
 echo   正在启动 [视汇 - 内网数据汇聚与管理中台] ...
 echo   端口: 4002
 echo ===================================================
-node packages/core/server.js
+"!NODE_BIN!" packages/core/server.js
 pause
 `;
 
-const batAll = `@echo off
-chcp 65001 >nul
+const batAll = `\uFEFF@echo off
+@chcp 65001 >nul
+setlocal enabledelayedexpansion
+cd /d "%~dp0"
+if exist "%~dp0node.exe" (
+  set "NODE_BIN=%~dp0node.exe"
+) else (
+  set "NODE_BIN=node"
+)
+
 title 视汇 (VFusion v0.10.0) - 一键双端服务启动器
 echo ===================================================
 echo   视汇通用跨隔离网数据交换与汇聚中台 (v0.10.0)
 echo ===================================================
 echo 1. 正在启动 [视频网数据采集/发布终端] (Port 4001)...
-start "视汇-视频网发布终端(4001)" cmd /k "node packages/collector/server.js"
+start "视汇-视频网发布终端(4001)" cmd /k ""!NODE_BIN!" packages/collector/server.js"
 echo 2. 正在启动 [内网数据汇聚与管理中台] (Port 4002)...
-start "视汇-内网数据汇聚与管理中台(4002)" cmd /k "node packages/core/server.js"
+start "视汇-内网数据汇聚与管理中台(4002)" cmd /k ""!NODE_BIN!" packages/core/server.js"
 echo.
 echo 双端服务已在后台启动完成！
 echo - 本机视频网终端: http://localhost:4001

@@ -108,19 +108,19 @@ pause
 
 const batAll = `@echo off
 cd /d "%~dp0"
-set NODE_EXE=%~dp0node.exe
-if not exist "%NODE_EXE%" set NODE_EXE=node
 
 title 视汇 (VFusion v0.10.0) - 一键双端服务启动器
 echo ===================================================
 echo   视汇通用跨隔离网数据交换与汇聚中台 (v0.10.0)
 echo ===================================================
 echo 1. 正在启动 [视频网数据采集/发布终端] (Port 4001)...
-start "视汇-视频网发布终端(4001)" "%NODE_EXE%" packages/collector/server.js
+start "视汇-视频网发布终端(4001)" "%~dp0启动视频网发布终端(4001).bat"
+
 echo 2. 正在启动 [内网数据汇聚与管理中台] (Port 4002)...
-start "视汇-内网数据汇聚与管理中台(4002)" "%NODE_EXE%" packages/core/server.js
+start "视汇-内网数据中台(4002)" "%~dp0启动内网数据中台(4002).bat"
+
 echo.
-echo 双端服务已在后台启动完成！
+echo 双端服务已成功分别在两个独立的命令行窗口中启动！
 echo - 本机视频网终端: http://localhost:4001
 echo - 本机内网中台: http://localhost:4002
 echo.

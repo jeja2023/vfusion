@@ -440,6 +440,128 @@ async function scanLoop() {
 
 setInterval(scanLoop, 3000);
 
+// ========== FTP 远程自动轮询拉取引擎 ==========
+let ftpPollTimer = null;
+let ftpPollStatus = { running: false, lastPollTime: null, lastResult: null, downloadedTotal: 0, errorCount: 0 };
+
+function getFtpConfig() {
+  try {
+    if (fs.existsSync(SECURITY_CONFIG_FILE)) {
+      return JSON.parse(fs.readFileSync(SECURITY_CONFIG_FILE, 'utf8'));
+    }
+  } catch (e) {}
+  return null;
+}
+
+async function ftpPollLoop() {
+  if (ftpPollStatus.running) return; // 防止并发重入
+  const sec = getFtpConfig();
+  if (!sec || !sec.ftp_enabled || !sec.ftp_host) return;
+
+  ftpPollStatus.running = true;
+  ftpPollStatus.lastPollTime = new Date().toISOString();
+
+  try {
+    const ftpInDir = getFtpInDir();
+    if (!fs.existsSync(ftpInDir)) fs.mkdirSync(ftpInDir, { recursive: true });
+    const prefix = getPkgPrefix();
+
+    const downloadedFiles = await downloadFromRemoteFtp(ftpInDir, sec, prefix);
+
+    if (downloadedFiles.length > 0) {
+      ftpPollStatus.downloadedTotal += downloadedFiles.length;
+      ftpPollStatus.lastResult = `成功拉取 ${downloadedFiles.length} 个数据包: ${downloadedFiles.join(', ')}`;
+      addAuditLog('FTP_POLL', `从远程 FTP [${sec.ftp_host}:${sec.ftp_port || 21}] 自动拉取了 ${downloadedFiles.length} 个数据包`, 'SUCCESS');
+      console.log(`[VFusion Core FTP] 从远程 FTP 拉取了 ${downloadedFiles.length} 个包: ${downloadedFiles.join(', ')}`);
+    } else {
+      ftpPollStatus.lastResult = '远程 FTP 目录暂无新数据包';
+    }
+  } catch (err) {
+    ftpPollStatus.errorCount++;
+    ftpPollStatus.lastResult = `轮询异常: ${err.message}`;
+    addAuditLog('FTP_POLL', `远程 FTP 轮询拉取失败: ${err.message}`, 'WARN');
+    console.error('[VFusion Core FTP] 远程轮询异常:', err.message);
+  } finally {
+    ftpPollStatus.running = false;
+  }
+}
+
+function setFtpPollInterval(seconds) {
+  if (ftpPollTimer) { clearInterval(ftpPollTimer); ftpPollTimer = null; }
+  if (seconds > 0) {
+    ftpPollTimer = setInterval(ftpPollLoop, seconds * 1000);
+    console.log(`[VFusion Core FTP] FTP 远程自动轮询已启动 (每 ${seconds} 秒拉取一次)`);
+  } else {
+    console.log('[VFusion Core FTP] FTP 远程自动轮询已停止');
+  }
+}
+
+// 服务器启动时自动检测并启用 FTP 轮询
+function bootFtpPoll() {
+  try {
+    const sec = getFtpConfig();
+    if (sec && sec.ftp_enabled && sec.ftp_host) {
+      const interval = sec.ftp_poll_interval || 10;
+      setFtpPollInterval(interval);
+      addAuditLog('FTP_POLL', `服务启动时自动启用 FTP 远程轮询 (每 ${interval} 秒)`, 'INFO');
+    }
+  } catch (e) {}
+}
+
+// 手动触发一次 FTP 拉取
+app.post('/api/ftp/pull', async (req, res) => {
+  try {
+    const sec = getFtpConfig();
+    if (!sec || !sec.ftp_enabled || !sec.ftp_host) {
+      return res.status(400).json({ success: false, error: '未配置或未启用第三方 FTP 服务器，请先在 FTP 配置页面填写并启用' });
+    }
+    const ftpInDir = getFtpInDir();
+    if (!fs.existsSync(ftpInDir)) fs.mkdirSync(ftpInDir, { recursive: true });
+    const prefix = getPkgPrefix();
+
+    const downloadedFiles = await downloadFromRemoteFtp(ftpInDir, sec, prefix);
+    addAuditLog('FTP_PULL', `管理员手动触发 FTP 拉取，下载了 ${downloadedFiles.length} 个数据包`, downloadedFiles.length > 0 ? 'SUCCESS' : 'INFO');
+    res.json({
+      success: true,
+      message: downloadedFiles.length > 0
+        ? `成功从远程 FTP 拉取 ${downloadedFiles.length} 个数据包: ${downloadedFiles.join(', ')}`
+        : '远程 FTP 目录中暂无匹配的新数据包',
+      data: { files: downloadedFiles, count: downloadedFiles.length }
+    });
+  } catch (err) {
+    addAuditLog('FTP_PULL', `手动 FTP 拉取失败: ${err.message}`, 'ERROR');
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// FTP 轮询状态查询
+app.get('/api/ftp/poll-status', (req, res) => {
+  const sec = getFtpConfig();
+  res.json({
+    success: true,
+    data: {
+      enabled: !!(sec && sec.ftp_enabled && sec.ftp_host),
+      poll_interval: sec ? (sec.ftp_poll_interval || 10) : 0,
+      timer_active: !!ftpPollTimer,
+      ...ftpPollStatus
+    }
+  });
+});
+
+// FTP 轮询间隔控制
+app.post('/api/ftp/poll-interval', (req, res) => {
+  const { interval } = req.body;
+  const seconds = parseInt(interval) || 0;
+  try {
+    const sec = getFtpConfig() || {};
+    sec.ftp_poll_interval = seconds;
+    writeJsonAtomic(SECURITY_CONFIG_FILE, sec);
+    setFtpPollInterval(seconds);
+    addAuditLog('FTP_POLL', `FTP 远程自动轮询间隔已更新为 ${seconds} 秒 (${seconds > 0 ? '启用' : '停止'})`, 'SUCCESS');
+    res.json({ success: true, message: seconds > 0 ? `FTP 自动轮询已启动 (每 ${seconds} 秒)` : 'FTP 自动轮询已停止' });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 let autoDiodeTimer = null;
 function setAutoDiodeInterval(seconds) {
   if (autoDiodeTimer) { clearInterval(autoDiodeTimer); autoDiodeTimer = null; }
@@ -705,6 +827,15 @@ app.post('/api/config/security', (req, res) => {
     if (typeof pkg_prefix === 'string') sec.pkg_prefix = pkg_prefix;
 
     writeJsonAtomic(SECURITY_CONFIG_FILE, sec);
+
+    // 保存后自动启停 FTP 轮询引擎
+    if (sec.ftp_enabled && sec.ftp_host) {
+      const pollInterval = sec.ftp_poll_interval || 10;
+      setFtpPollInterval(pollInterval);
+    } else {
+      setFtpPollInterval(0);
+    }
+
     addAuditLog('FTP_CONFIG', `第三方 FTP 通道配置更新 (${sec.ftp_enabled ? '启用' : '关闭'}, Host: ${sec.ftp_host}:${sec.ftp_port})`, 'SUCCESS');
     res.json({ success: true, message: '安全与 FTP 通道可视化配置更新成功' });
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
@@ -887,4 +1018,7 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(` 局域网/其他电脑访问地址: http://${ip}:${PORT}`);
   });
   console.log(`===================================================`);
+
+  // 启动时自动检测并开启 FTP 远程轮询
+  bootFtpPoll();
 });

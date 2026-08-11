@@ -647,28 +647,31 @@
 
       grid.innerHTML = '';
 
-      // 添加“提取已登记人员”快捷组件
       const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 19);
 
-      if (registeredPersonnel.length > 0) {
-        const pGroup = document.createElement('div');
-        pGroup.className = 'form-group full-width';
-        const optsHtml = registeredPersonnel.map((p, idx) => 
-          `<option value="${idx}">${p.name} - ${p.id_card} (${p.domicile || '户籍未填'})</option>`
-        ).join('');
+      // 总是显眼呈现涉事人员历史档案快速提取控件
+      const pGroup = document.createElement('div');
+      pGroup.className = 'form-group full-width';
+      pGroup.style.cssText = 'background:#eff6ff; border:1.5px dashed #3b82f6; padding:0.85rem 1rem; border-radius:10px; margin-bottom:0.25rem;';
+      
+      const optsHtml = registeredPersonnel.length > 0
+        ? registeredPersonnel.map((p, idx) => `<option value="${idx}">${p.name} - 身份证: ${p.id_card || '未填'} (户籍: ${p.domicile || '未填'})</option>`).join('')
+        : '<option value="" disabled>暂无历史人员档案 (首次录入提交后将自动存档)</option>';
 
-        pGroup.innerHTML = `
-          <label style="color:var(--primary); font-weight:700; display:flex; align-items:center; gap:0.4rem;">
-            <svg class="icon-svg" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-            涉事人员快速提取与填入 (历史档案)
-          </label>
-          <select style="border-color:var(--primary); background:#f0f9ff;" onchange="autoFillPersonnel(this.value)">
-            <option value="">-- 点击选择提取已有人员档案 (自动填入姓名/身份证/户籍) --</option>
-            ${optsHtml}
-          </select>
-        `;
-        grid.appendChild(pGroup);
-      }
+      pGroup.innerHTML = `
+        <label style="color:#1d4ed8; font-weight:700; font-size:0.875rem; display:flex; align-items:center; justify-content:space-between;">
+          <span style="display:flex; align-items:center; gap:0.45rem;">
+            <svg class="icon-svg" viewBox="0 0 24 24" style="color:#2563eb;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 1 0 7.75"/></svg>
+            涉事人员历史档案 (点击选择一键填入)
+          </span>
+          <span style="font-size:0.75rem; font-weight:normal; color:#2563eb;">已有 ${registeredPersonnel.length} 人档案</span>
+        </label>
+        <select id="personnelSelectBox" style="border:1px solid #93c5fd; background:#ffffff; font-weight:600; cursor:pointer;" onchange="autoFillPersonnel(this.value)">
+          <option value="">-- 点击下拉框选择已登记人员 (自动填入姓名/身份证/户籍) --</option>
+          ${optsHtml}
+        </select>
+      `;
+      grid.appendChild(pGroup);
 
       (fields || []).forEach(field => {
         const group = document.createElement('div');
@@ -824,6 +827,10 @@
           e.target.reset();
           document.getElementById('previewContainer').innerHTML = '';
           selectedFiles = [];
+
+          // 提交成功后立即同步最新涉事人员档案库，并即时更新提取下拉框
+          await loadPersonnelList();
+          renderDynamicForm(currentSchema.fields);
         } else { showToast('打包失败: ' + result.error, 'error'); }
       } catch (err) { showToast('提交异常: ' + err.message, 'error'); }
       finally {

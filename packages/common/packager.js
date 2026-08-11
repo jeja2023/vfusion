@@ -14,6 +14,9 @@ async function packEventPackage(options) {
     bizType,
     eventId,
     operator,
+    operatorUsername,
+    operatorName,
+    submitTime,
     payload,
     files = [],
     schema = null
@@ -45,6 +48,9 @@ async function packEventPackage(options) {
     bizType,
     eventId,
     operator,
+    operatorUsername,
+    operatorName,
+    submitTime,
     payload,
     files: processedFiles
   });

@@ -810,7 +810,17 @@
       const appId = document.getElementById('appIdSelect').value;
       formData.append('app_id', appId);
       formData.append('event_id', 'EVT_' + Date.now());
-      if (currentUser) formData.append('operator', currentUser.name);
+
+      if (currentUser) {
+        formData.append('operator', `${currentUser.name} (${currentUser.username})`);
+        formData.append('operator_username', currentUser.username);
+        formData.append('operator_name', currentUser.name);
+      } else {
+        formData.append('operator', '视频网操作员 (operator)');
+        formData.append('operator_username', 'operator');
+        formData.append('operator_name', '视频网操作员');
+      }
+      formData.append('submit_time', new Date().toISOString());
 
       try {
         const res = await fetch('/api/publish', { method: 'POST', body: formData });

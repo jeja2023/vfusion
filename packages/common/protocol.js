@@ -29,14 +29,18 @@ const DEFAULT_FORM_SCHEMA = {
   ]
 };
 
-function createInfoJson({ appId, bizType, eventId, operator, payload, files }) {
+function createInfoJson({ appId, bizType, eventId, operator, operatorUsername, operatorName, submitTime, payload, files }) {
+  const nowStr = submitTime || new Date().toISOString();
   return {
     version: "2.0.0",
     app_id: appId,
     biz_type: bizType,
     event_id: eventId,
-    timestamp: new Date().toISOString(),
-    operator: operator,
+    timestamp: nowStr,
+    submit_time: nowStr,
+    operator: operator || `${operatorName || '操作员'} (${operatorUsername || 'operator'})`,
+    operator_username: operatorUsername || 'operator',
+    operator_name: operatorName || '操作员',
     payload: payload,
     files: files,
     signature: ""

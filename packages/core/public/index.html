@@ -996,25 +996,14 @@
       tbody.innerHTML = filtered.map((item, idx) => {
         const p = item.payload || {};
         
-        // 优雅极简短化呈现 AI 算法提取特征，增加 Tooltip 完整提示
-        const aiBadges = (item.ai_tags || ['AI识别']).map(t => {
-          let badgeText = t;
-          let badgeStyle = 'background:#f0f9ff; color:#0284c7; border-color:#bae6fd;';
-          if (t.includes('MD5+HMAC')) {
-            badgeText = 'HMAC防篡改';
-            badgeStyle = 'background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe;';
-          } else if (t.includes('YOLOv8')) {
-            badgeText = 'YOLOv8';
-            badgeStyle = 'background:#f0fdf4; color:#15803d; border-color:#bbf7d0;';
-          } else if (t.includes('FaceNet')) {
-            badgeText = 'FaceNet';
-            badgeStyle = 'background:#faf5ff; color:#7e22ce; border-color:#e9d5ff;';
-          } else if (t.includes('AI交通工具')) {
-            badgeText = 'AI识别';
-            badgeStyle = 'background:#fff7ed; color:#c2410c; border-color:#ffedd5;';
-          }
-          return `<span class="ai-tag-badge" style="font-size:0.7rem; padding:0.15rem 0.4rem; ${badgeStyle} border-radius:4px; white-space:nowrap; font-weight:600;" title="${t}">${badgeText}</span>`;
-        }).join('');
+        // 标准无特殊彩色样式呈现 AI 算法提取特征字段
+        const aiText = (item.ai_tags || ['AI识别']).map(t => {
+          if (t.includes('MD5+HMAC')) return 'HMAC防篡改';
+          if (t.includes('YOLOv8')) return 'YOLOv8';
+          if (t.includes('FaceNet')) return 'FaceNet';
+          if (t.includes('AI交通工具')) return 'AI识别';
+          return t;
+        }).join('、');
 
         const imgsHtml = (item.files || []).map(f => 
           `<img src="${f.url}" style="width:34px; height:34px; object-fit:cover; border-radius:6px; border:1px solid var(--border-color); cursor:pointer; transition:transform 0.15s;" onclick="event.stopPropagation(); openImageLightbox('${f.url}', '现场存照凭证放大预览 (${f.filename || '001.jpg'})')" title="点击在弹窗中放大查看">`
@@ -1038,7 +1027,7 @@
             <td><span class="ai-tag-badge" style="background:#f0f9ff; color:#0369a1; border-color:#bae6fd; font-weight:600;">${p.transportation || '-'}</span></td>
             <td>${personStr}</td>
             <td><div style="display:flex; gap:0.3rem;">${imgsHtml || '-'}</div></td>
-            <td><div style="display:flex; gap:0.25rem; flex-wrap:wrap; align-items:center; max-width:140px;">${aiBadges}</div></td>
+            <td><span style="color:var(--text-sub); font-size:0.8rem;" title="${(item.ai_tags || []).join('\n')}">${aiText || '-'}</span></td>
             <td style="text-align:left; white-space:nowrap;">
               <button class="btn btn-diode" style="padding:0.3rem 0.65rem; font-size:0.775rem;" onclick="event.stopPropagation(); openEventDrawer('${item.event_id}')">详情</button>
               <button class="btn btn-export" style="padding:0.3rem 0.65rem; font-size:0.775rem; margin-left:0.35rem;" onclick="event.stopPropagation(); downloadEventZip('${item.event_id}')">Zip存照</button>

@@ -1,0 +1,360 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "admin",
+      "password": "123",
+      "name": "视频网管理员",
+      "role": "admin",
+      "status": "active"
+    },
+    {
+      "id": 2,
+      "username": "operator",
+      "password": "123",
+      "name": "视频网操作员",
+      "role": "operator",
+      "status": "active"
+    },
+    {
+      "id": 3,
+      "username": "auditor",
+      "password": "123",
+      "name": "视频网审计员",
+      "role": "auditor",
+      "status": "active"
+    }
+  ],
+  "audit_logs": [
+    {
+      "id": 1786417855629,
+      "timestamp": "2026-08-11T03:10:55.629Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786417048753,
+      "timestamp": "2026-08-11T02:57:28.753Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786416903763,
+      "timestamp": "2026-08-11T02:55:03.763Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786416548254,
+      "timestamp": "2026-08-11T02:49:08.254Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786416446577,
+      "timestamp": "2026-08-11T02:47:26.577Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786416287114,
+      "timestamp": "2026-08-11T02:44:47.114Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786416274050,
+      "timestamp": "2026-08-11T02:44:34.050Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786415366398,
+      "timestamp": "2026-08-11T02:29:26.398Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786415088012,
+      "timestamp": "2026-08-11T02:24:48.012Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786414496404,
+      "timestamp": "2026-08-11T02:14:56.404Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786414437188,
+      "timestamp": "2026-08-11T02:13:57.188Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786414368665,
+      "timestamp": "2026-08-11T02:12:48.665Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786414333640,
+      "timestamp": "2026-08-11T02:12:13.640Z",
+      "type": "AUTH_SUCCESS",
+      "message": "视频网用户 [视频网管理员(admin)] 登录系统成功 (角色: admin)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786414296531,
+      "timestamp": "2026-08-11T02:11:36.531Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786414245370,
+      "timestamp": "2026-08-11T02:10:45.370Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786414186819,
+      "timestamp": "2026-08-11T02:09:46.819Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786413921854,
+      "timestamp": "2026-08-11T02:05:21.854Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786413723089,
+      "timestamp": "2026-08-11T02:02:03.089Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786413600192,
+      "timestamp": "2026-08-11T02:00:00.192Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786413521631,
+      "timestamp": "2026-08-11T01:58:41.631Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786413389355,
+      "timestamp": "2026-08-11T01:56:29.355Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786413355656,
+      "timestamp": "2026-08-11T01:55:55.656Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786413289657,
+      "timestamp": "2026-08-11T01:54:49.657Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786413203939,
+      "timestamp": "2026-08-11T01:53:23.939Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786413139297,
+      "timestamp": "2026-08-11T01:52:19.297Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786413068486,
+      "timestamp": "2026-08-11T01:51:08.486Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786412812425,
+      "timestamp": "2026-08-11T01:46:52.425Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786412744671,
+      "timestamp": "2026-08-11T01:45:44.671Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786412697177,
+      "timestamp": "2026-08-11T01:44:57.177Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786412572569,
+      "timestamp": "2026-08-11T01:42:52.569Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786412463599,
+      "timestamp": "2026-08-11T01:41:03.599Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786412318304,
+      "timestamp": "2026-08-11T01:38:38.304Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786412196084,
+      "timestamp": "2026-08-11T01:36:36.084Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786412133703,
+      "timestamp": "2026-08-11T01:35:33.703Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786412045151,
+      "timestamp": "2026-08-11T01:34:05.151Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786411801644,
+      "timestamp": "2026-08-11T01:30:01.644Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786411761208,
+      "timestamp": "2026-08-11T01:29:21.208Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786411641784,
+      "timestamp": "2026-08-11T01:27:21.784Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786411062391,
+      "timestamp": "2026-08-11T01:17:42.391Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_1786411062348.zip (应用租户: sys_gate_security, 操作员: 视频网管理员)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786410755221,
+      "timestamp": "2026-08-11T01:12:35.221Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786410670739,
+      "timestamp": "2026-08-11T01:11:10.739Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786410196624,
+      "timestamp": "2026-08-11T01:03:16.624Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786409788373,
+      "timestamp": "2026-08-11T00:56:28.373Z",
+      "type": "INGEST",
+      "message": "成功打包投递单据: vfusion_pkg_EVT_20260810_0001.zip (应用租户: sys_gate_security, 操作员: 张三)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786352350895,
+      "timestamp": "2026-08-10T08:59:10.895Z",
+      "type": "AUTH_SUCCESS",
+      "message": "视频网用户 [视频网管理员(admin)] 登录系统成功 (角色: admin)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": 1786352333886,
+      "timestamp": "2026-08-10T08:58:53.886Z",
+      "type": "AUTH_FAIL",
+      "message": "视频网用户尝试登录失败 (用户名: admin)",
+      "status": "WARN"
+    },
+    {
+      "id": 1,
+      "timestamp": "2026-08-10T08:58:53.869Z",
+      "type": "AUTH_SUCCESS",
+      "message": "视频网系统超级管理员 (admin) 登录成功",
+      "status": "SUCCESS"
+    }
+  ],
+  "personnel": [
+    {
+      "id": 1786411062365,
+      "name": "张三",
+      "id_card": "320202198504152035",
+      "domicile": "江苏省无锡市"
+    }
+  ]
+}

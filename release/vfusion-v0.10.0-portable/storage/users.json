@@ -1,0 +1,29 @@
+[
+  {
+    "id": 101,
+    "username": "admin",
+    "name": "系统超级管理员",
+    "password": "504eb946b5783dca46ebbd763791ee4012fa42b5664b150ed2a7367c78402847",
+    "role": "admin",
+    "status": "ACTIVE",
+    "created_at": "2026-08-10T08:32:14.202Z"
+  },
+  {
+    "id": 102,
+    "username": "operator",
+    "name": "视频网业务操作员",
+    "password": "b00611ffb9b93b6ac0b711ef9092864c6f3252c8d9a6804be0483f7cfd7d3014",
+    "role": "operator",
+    "status": "ACTIVE",
+    "created_at": "2026-08-10T08:32:14.203Z"
+  },
+  {
+    "id": 103,
+    "username": "auditor",
+    "name": "安全合规审计员",
+    "password": "ea3649540c3671f5126553837696ebd1c82caa092fb971d203dfd4bcd34077a6",
+    "role": "auditor",
+    "status": "ACTIVE",
+    "created_at": "2026-08-10T08:32:14.203Z"
+  }
+]

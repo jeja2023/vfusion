@@ -1,0 +1,6 @@
+{
+  "name": "@vfusion/collector",
+  "version": "0.10.0",
+  "main": "server.js",
+  "dependencies": {}
+}

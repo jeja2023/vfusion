@@ -13,3 +13,4 @@ storage/assets/*
 *.log
 .DS_Store
 Thumbs.db
+release/

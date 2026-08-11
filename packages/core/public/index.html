@@ -376,8 +376,26 @@
             </select>
           </div>
 
-          <div class="event-list" id="eventList">
-            <div style="text-align:center; padding:3rem; color:var(--text-muted);">暂无汇聚事件</div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th class="col-idx">序号</th>
+                  <th>事件单据编号</th>
+                  <th>提交时间</th>
+                  <th>录入人员</th>
+                  <th>发生地点</th>
+                  <th>交通方式</th>
+                  <th>涉事人员</th>
+                  <th>现场照片凭证</th>
+                  <th>AI 提取算法特征</th>
+                  <th style="text-align:right;">操作动作</th>
+                </tr>
+              </thead>
+              <tbody id="eventTableBody">
+                <tr><td colspan="10" style="text-align:center; padding:3rem; color:var(--text-muted);">暂无摆渡汇聚事件单据</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -871,56 +889,54 @@
     }
 
     function renderEvents() {
-      const listEl = document.getElementById('eventList');
+      const tbody = document.getElementById('eventTableBody');
       const kw = document.getElementById('filterKeyword').value.toLowerCase();
       const type = document.getElementById('filterType').value;
 
       const filtered = eventsData.filter(e => {
         const payload = e.payload || {};
-        const matchKw = !kw || e.event_id.toLowerCase().includes(kw) || (payload.location && payload.location.toLowerCase().includes(kw)) || (e.operator && e.operator.toLowerCase().includes(kw));
+        const matchKw = !kw || 
+          e.event_id.toLowerCase().includes(kw) || 
+          (payload.location && payload.location.toLowerCase().includes(kw)) || 
+          (payload.person_name && payload.person_name.toLowerCase().includes(kw)) || 
+          (payload.person_id_card && payload.person_id_card.toLowerCase().includes(kw)) || 
+          (e.operator && e.operator.toLowerCase().includes(kw));
         const matchType = !type || payload.transportation === type;
         return matchKw && matchType;
       });
 
       if (filtered.length === 0) {
-        listEl.innerHTML = `<div style="text-align:center; padding:3rem; color:var(--text-muted);">未找到匹配的单据事件</div>`;
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:3rem; color:var(--text-muted);">未找到匹配的单据事件数据</td></tr>`;
         return;
       }
 
-      listEl.innerHTML = filtered.map(item => {
+      tbody.innerHTML = filtered.map((item, idx) => {
         const p = item.payload || {};
-
-        const payloadItems = Object.entries(p).map(([k, v]) => 
-          `<div><span class="meta-label">${k}：</span><span class="meta-val">${v}</span></div>`
-        ).join('');
-
-        const aiBadges = (item.ai_tags || ['AI识别通过']).map(t => `<span class="ai-tag-badge">${t}</span>`).join(' ');
-
+        const aiBadges = (item.ai_tags || ['AI识别通过']).map(t => `<span class="ai-tag-badge" style="font-size:0.7rem; padding:0.15rem 0.4rem; white-space:nowrap;">${t}</span>`).join(' ');
         const imgsHtml = (item.files || []).map(f => 
-          `<img class="gallery-img" src="${f.url}" onclick="event.stopPropagation(); window.open('${f.url}')" title="点击查看大图">`
-        ).join('');
+          `<img src="${f.url}" style="width:36px; height:36px; object-fit:cover; border-radius:4px; border:1px solid var(--border-color); cursor:pointer;" onclick="event.stopPropagation(); window.open('${f.url}')" title="点击查看原图">`
+        ).join(' ');
+
+        const personStr = p.person_name 
+          ? `<strong>${p.person_name}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">${p.person_id_card || ''}</span>`
+          : '<span style="color:var(--text-muted);">-</span>';
 
         return `
-          <div class="event-item" onclick="openEventDrawer('${item.event_id}')">
-            <div class="event-header">
-              <div class="event-id">
-                <svg class="icon-svg" viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-                ${item.event_id}
-              </div>
-              <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:nowrap;">
-                ${aiBadges}
-                <button class="btn btn-export" style="padding:0.25rem 0.6rem; font-size:0.75rem;" onclick="event.stopPropagation(); downloadEventZip('${item.event_id}')">导出存照 Zip</button>
-              </div>
-            </div>
-            
-            <div class="meta-grid">
-              <div><span class="meta-label">提交时间：</span><span class="meta-val">${new Date(item.submit_time || item.timestamp).toLocaleString()}</span></div>
-              <div><span class="meta-label">录入人员：</span><span class="meta-val">${item.operator}</span></div>
-              ${payloadItems}
-            </div>
-
-            <div class="gallery">${imgsHtml}</div>
-          </div>
+          <tr style="cursor:pointer;" onclick="openEventDrawer('${item.event_id}')">
+            <td class="col-idx">${idx + 1}</td>
+            <td><strong style="color:var(--primary); font-family:monospace;">${item.event_id}</strong></td>
+            <td><code style="font-size:0.775rem;">${new Date(item.submit_time || item.timestamp).toLocaleString()}</code></td>
+            <td><span style="font-weight:600;">${item.operator || '-'}</span></td>
+            <td>${p.location || '-'}</td>
+            <td><span class="ai-tag-badge" style="background:#f0f9ff; color:#0369a1; border-color:#bae6fd;">${p.transportation || '-'}</span></td>
+            <td>${personStr}</td>
+            <td><div style="display:flex; gap:0.25rem;">${imgsHtml || '-'}</div></td>
+            <td><div style="display:flex; gap:0.25rem; flex-wrap:wrap; max-width:220px;">${aiBadges}</div></td>
+            <td style="text-align:right; white-space:nowrap;">
+              <button class="btn btn-diode" style="padding:0.25rem 0.55rem; font-size:0.75rem;" onclick="event.stopPropagation(); openEventDrawer('${item.event_id}')">详情</button>
+              <button class="btn btn-export" style="padding:0.25rem 0.55rem; font-size:0.75rem; margin-left:0.25rem;" onclick="event.stopPropagation(); downloadEventZip('${item.event_id}')">Zip存照</button>
+            </td>
+          </tr>
         `;
       }).join('');
     }

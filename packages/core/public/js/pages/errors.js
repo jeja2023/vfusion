@@ -38,13 +38,13 @@ function renderErrors() {
     return `
       <tr>
         <td class="col-idx">${globalIdx}</td>
-        <td><code style="color:var(--danger); font-weight:600;">${item.filename}</code></td>
+        <td><code style="color:var(--danger); font-weight:600;">${escapeHtml(item.filename)}</code></td>
         <td>${(item.size / 1024).toFixed(1)} KB</td>
-        <td><code>${new Date(item.mtime).toLocaleString()}</code></td>
+        <td><code>${escapeHtml(new Date(item.mtime).toLocaleString())}</code></td>
         <td><span class="badge-level 高">HMAC校验/文件破坏</span></td>
         <td style="display:flex; gap:0.4rem;">
-          <button class="btn btn-primary" style="padding:0.25rem 0.55rem; font-size:0.75rem; white-space:nowrap;" onclick="retryError('${item.filename}')">重试解析</button>
-          <button class="btn btn-danger" style="padding:0.25rem 0.55rem; font-size:0.75rem; white-space:nowrap;" onclick="deleteError('${item.filename}')">删除</button>
+          <button class="btn btn-primary" style="padding:0.25rem 0.55rem; font-size:0.75rem; white-space:nowrap;" onclick="retryError('${escapeJsString(item.filename)}')">重试解析</button>
+          <button class="btn btn-danger" style="padding:0.25rem 0.55rem; font-size:0.75rem; white-space:nowrap;" onclick="deleteError('${escapeJsString(item.filename)}')">删除</button>
         </td>
       </tr>
     `;
@@ -56,14 +56,23 @@ function prevErrorPage() { if (errorCurrentPage > 1) { errorCurrentPage--; rende
 function nextErrorPage() { errorCurrentPage++; renderErrors(); }
 
 async function retryError(filename) {
-  const res = await fetch('/api/errors/retry', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename }) });
-  const json = await res.json();
-  showToast(json.success ? '重试成功已入库！' : '重试失败: ' + json.error, json.success ? 'success' : 'error');
-  loadErrors();
+  try {
+    const res = await fetch('/api/errors/retry', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename }) });
+    const json = await res.json();
+    showToast(json.success ? '重试成功已入库！' : '重试失败: ' + json.error, json.success ? 'success' : 'error');
+    loadErrors();
+  } catch (e) {
+    console.error('重试解析失败:', e);
+  }
 }
 
 async function deleteError(filename) {
-  const res = await fetch(`/api/errors/${filename}`, { method: 'DELETE' });
-  showToast('删除隔离包成功', 'error');
-  loadErrors();
+  try {
+    const res = await fetch(`/api/errors/${encodeURIComponent(filename)}`, { method: 'DELETE' });
+    const json = await res.json();
+    showToast(json.success ? '删除隔离包成功' : ('删除失败: ' + (json.error || '未知错误')), json.success ? 'success' : 'error');
+    loadErrors();
+  } catch (e) {
+    console.error('删除隔离包失败:', e);
+  }
 }

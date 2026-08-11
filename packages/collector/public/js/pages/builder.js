@@ -44,10 +44,10 @@ function renderSchemaFields() {
     return `
       <tr>
         <td class="col-idx">${globalIdx}</td>
-        <td><code>${f.key}</code></td>
-        <td><strong>${f.label}</strong></td>
-        <td>${f.type}</td>
-        <td>${(f.options || []).join(', ') || '-'}</td>
+        <td><code>${escapeHtml(f.key)}</code></td>
+        <td><strong>${escapeHtml(f.label)}</strong></td>
+        <td>${escapeHtml(f.type)}</td>
+        <td>${escapeHtml((f.options || []).join(', ')) || '-'}</td>
         <td><button class="btn-submit" style="width:auto; min-width:55px; margin-top:0; padding:0.25rem 0.55rem; font-size:0.75rem; background:var(--danger); white-space:nowrap; flex-shrink:0;" onclick="removeSchemaField(${realIdx})">删除</button></td>
       </tr>
     `;

@@ -1,5 +1,0 @@
-/* Audits Page Styles */
-.badge-level { padding: 0.2rem 0.55rem; border-radius: 20px; font-size: 0.725rem; font-weight: 700; white-space: nowrap; display: inline-flex; }
-.badge-level.高 { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-border); }
-.badge-level.中 { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-border); }
-.badge-level.低 { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }

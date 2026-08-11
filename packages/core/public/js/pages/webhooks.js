@@ -11,8 +11,8 @@ async function loadWebhooks() {
     tbody.innerHTML = json.data.map((item, idx) => `
       <tr>
         <td class="col-idx">${idx + 1}</td>
-        <td><strong>${item.name}</strong></td>
-        <td><code>${item.url}</code></td>
+        <td><strong>${escapeHtml(item.name)}</strong></td>
+        <td><code>${escapeHtml(item.url)}</code></td>
         <td><button class="btn btn-danger" style="padding:0.25rem 0.5rem; font-size:0.75rem; white-space:nowrap;" onclick="deleteWebhook(${item.id})">移除</button></td>
       </tr>
     `).join('');

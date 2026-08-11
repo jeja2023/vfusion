@@ -1,5 +1,27 @@
 let currentUser = null;
 
+// 统一转义：所有后端返回值在拼入 innerHTML 前必须经过此函数
+function escapeHtml(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// 用于嵌入 onclick="fn('...')" 这类内联属性的字符串字面量
+function escapeJsString(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '\\u003c')
+    .replace(/\r?\n/g, '\\n');
+}
+
 const auditTypeMap = {
   'AUTH_SUCCESS': '用户登录',
   'AUTH_FAIL': '登录失败',
@@ -72,7 +94,7 @@ function showToast(message, type = 'success') {
   toast.className = `toast ${type}`;
   toast.innerHTML = `
     <svg class="icon-svg" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-    <span>${message}</span>
+    <span>${escapeHtml(message)}</span>
   `;
   container.appendChild(toast);
   setTimeout(() => toast.remove(), 3000);

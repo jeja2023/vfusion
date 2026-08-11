@@ -30,23 +30,23 @@ async function loadSystemHealth() {
           <div style="display:flex; flex-direction:column; gap:0.5rem;">
             <div style="display:flex; justify-content:space-between; border-bottom:1px solid #e2e8f0; padding-bottom:0.4rem;">
               <span style="color:var(--text-sub);">节点部署角色:</span>
-              <strong style="color:var(--primary);">${d.role || 'CORE (数据中台)'}</strong>
+              <strong style="color:var(--primary);">${escapeHtml(d.role || 'CORE (数据中台)')}</strong>
             </div>
             <div style="display:flex; justify-content:space-between; border-bottom:1px solid #e2e8f0; padding-bottom:0.4rem;">
               <span style="color:var(--text-sub);">运行环境版本:</span>
-              <span><code>${d.node_version}</code> (运行 <code>${d.uptime_seconds}</code> 秒)</span>
+              <span><code>${escapeHtml(d.node_version)}</code> (运行 <code>${escapeHtml(d.uptime_seconds)}</code> 秒)</span>
             </div>
             <div style="display:flex; justify-content:space-between; border-bottom:1px solid #e2e8f0; padding-bottom:0.4rem;">
               <span style="color:var(--text-sub);">内存堆使用 (RSS):</span>
-              <span><code>${d.memory_heap_mb} MB</code> (常驻内存: <code>${d.memory_rss_mb} MB</code>)</span>
+              <span><code>${escapeHtml(d.memory_heap_mb)} MB</code> (常驻内存: <code>${escapeHtml(d.memory_rss_mb)} MB</code>)</span>
             </div>
             <div style="display:flex; justify-content:space-between; border-bottom:1px solid #e2e8f0; padding-bottom:0.4rem;">
               <span style="color:var(--text-sub);">服务器操作系统:</span>
-              <span><code>${d.system_os}</code></span>
+              <span><code>${escapeHtml(d.system_os)}</code></span>
             </div>
             <div style="display:flex; justify-content:space-between;">
               <span style="color:var(--text-sub);">存储健康状态:</span>
-              <span style="color:var(--success); font-weight:700;">${d.storage_status} (HEALTHY)</span>
+              <span style="color:var(--success); font-weight:700;">${escapeHtml(d.storage_status)} (HEALTHY)</span>
             </div>
           </div>
         `;
@@ -117,7 +117,7 @@ async function runOnlineDiagnostics() {
     if (container) {
       container.innerHTML = json.data.map(item => `
         <div style="margin-bottom:0.4rem; font-size:0.825rem;">
-          <strong>[${item.category}]</strong>: <span style="color:var(--success); font-weight:700;">${item.status}</span> - ${item.detail}
+          <strong>[${escapeHtml(item.category)}]</strong>: <span style="color:var(--success); font-weight:700;">${escapeHtml(item.status)}</span> - ${escapeHtml(item.detail)}
         </div>
       `).join('');
     }

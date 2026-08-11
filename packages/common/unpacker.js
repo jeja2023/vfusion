@@ -32,12 +32,22 @@ async function unpackAndVerifyPackage(zipFilePath, targetDir) {
   const checksumRaw = fs.readFileSync(checksumPath, 'utf8');
   const checksumLines = checksumRaw.split(/\r?\n/).filter(line => line.trim().length > 0);
 
+  const verifiedPaths = new Set();
+
   for (const line of checksumLines) {
     const parts = line.trim().split(/\s+/);
     if (parts.length >= 2) {
       const expectedMd5 = parts[0];
       const relPath = parts.slice(1).join(' ');
       const actualFilePath = path.join(extractDir, relPath);
+
+      // checksum.txt 来自不可信的包，条目可能构造 ../ 指向解包目录之外
+      const normalizedTarget = path.resolve(actualFilePath);
+      if (normalizedTarget !== path.resolve(extractDir) &&
+          !normalizedTarget.startsWith(path.resolve(extractDir) + path.sep)) {
+        fs.rmSync(extractDir, { recursive: true, force: true });
+        throw new Error(`非法校验条目路径 (越权访问解包目录之外): ${relPath}`);
+      }
 
       if (!fs.existsSync(actualFilePath)) {
         fs.rmSync(extractDir, { recursive: true, force: true });
@@ -56,7 +66,15 @@ async function unpackAndVerifyPackage(zipFilePath, targetDir) {
         fs.rmSync(extractDir, { recursive: true, force: true });
         throw new Error(`MD5 校验不一致: ${relPath} (期望: ${expectedMd5}, 实际: ${actualMd5})`);
       }
+
+      verifiedPaths.add(relPath.replace(/\\/g, '/'));
     }
+  }
+
+  // info.json 必须在校验清单内，否则攻击者只需删掉该行即可绕过完整性校验
+  if (!verifiedPaths.has('info.json')) {
+    fs.rmSync(extractDir, { recursive: true, force: true });
+    throw new Error('解包校验失败: checksum.txt 未包含 info.json 校验条目');
   }
 
   // 2. 解析 info.json 并验证 HMAC 数字签名
@@ -65,7 +83,7 @@ async function unpackAndVerifyPackage(zipFilePath, targetDir) {
 
   if (!isSigValid) {
     fs.rmSync(extractDir, { recursive: true, force: true });
-    throw new Error('数字签名验证失败: 单据包内容被非法篡改或密钥不匹配');
+    throw new Error('数字签名验证失败: 单据包未签名、被非法篡改或密钥不匹配');
   }
 
   return {

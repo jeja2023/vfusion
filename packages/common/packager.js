@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const archiver = require('archiver');
 const { md5String, md5File } = require('./checksum');
-const { createInfoJson, calculateHmacSignature } = require('./protocol');
+const { createInfoJson, signInfoObject } = require('./protocol');
 
 /**
  * 通用单据打包引擎 (.tmp 原子写入模式 + HMAC 签名 + 动态 Schema 嵌入)
@@ -64,11 +64,13 @@ async function packEventPackage(options) {
     infoData.schema_definition = schema;
   }
 
-  const infoJsonStr = JSON.stringify(infoData, null, 2);
+  // 所有字段就位后再签名，并将签名回填进 info.json，
+  // 保证接收端能对 info.json 自身做完整性与真实性校验
+  const { signedInfo, signature: sigContent, infoJsonStr } = signInfoObject(infoData);
+
   const infoJsonMd5 = md5String(infoJsonStr);
   fileChecksumMap['info.json'] = infoJsonMd5;
 
-  const sigContent = calculateHmacSignature(infoJsonStr);
   const sigMd5 = md5String(sigContent);
   fileChecksumMap['signature.sig'] = sigMd5;
 
@@ -89,7 +91,7 @@ async function packEventPackage(options) {
           pkgName,
           zipPath: finalZipPath,
           size: archive.pointer(),
-          info: infoData
+          info: signedInfo
         });
       });
     });

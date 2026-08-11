@@ -45,10 +45,10 @@ function renderAuditLogs() {
     return `
       <tr>
         <td class="col-idx">${globalIdx}</td>
-        <td><code>${new Date(item.timestamp).toLocaleString()}</code></td>
-        <td><strong>${typeCn}</strong></td>
-        <td>${item.message}</td>
-        <td><span class="badge-level ${item.status === 'ERROR' ? '高' : (item.status === 'WARN' ? '中' : '低')}">${statusCn}</span></td>
+        <td><code>${escapeHtml(new Date(item.timestamp).toLocaleString())}</code></td>
+        <td><strong>${escapeHtml(typeCn)}</strong></td>
+        <td>${escapeHtml(item.message)}</td>
+        <td><span class="badge-level ${item.status === 'ERROR' ? '高' : (item.status === 'WARN' ? '中' : '低')}">${escapeHtml(statusCn)}</span></td>
       </tr>
     `;
   }).join('');

@@ -3,6 +3,73 @@ let eventsData = [];
 let auditLogs = [];
 let currentSchema = { fields: [] };
 
+// 转义后端回传文本，避免拼接进 innerHTML 时形成存储型 XSS
+function escapeHtml(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// 用于嵌入 onclick="fn('...')" 这类内联属性的字符串字面量
+function escapeJsString(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '\\u003c')
+    .replace(/\r?\n/g, '\\n');
+}
+
+function getAuthToken() {
+  return localStorage.getItem('vfusion_token') || '';
+}
+
+// 保留原生实现，供 apiFetch 与静态资源请求使用，避免下方全局拦截造成递归
+const nativeFetch = window.fetch.bind(window);
+
+// 所有 /api 请求统一携带 Token；遇到 401/403 自动回到登录态
+async function apiFetch(url, options = {}) {
+  const opts = { ...options };
+  opts.headers = { ...(options.headers || {}) };
+  const token = getAuthToken();
+  if (token) opts.headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await nativeFetch(url, opts);
+  if (res.status === 401) {
+    const wasLoggedIn = !!currentUser || !!token;
+    localStorage.removeItem('vfusion_token');
+    localStorage.removeItem('vfusion_user');
+    currentUser = null;
+
+    if (wasLoggedIn) {
+      showToast('登录状态已过期，请重新登录', 'error');
+      const overlay = document.getElementById('loginOverlay');
+      if (overlay) overlay.style.display = 'flex';
+    }
+    throw new Error('未认证或登录状态已过期');
+  }
+  if (res.status === 403) {
+    showToast('当前账号无权执行该操作', 'error');
+    throw new Error('权限不足');
+  }
+  return res;
+}
+
+// 全局拦截：让各页面已有的 fetch('/api/...') 调用自动携带 Token 并统一处理登录态失效
+window.fetch = function (input, init) {
+  const url = typeof input === 'string' ? input : (input && input.url) || '';
+  // 登录接口的 401 表示凭据错误，需交由登录表单提示，不能触发"登录态失效"重载
+  if (!url.startsWith('/api/') || url.startsWith('/api/auth/login')) {
+    return nativeFetch(input, init);
+  }
+  return apiFetch(url, init || {});
+};
+
 const auditTypeMap = {
   'AUTH_SUCCESS': '用户登录',
   'AUTH_FAIL': '登录失败',
@@ -55,7 +122,7 @@ function showToast(message, type = 'success') {
   toast.className = `toast ${type}`;
   toast.innerHTML = `
     <svg class="icon-svg" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-    <span>${message}</span>
+    <span>${escapeHtml(message)}</span>
   `;
   container.appendChild(toast);
   setTimeout(() => toast.remove(), 3000);
@@ -158,8 +225,9 @@ function applyRolePermissions() {
 }
 
 async function loadAlerts() {
+  if (!currentUser) return;
   try {
-    const res = await fetch('/api/alerts');
+    const res = await apiFetch('/api/alerts');
     const json = await res.json();
     if (json.success) {
       const badge = document.getElementById('alertBadge');
@@ -178,10 +246,10 @@ async function loadAlerts() {
         container.innerHTML = json.data.slice(0, 5).map(item => `
           <div class="alert-item">
             <div style="font-weight:700; color:var(--danger); display:flex; justify-content:space-between;">
-              <span>${item.title}</span>
-              <span style="font-size:0.75rem; color:var(--text-muted); font-weight:normal;">${new Date(item.timestamp).toLocaleTimeString()}</span>
+              <span>${escapeHtml(item.title)}</span>
+              <span style="font-size:0.75rem; color:var(--text-muted); font-weight:normal;">${escapeHtml(new Date(item.timestamp).toLocaleTimeString())}</span>
             </div>
-            <div style="margin-top:2px; color:var(--text-sub);">${item.message}</div>
+            <div style="margin-top:2px; color:var(--text-sub);">${escapeHtml(item.message)}</div>
           </div>
         `).join('');
       }
@@ -194,9 +262,13 @@ function toggleAlertDropdown() {
 }
 
 async function markAlertsRead() {
-  await fetch('/api/alerts/read', { method: 'POST' });
-  showToast('告警已全部标为已读');
-  loadAlerts();
+  try {
+    await apiFetch('/api/alerts/read', { method: 'POST' });
+    showToast('告警已全部标为已读');
+    loadAlerts();
+  } catch (err) {
+    console.error('标记告警已读失败:', err);
+  }
 }
 
 function toggleFullscreenDashboard() {
@@ -229,24 +301,24 @@ function openEventDrawer(eventId) {
   document.getElementById('drawerTitle').innerText = `单据详情分析与存照: ${evt.event_id}`;
   document.getElementById('drawerDownloadZipBtn').onclick = () => downloadEventZip(evt.event_id);
 
-  const aiTagsHtml = (evt.ai_tags || []).map(t => `<span class="ai-tag-badge">${t}</span>`).join(' ');
+  const aiTagsHtml = (evt.ai_tags || []).map(t => `<span class="ai-tag-badge">${escapeHtml(t)}</span>`).join(' ');
 
   document.getElementById('drawerBody').innerHTML = `
     <div style="margin-bottom:1.5rem;">
-      <h4 style="font-size:0.875rem; color:var(--text-muted); margin-bottom:0.5rem;">AI 智能提取管道分析特征</h4>
+      <h4 style="font-size:0.875rem; color:var(--text-muted); margin-bottom:0.5rem;">要素提取分析标签</h4>
       <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">${aiTagsHtml}</div>
     </div>
     <div style="margin-bottom:1.5rem;">
-      <h4 style="font-size:0.875rem; color:var(--text-muted); margin-bottom:0.5rem;">数字签名 (SHA-256)</h4>
-      <div style="font-family:monospace; font-size:0.8rem; background:#f8fafc; padding:0.6rem; border-radius:6px; border:1px solid var(--border-color); word-break:break-all;">${evt.signature || '未签名'}</div>
+      <h4 style="font-size:0.875rem; color:var(--text-muted); margin-bottom:0.5rem;">数字签名 (HMAC-SHA256)</h4>
+      <div style="font-family:monospace; font-size:0.8rem; background:#f8fafc; padding:0.6rem; border-radius:6px; border:1px solid var(--border-color); word-break:break-all;">${escapeHtml(evt.signature || '未签名')}</div>
     </div>
     <div style="margin-bottom:1.5rem;">
       <h4 style="font-size:0.875rem; color:var(--text-muted); margin-bottom:0.5rem;">数据包摘要校验和 (MD5)</h4>
-      <div style="font-family:monospace; font-size:0.8rem; background:#f8fafc; padding:0.6rem; border-radius:6px; border:1px solid var(--border-color);">${evt.zip_hash}</div>
+      <div style="font-family:monospace; font-size:0.8rem; background:#f8fafc; padding:0.6rem; border-radius:6px; border:1px solid var(--border-color);">${escapeHtml(evt.zip_hash)}</div>
     </div>
     <div>
       <h4 style="font-size:0.875rem; color:var(--text-muted); margin-bottom:0.5rem;">结构化元数据</h4>
-      <pre style="font-family:monospace; font-size:0.8rem; background:#0f172a; color:#38bdf8; padding:1rem; border-radius:8px; overflow-x:auto;">${JSON.stringify(evt, null, 2)}</pre>
+      <pre style="font-family:monospace; font-size:0.8rem; background:#0f172a; color:#38bdf8; padding:1rem; border-radius:8px; overflow-x:auto;">${escapeHtml(JSON.stringify(evt, null, 2))}</pre>
     </div>
   `;
   document.getElementById('drawerOverlay').classList.add('open');
@@ -257,22 +329,59 @@ function closeDrawer() {
   if (overlay) overlay.classList.remove('open');
 }
 
+// 下载类接口同样需要携带 Token，因此改为取 blob 后再触发浏览器保存
+async function downloadWithAuth(url, fallbackName) {
+  try {
+    const res = await apiFetch(url);
+    if (!res.ok) {
+      let msg = `下载失败 (HTTP ${res.status})`;
+      try {
+        const errJson = await res.json();
+        if (errJson && errJson.error) msg = errJson.error;
+      } catch (e) {}
+      showToast(msg, 'error');
+      return;
+    }
+    const disposition = res.headers.get('Content-Disposition') || '';
+    const match = disposition.match(/filename=([^;]+)/);
+    const filename = match ? decodeURIComponent(match[1].replace(/["']/g, '').trim()) : fallbackName;
+
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(objectUrl);
+  } catch (err) {
+    console.error('下载失败:', err);
+  }
+}
+
 function downloadEventZip(eventId) {
   showToast(`正在准备 [${eventId}] 存照 Zip 离线包下载...`);
-  window.location.href = `/api/events/${eventId}/download`;
+  downloadWithAuth(`/api/events/${encodeURIComponent(eventId)}/download`, `vfusion_${eventId}.zip`);
 }
 
 function exportCsvReport() {
   showToast('准备导出 Excel 报表...');
-  window.location.href = '/api/events/export';
+  downloadWithAuth('/api/events/export', 'vfusion_report.csv');
 }
 
 async function triggerDiodeSimulation() {
-  const res = await fetch('/api/simulate-diode', { method: 'POST' });
-  const json = await res.json();
-  if (json.success) {
-    showToast(json.message);
-    if (typeof fetchData === 'function') fetchData();
+  try {
+    const res = await apiFetch('/api/simulate-diode', { method: 'POST' });
+    const json = await res.json();
+    if (json.success) {
+      showToast(json.message);
+      if (typeof fetchData === 'function') fetchData();
+    } else {
+      showToast(json.error || '摆渡执行失败', 'error');
+    }
+  } catch (err) {
+    console.error('摆渡执行失败:', err);
   }
 }
 

@@ -44,8 +44,8 @@ function renderDynamicForm(fields) {
   taskGroup.style.cssText = 'background:#f8fafc; border:1px solid var(--border-color); padding:0.5rem 0.75rem; border-radius:8px; display:grid; grid-template-columns: 1.1fr 0.9fr; gap:0.65rem;';
   
   const defaultTaskCode = 'TASK_' + new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 12);
-  const savedTaskName = existingValues['task_name'] || '厂区周界安防例行巡检';
-  const savedTaskCode = existingValues['task_code'] || defaultTaskCode;
+  const savedTaskName = escapeHtml(existingValues['task_name'] || '厂区周界安防例行巡检');
+  const savedTaskCode = escapeHtml(existingValues['task_code'] || defaultTaskCode);
 
   taskGroup.innerHTML = `
     <div>
@@ -70,7 +70,7 @@ function renderDynamicForm(fields) {
   pGroup.style.cssText = 'background:#eff6ff; border:1.5px dashed #3b82f6; padding:0.5rem 0.75rem; border-radius:8px;';
   
   const optsHtml = registeredPersonnel.length > 0
-    ? registeredPersonnel.map((p, idx) => `<option value="${idx}">${p.name} - 身份证: ${p.id_card || '未填'} (户籍: ${p.domicile || '未填'})</option>`).join('')
+    ? registeredPersonnel.map((p, idx) => `<option value="${idx}">${escapeHtml(p.name)} - 身份证: ${escapeHtml(p.id_card) || '未填'} (户籍: ${escapeHtml(p.domicile) || '未填'})</option>`).join('')
     : '<option value="" disabled>暂无历史人员档案 (首次录入提交后将自动存档)</option>';
 
   pGroup.innerHTML = `
@@ -94,26 +94,30 @@ function renderDynamicForm(fields) {
 
     const curVal = existingValues[field.key] !== undefined ? existingValues[field.key] : (field.key === 'event_time' ? nowStr : '');
 
+    const safeKey = escapeHtml(field.key);
+    const safeLabel = escapeHtml(field.label);
+    const safeVal = escapeHtml(curVal);
+
     let inputHtml = '';
     if (field.type === 'select') {
-      const optsHtml = field.options.map(opt => `<option value="${opt}" ${curVal === opt ? 'selected' : ''}>${opt}</option>`).join('');
-      inputHtml = `<select name="${field.key}" ${field.required ? 'required' : ''}>${optsHtml}</select>`;
+      const optsHtml = (field.options || []).map(opt => `<option value="${escapeHtml(opt)}" ${curVal === opt ? 'selected' : ''}>${escapeHtml(opt)}</option>`).join('');
+      inputHtml = `<select name="${safeKey}" ${field.required ? 'required' : ''}>${optsHtml}</select>`;
     } else if (field.type === 'radio') {
-      const optsHtml = field.options.map((opt, idx) => `
+      const optsHtml = (field.options || []).map((opt, idx) => `
         <label class="radio-label">
-          <input type="radio" name="${field.key}" value="${opt}" ${curVal ? (curVal === opt ? 'checked' : '') : (idx === 0 ? 'checked' : '')}>
-          ${opt}
+          <input type="radio" name="${safeKey}" value="${escapeHtml(opt)}" ${curVal ? (curVal === opt ? 'checked' : '') : (idx === 0 ? 'checked' : '')}>
+          ${escapeHtml(opt)}
         </label>
       `).join('');
       inputHtml = `<div class="radio-group">${optsHtml}</div>`;
     } else if (field.type === 'textarea') {
-      inputHtml = `<textarea name="${field.key}" placeholder="请输入${field.label}" ${field.required ? 'required' : ''}>${curVal}</textarea>`;
+      inputHtml = `<textarea name="${safeKey}" placeholder="请输入${safeLabel}" ${field.required ? 'required' : ''}>${safeVal}</textarea>`;
     } else {
-      inputHtml = `<input type="text" name="${field.key}" value="${curVal}" placeholder="请输入${field.label}" ${field.required ? 'required' : ''}>`;
+      inputHtml = `<input type="text" name="${safeKey}" value="${safeVal}" placeholder="请输入${safeLabel}" ${field.required ? 'required' : ''}>`;
     }
 
     group.innerHTML = `
-      <label>${field.label} ${field.required ? '<span class="req">*</span>' : ''}</label>
+      <label>${safeLabel} ${field.required ? '<span class="req">*</span>' : ''}</label>
       ${inputHtml}
     `;
     grid.appendChild(group);

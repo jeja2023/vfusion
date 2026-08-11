@@ -4,10 +4,10 @@ const archiver = require('archiver');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
 const RELEASE_DIR = path.join(ROOT_DIR, 'release');
-const PORTABLE_DIR = path.join(RELEASE_DIR, 'vfusion-v0.10.0-portable');
-const ZIP_OUTPUT_PATH = path.join(RELEASE_DIR, 'vfusion-v0.10.0-portable-windows.zip');
+const PORTABLE_DIR = path.join(RELEASE_DIR, 'vfusion-v0.11.0-portable');
+const ZIP_OUTPUT_PATH = path.join(RELEASE_DIR, 'vfusion-v0.11.0-portable-windows.zip');
 
-console.log('=== 开始构建 视汇 (VFusion v0.10.0) 绿色免安装部署包 ===\n');
+console.log('=== 开始构建 视汇 (VFusion v0.11.0) 绿色免安装部署包 ===\n');
 
 // 1. 清理并新建 release 目录
 try {
@@ -83,10 +83,10 @@ cd /d "%~dp0"
 set NODE_EXE=%~dp0node.exe
 if not exist "%NODE_EXE%" set NODE_EXE=node
 
-title 视汇 - 视频网数据采集与发布终端 (v0.10.0)
+title 视汇 - 视频网数据采集与发布终端 (v0.11.0)
 echo ===================================================
 echo   正在启动 [视汇 - 视频网数据采集/发布终端] ...
-echo   端口: 4001
+echo   端口: 5001
 echo ===================================================
 "%NODE_EXE%" packages/collector/server.js
 pause
@@ -97,10 +97,10 @@ cd /d "%~dp0"
 set NODE_EXE=%~dp0node.exe
 if not exist "%NODE_EXE%" set NODE_EXE=node
 
-title 视汇 - 内网数据汇聚与管理中台 (v0.10.0)
+title 视汇 - 内网数据汇聚与管理中台 (v0.11.0)
 echo ===================================================
 echo   正在启动 [视汇 - 内网数据汇聚与管理中台] ...
-echo   端口: 4002
+echo   端口: 5002
 echo ===================================================
 "%NODE_EXE%" packages/core/server.js
 pause
@@ -109,26 +109,26 @@ pause
 const batAll = `@echo off
 cd /d "%~dp0"
 
-title 视汇 (VFusion v0.10.0) - 一键双端服务启动器
+title 视汇 (VFusion v0.11.0) - 一键双端服务启动器
 echo ===================================================
-echo   视汇通用跨隔离网数据交换与汇聚中台 (v0.10.0)
+echo   视汇通用跨隔离网数据交换与汇聚中台 (v0.11.0)
 echo ===================================================
-echo 1. 正在启动 [视频网数据采集/发布终端] (Port 4001)...
+echo 1. 正在启动 [视频网数据采集/发布终端] (Port 5001)...
 start "视汇-视频网发布终端" "%~dp0启动视频网发布终端.bat"
 
-echo 2. 正在启动 [内网数据汇聚与管理中台] (Port 4002)...
+echo 2. 正在启动 [内网数据汇聚与管理中台] (Port 5002)...
 start "视汇-内网数据中台" "%~dp0启动内网数据中台.bat"
 
 echo.
 echo 双端服务已成功在两个独立的命令行窗口中启动！
-echo - 本机视频网终端: http://localhost:4001
-echo - 本机内网中台: http://localhost:4002
+echo - 本机视频网终端: http://localhost:5001
+echo - 本机内网中台: http://localhost:5002
 echo.
 pause
 `;
 
 // 清理带括号的旧批处理文件
-['启动视频网发布终端(4001).bat', '启动内网数据中台(4002).bat'].forEach(oldFile => {
+['启动视频网发布终端(5001).bat', '启动内网数据中台(5002).bat'].forEach(oldFile => {
   if (fs.existsSync(path.join(PORTABLE_DIR, oldFile))) fs.unlinkSync(path.join(PORTABLE_DIR, oldFile));
   if (fs.existsSync(path.join(ROOT_DIR, oldFile))) fs.unlinkSync(path.join(ROOT_DIR, oldFile));
 });
@@ -160,5 +160,5 @@ archive.on('error', function (err) {
 });
 
 archive.pipe(output);
-archive.directory(PORTABLE_DIR, 'vfusion-v0.10.0-portable');
+archive.directory(PORTABLE_DIR, 'vfusion-v0.11.0-portable');
 archive.finalize();

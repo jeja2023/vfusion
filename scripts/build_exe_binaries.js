@@ -12,19 +12,19 @@ if (!fs.existsSync(EXE_DIR)) {
 console.log('=== 开始编译 生成单文件 Windows .exe 二进制程序 ===\n');
 
 try {
-  console.log('[1/2] 正在编译 视频网数据采集/发布终端 -> vfusion-collector-4001.exe ...');
+  console.log('[1/2] 正在编译 视频网数据采集/发布终端 -> vfusion-collector-5001.exe ...');
   execSync(`npx @yao-pkg/pkg -t node20-win-x64 --out-path "${EXE_DIR}" packages/collector/server.js`, { stdio: 'inherit', cwd: ROOT_DIR });
   const oldCollectorExe = path.join(EXE_DIR, 'server.exe');
-  const newCollectorExe = path.join(EXE_DIR, 'vfusion-collector-4001.exe');
+  const newCollectorExe = path.join(EXE_DIR, 'vfusion-collector-5001.exe');
   if (fs.existsSync(oldCollectorExe)) {
     if (fs.existsSync(newCollectorExe)) fs.unlinkSync(newCollectorExe);
     fs.renameSync(oldCollectorExe, newCollectorExe);
   }
 
-  console.log('\n[2/2] 正在编译 内网数据汇聚与管理中台 -> vfusion-core-4002.exe ...');
+  console.log('\n[2/2] 正在编译 内网数据汇聚与管理中台 -> vfusion-core-5002.exe ...');
   execSync(`npx @yao-pkg/pkg -t node20-win-x64 --out-path "${EXE_DIR}" packages/core/server.js`, { stdio: 'inherit', cwd: ROOT_DIR });
   const oldCoreExe = path.join(EXE_DIR, 'server.exe');
-  const newCoreExe = path.join(EXE_DIR, 'vfusion-core-4002.exe');
+  const newCoreExe = path.join(EXE_DIR, 'vfusion-core-5002.exe');
   if (fs.existsSync(oldCoreExe)) {
     if (fs.existsSync(newCoreExe)) fs.unlinkSync(newCoreExe);
     fs.renameSync(oldCoreExe, newCoreExe);

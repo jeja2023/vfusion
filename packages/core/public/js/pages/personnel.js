@@ -36,11 +36,11 @@ function renderPersonnelArchive() {
     return `
       <tr>
         <td class="col-idx">${globalIdx}</td>
-        <td><strong>${item.name || '未知'}</strong></td>
-        <td><code>${item.id_card || '-'}</code></td>
-        <td>${item.domicile || '-'}</td>
-        <td><code>${item.last_seen ? new Date(item.last_seen).toLocaleString() : '-'}</code></td>
-        <td><code>${item.last_event_id || '-'}</code></td>
+        <td><strong>${escapeHtml(item.name || '未知')}</strong></td>
+        <td><code>${escapeHtml(item.id_card || '-')}</code></td>
+        <td>${escapeHtml(item.domicile || '-')}</td>
+        <td><code>${escapeHtml(item.last_seen ? new Date(item.last_seen).toLocaleString() : '-')}</code></td>
+        <td><code>${escapeHtml(item.last_event_id || '-')}</code></td>
       </tr>
     `;
   }).join('');

@@ -108,6 +108,7 @@ async function testCoreFtpServerConnection() {
 // ========== FTP 轮询控制 ==========
 
 async function loadFtpPollStatus() {
+  if (typeof currentUser !== 'undefined' && !currentUser) return;
   try {
     const res = await fetch('/api/ftp/poll-status');
     const json = await res.json();
@@ -133,7 +134,7 @@ async function loadFtpPollStatus() {
           html += `<div><strong>上次轮询:</strong> ${new Date(d.lastPollTime).toLocaleString('zh-CN')}</div>`;
         }
         if (d.lastResult) {
-          html += `<div><strong>最近结果:</strong> ${d.lastResult}</div>`;
+          html += `<div><strong>最近结果:</strong> ${escapeHtml(d.lastResult)}</div>`;
         }
         if (d.errorCount > 0) {
           html += `<div style="color:#b91c1c;"><strong>累计异常:</strong> ${d.errorCount} 次</div>`;

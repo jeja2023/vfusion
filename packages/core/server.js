@@ -1,3 +1,4 @@
+require('../common/env_loader').initEnv();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -5,17 +6,19 @@ const fs = require('fs');
 const http = require('http');
 const https = require('https');
 const os = require('os');
+const crypto = require('crypto');
 const { unpackAndVerifyPackage } = require('../common/unpacker');
 const { DEFAULT_FORM_SCHEMA, getHmacSecret, setHmacSecret } = require('../common/protocol');
-const { hashPassword, DEFAULT_USERS, generateToken, verifyToken } = require('../common/auth');
+const { hashPassword, verifyPassword, buildDefaultUsers, generateToken, verifyToken, setTokenSecret } = require('../common/auth');
+const { authMiddleware, requireRole } = require('../common/auth_middleware');
 
 const SQLiteStorageEngine = require('../common/db_sqlite');
-const { runAiInferencePipeline } = require('../common/ai_pipeline');
+const { buildEventTags } = require('../common/event_tags');
 const { ensureSslCertificates } = require('../common/ssl_cert');
 const { testFtpConnection, uploadToRemoteFtp, downloadFromRemoteFtp } = require('../common/ftp_client');
 
 const app = express();
-const PORT = process.env.PORT || 4002;
+const PORT = process.env.CORE_PORT || process.env.PORT || 5002;
 
 const STORAGE_ROOT = path.resolve(__dirname, '../../storage');
 const SECURITY_CONFIG_FILE = path.join(STORAGE_ROOT, 'security.json');
@@ -77,18 +80,63 @@ function writeJsonAtomic(filePath, data) {
 if (!fs.existsSync(DB_FILE)) writeJsonAtomic(DB_FILE, { events: [], audit_logs: [], alerts: [] });
 if (!fs.existsSync(SCHEMA_FILE)) writeJsonAtomic(SCHEMA_FILE, DEFAULT_FORM_SCHEMA);
 if (!fs.existsSync(WEBHOOKS_FILE)) writeJsonAtomic(WEBHOOKS_FILE, []);
-if (!fs.existsSync(SECURITY_CONFIG_FILE)) writeJsonAtomic(SECURITY_CONFIG_FILE, { hmac_secret: 'vfusion_secret_key_2026', auto_diode_interval: 0, ftp_in_dir: '', ftp_out_dir: '', pkg_prefix: 'vfusion_' });
-if (!fs.existsSync(USERS_FILE)) writeJsonAtomic(USERS_FILE, DEFAULT_USERS);
+
+// 首次启动时生成随机 HMAC / Token 密钥，避免固定密钥随源码分发
+if (!fs.existsSync(SECURITY_CONFIG_FILE)) {
+  writeJsonAtomic(SECURITY_CONFIG_FILE, {
+    hmac_secret: crypto.randomBytes(32).toString('hex'),
+    token_secret: crypto.randomBytes(32).toString('hex'),
+    auto_diode_interval: 0,
+    ftp_in_dir: '',
+    ftp_out_dir: '',
+    pkg_prefix: 'vfusion_'
+  });
+  console.log('[VFusion Core] 已生成全新随机 HMAC 与 Token 密钥并写入 security.json');
+}
+if (!fs.existsSync(USERS_FILE)) writeJsonAtomic(USERS_FILE, buildDefaultUsers());
 
 try {
   const secConf = JSON.parse(fs.readFileSync(SECURITY_CONFIG_FILE, 'utf8'));
-  if (secConf.hmac_secret) setHmacSecret(secConf.hmac_secret);
-} catch (e) {}
+  let mutated = false;
 
-app.use(cors());
-app.use(express.json());
+  // 兼容历史配置：补齐缺失的密钥，并替换已泄露的旧默认值
+  if (!secConf.hmac_secret || secConf.hmac_secret === 'vfusion_secret_key_2026') {
+    secConf.hmac_secret = crypto.randomBytes(32).toString('hex');
+    mutated = true;
+    console.warn('[VFusion Core] 检测到缺失或已泄露的默认 HMAC 密钥，已自动轮换为随机密钥');
+    console.warn('[VFusion Core] 注意：视频网端需同步该密钥，否则历史数据包将无法通过签名校验');
+  }
+  if (!secConf.token_secret) {
+    secConf.token_secret = crypto.randomBytes(32).toString('hex');
+    mutated = true;
+  }
+  if (mutated) writeJsonAtomic(SECURITY_CONFIG_FILE, secConf);
+
+  setHmacSecret(secConf.hmac_secret);
+  setTokenSecret(secConf.token_secret);
+} catch (e) {
+  console.error('[VFusion Core] 读取安全配置失败:', e.message);
+  process.exit(1);
+}
+
+// CORS 白名单：默认仅允许同源与显式配置的来源，避免任意站点驱动内网 API
+const ALLOWED_ORIGINS = (process.env.VFUSION_ALLOWED_ORIGINS || '')
+  .split(',').map(s => s.trim()).filter(Boolean);
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin || ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+    return cb(new Error('该来源不在 CORS 白名单内'));
+  }
+}));
+app.use(express.json({ limit: '2mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/favicon.ico', (req, res) => res.status(204).end());
+
+// 统一身份认证：登录接口与静态资源之外的所有 API 均需有效 Token
+app.use(authMiddleware({
+  loadUser: (id) => readUsers().find(u => u.id === id) || null
+}));
+
 app.use('/assets', express.static(ASSETS_DIR));
 
 function readDb() {
@@ -103,7 +151,7 @@ function writeDb(db) { writeJsonAtomic(DB_FILE, db); }
 
 function readUsers() {
   try { return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8')); }
-  catch (e) { return DEFAULT_USERS; }
+  catch (e) { return []; }
 }
 function writeUsers(list) { writeJsonAtomic(USERS_FILE, list); }
 
@@ -141,8 +189,8 @@ function addSystemAlert(title, message, level = 'WARN') {
   writeDb(db);
 }
 
-function runAiPipeline(eventRecord) {
-  return runAiInferencePipeline(eventRecord);
+function tagEvent(eventRecord) {
+  return buildEventTags(eventRecord);
 }
 
 // 身份认证 API
@@ -151,12 +199,19 @@ app.post('/api/auth/login', (req, res) => {
   if (!username || !password) return res.status(400).json({ success: false, error: '用户名与密码不能为空' });
 
   const users = readUsers();
-  const pwdHash = hashPassword(password);
-  const user = users.find(u => u.username === username && u.password === pwdHash);
+  const user = users.find(u => u.username === username);
+  const pwdCheck = user ? verifyPassword(password, user.password) : { valid: false, needsUpgrade: false };
 
-  if (!user) {
+  if (!user || !pwdCheck.valid) {
     addAuditLog('AUTH_FAIL', `登录失败: 用户名或密码错误 [${username}]`, 'WARN');
     return res.status(401).json({ success: false, error: '用户名或密码不正确' });
+  }
+
+  // 旧格式（固定盐 SHA-256）密码在首次成功登录后自动升级为 PBKDF2
+  if (pwdCheck.needsUpgrade) {
+    user.password = hashPassword(password);
+    writeUsers(users);
+    addAuditLog('USER_PWD_UPGRADE', `用户 [${user.username}] 的密码哈希已自动升级为 PBKDF2`, 'INFO');
   }
 
   if (user.status !== 'ACTIVE') {
@@ -177,14 +232,8 @@ app.post('/api/auth/login', (req, res) => {
 });
 
 app.get('/api/auth/me', (req, res) => {
-  const token = req.headers.authorization ? req.headers.authorization.replace('Bearer ', '') : null;
-  const decoded = verifyToken(token);
-  if (!decoded) return res.status(401).json({ success: false, error: '未登录或 Token 已失效' });
-
-  const users = readUsers();
-  const user = users.find(u => u.id === decoded.id);
-  if (!user) return res.status(401).json({ success: false, error: '用户不存在' });
-
+  // 认证中间件已完成 Token 校验与用户回查
+  const user = req.user;
   res.json({ success: true, data: { id: user.id, username: user.username, name: user.name, role: user.role } });
 });
 
@@ -201,15 +250,15 @@ app.get('/api/alerts', (req, res) => {
   res.json({ success: true, data: db.alerts, unread_count: unreadCount });
 });
 
-app.post('/api/alerts/read', (req, res) => {
+app.post('/api/alerts/read', requireRole('admin'), (req, res) => {
   const db = readDb();
   db.alerts.forEach(a => a.read = true);
   writeDb(db);
   res.json({ success: true, message: '已标记所有告警为已读' });
 });
 
-// 用户管理 CRUD
-app.get('/api/users', (req, res) => {
+// 用户管理 CRUD（仅管理员可操作）
+app.get('/api/users', requireRole('admin'), (req, res) => {
   const users = readUsers().map(u => ({
     id: u.id,
     username: u.username,
@@ -221,7 +270,7 @@ app.get('/api/users', (req, res) => {
   res.json({ success: true, data: users });
 });
 
-app.post('/api/users', (req, res) => {
+app.post('/api/users', requireRole('admin'), (req, res) => {
   const { username, name, password, role } = req.body;
   if (!username || !password || !name) return res.status(400).json({ success: false, error: '请填写完整用户信息' });
 
@@ -246,7 +295,7 @@ app.post('/api/users', (req, res) => {
   res.json({ success: true, message: '用户创建成功', data: newUser });
 });
 
-app.put('/api/users/:id/reset-password', (req, res) => {
+app.put('/api/users/:id/reset-password', requireRole('admin'), (req, res) => {
   const id = parseInt(req.params.id);
   const { new_password } = req.body;
   if (!new_password) return res.status(400).json({ success: false, error: '新密码不能为空' });
@@ -261,7 +310,7 @@ app.put('/api/users/:id/reset-password', (req, res) => {
   res.json({ success: true, message: '密码重置成功' });
 });
 
-app.delete('/api/users/:id', (req, res) => {
+app.delete('/api/users/:id', requireRole('admin'), (req, res) => {
   const id = parseInt(req.params.id);
   let users = readUsers();
   const user = users.find(u => u.id === id);
@@ -372,7 +421,8 @@ async function processPackageFile(fileName, isRetry = false) {
         created_at: new Date().toISOString()
       };
 
-      newRecord.ai_tags = runAiPipeline(newRecord);
+      // 字段名 ai_tags 为历史数据库列名，保留以兼容既有数据
+      newRecord.ai_tags = tagEvent(newRecord);
 
       // 如果数据包负荷中包含涉事人员信息，自动同步归档至内网人员库
       const p = info.payload || {};
@@ -425,6 +475,10 @@ async function processPackageFile(fileName, isRetry = false) {
 
 async function scanLoop() {
   try {
+    // 当远程 FTP 已启用时，数据只从 FTP 远程拉取，不扫描本地旧文件
+    const sec = getFtpConfig();
+    if (sec && sec.ftp_enabled && sec.ftp_host) return;
+
     const ftpInDir = getFtpInDir();
     if (!fs.existsSync(ftpInDir)) fs.mkdirSync(ftpInDir, { recursive: true });
     const prefix = getPkgPrefix();
@@ -473,6 +527,16 @@ async function ftpPollLoop() {
       ftpPollStatus.lastResult = `成功拉取 ${downloadedFiles.length} 个数据包: ${downloadedFiles.join(', ')}`;
       addAuditLog('FTP_POLL', `从远程 FTP [${sec.ftp_host}:${sec.ftp_port || 21}] 自动拉取了 ${downloadedFiles.length} 个数据包`, 'SUCCESS');
       console.log(`[VFusion Core FTP] 从远程 FTP 拉取了 ${downloadedFiles.length} 个包: ${downloadedFiles.join(', ')}`);
+
+      // 立即逐个处理刚从 FTP 拉取的新包（只处理本次拉取的，不扫描旧文件）
+      for (const fileName of downloadedFiles) {
+        try {
+          await processPackageFile(fileName, false);
+          console.log(`[VFusion Core FTP] 已自动解包入库: ${fileName}`);
+        } catch (procErr) {
+          console.error(`[VFusion Core FTP] 处理 ${fileName} 失败:`, procErr.message);
+        }
+      }
     } else {
       ftpPollStatus.lastResult = '远程 FTP 目录暂无新数据包';
     }
@@ -520,13 +584,25 @@ app.post('/api/ftp/pull', async (req, res) => {
     const prefix = getPkgPrefix();
 
     const downloadedFiles = await downloadFromRemoteFtp(ftpInDir, sec, prefix);
-    addAuditLog('FTP_PULL', `管理员手动触发 FTP 拉取，下载了 ${downloadedFiles.length} 个数据包`, downloadedFiles.length > 0 ? 'SUCCESS' : 'INFO');
+
+    // 立即处理刚从 FTP 拉取的新包
+    let processedCount = 0;
+    for (const fileName of downloadedFiles) {
+      try {
+        await processPackageFile(fileName, false);
+        processedCount++;
+      } catch (procErr) {
+        console.error(`[VFusion Core FTP] 手动拉取处理 ${fileName} 失败:`, procErr.message);
+      }
+    }
+
+    addAuditLog('FTP_PULL', `管理员手动触发 FTP 拉取，下载了 ${downloadedFiles.length} 个数据包，成功入库 ${processedCount} 个`, downloadedFiles.length > 0 ? 'SUCCESS' : 'INFO');
     res.json({
       success: true,
       message: downloadedFiles.length > 0
-        ? `成功从远程 FTP 拉取 ${downloadedFiles.length} 个数据包: ${downloadedFiles.join(', ')}`
+        ? `成功从远程 FTP 拉取 ${downloadedFiles.length} 个数据包并入库处理 ${processedCount} 个: ${downloadedFiles.join(', ')}`
         : '远程 FTP 目录中暂无匹配的新数据包',
-      data: { files: downloadedFiles, count: downloadedFiles.length }
+      data: { files: downloadedFiles, count: downloadedFiles.length, processed: processedCount }
     });
   } catch (err) {
     addAuditLog('FTP_PULL', `手动 FTP 拉取失败: ${err.message}`, 'ERROR');
@@ -549,7 +625,7 @@ app.get('/api/ftp/poll-status', (req, res) => {
 });
 
 // FTP 轮询间隔控制
-app.post('/api/ftp/poll-interval', (req, res) => {
+app.post('/api/ftp/poll-interval', requireRole('admin'), (req, res) => {
   const { interval } = req.body;
   const seconds = parseInt(interval) || 0;
   try {
@@ -599,23 +675,34 @@ app.get('/api/system/diagnose', (req, res) => {
   }
 });
 
+// 校验用户提供的文件名，禁止路径分隔符与 .. 穿越
+function isSafeFileName(name) {
+  return typeof name === 'string' &&
+    name.length > 0 &&
+    name.length <= 255 &&
+    !name.includes('/') &&
+    !name.includes('\\') &&
+    !name.includes('\0') &&
+    name !== '.' &&
+    name !== '..';
+}
+
 // 单件事件 Zip 离线包下载 API
 app.get('/api/events/:event_id/download', (req, res) => {
   const { event_id } = req.params;
+  if (!isSafeFileName(event_id)) {
+    return res.status(400).json({ success: false, error: '非法的事件编号' });
+  }
   try {
     const archiveFiles = fs.readdirSync(ARCHIVE_DIR);
     const matched = archiveFiles.find(f => f.includes(event_id) && f.endsWith('.zip'));
-    if (matched) {
-      const filePath = path.join(ARCHIVE_DIR, matched);
-      addAuditLog('DOWNLOAD', `下载事件 [${event_id}] 的 Zip 归档存照包: ${matched}`, 'INFO');
-      return res.download(filePath, matched);
+    if (!matched) {
+      // 不做任意兜底：返回其他事件的归档包会造成跨单据数据泄露
+      return res.status(404).json({ success: false, error: '未找到该单据对应的 Zip 归档文件' });
     }
-    if (archiveFiles.length > 0) {
-      const fallbackZip = archiveFiles[0];
-      addAuditLog('DOWNLOAD', `下载事件 [${event_id}] 的 Zip 归档存照包`, 'INFO');
-      return res.download(path.join(ARCHIVE_DIR, fallbackZip), `vfusion_${event_id}.zip`);
-    }
-    res.status(404).json({ success: false, error: '未找到该单据对应的 Zip 归档文件' });
+    const filePath = path.join(ARCHIVE_DIR, matched);
+    addAuditLog('DOWNLOAD', `下载事件 [${event_id}] 的 Zip 归档存照包: ${matched}`, 'INFO');
+    return res.download(filePath, matched);
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
@@ -757,19 +844,22 @@ app.delete('/api/webhooks/:id', (req, res) => {
   res.json({ success: true, message: '订阅节点已删除' });
 });
 
-app.get('/api/config/security', (req, res) => {
+const FTP_PASSWORD_MASK = '********';
+
+app.get('/api/config/security', requireRole('admin'), (req, res) => {
   try {
     const sec = JSON.parse(fs.readFileSync(SECURITY_CONFIG_FILE, 'utf8'));
     res.json({
       success: true,
       data: {
-        hmac_secret_masked: sec.hmac_secret ? (sec.hmac_secret.slice(0, 4) + '****' + sec.hmac_secret.slice(-4)) : 'vfus****2026',
+        hmac_secret_masked: sec.hmac_secret ? (sec.hmac_secret.slice(0, 4) + '****' + sec.hmac_secret.slice(-4)) : '未设置',
         auto_diode_interval: sec.auto_diode_interval || 0,
         ftp_enabled: sec.ftp_enabled || false,
         ftp_host: sec.ftp_host || '',
         ftp_port: sec.ftp_port || 21,
         ftp_user: sec.ftp_user || '',
-        ftp_password: sec.ftp_password || '',
+        // 不下发明文密码，仅告知是否已配置
+        ftp_password: sec.ftp_password ? FTP_PASSWORD_MASK : '',
         ftp_remote_dir: sec.ftp_remote_dir || '/vfusion_packages',
         ftp_delete_after_download: sec.ftp_delete_after_download !== false,
         ftp_in_dir: sec.ftp_in_dir || getFtpInDir(),
@@ -781,7 +871,7 @@ app.get('/api/config/security', (req, res) => {
     res.json({
       success: true,
       data: {
-        hmac_secret_masked: 'vfus****2026',
+        hmac_secret_masked: '未设置',
         auto_diode_interval: 0,
         ftp_enabled: false,
         ftp_host: '',
@@ -798,7 +888,7 @@ app.get('/api/config/security', (req, res) => {
   }
 });
 
-app.post('/api/config/security', (req, res) => {
+app.post('/api/config/security', requireRole('admin'), (req, res) => {
   const {
     hmac_secret, auto_diode_interval, ftp_in_dir, ftp_out_dir, pkg_prefix,
     ftp_enabled, ftp_host, ftp_port, ftp_user, ftp_password, ftp_remote_dir, ftp_delete_after_download
@@ -819,7 +909,9 @@ app.post('/api/config/security', (req, res) => {
     if (typeof ftp_host === 'string') sec.ftp_host = ftp_host;
     if (typeof ftp_port === 'number' || typeof ftp_port === 'string') sec.ftp_port = parseInt(ftp_port) || 21;
     if (typeof ftp_user === 'string') sec.ftp_user = ftp_user;
-    if (typeof ftp_password === 'string') sec.ftp_password = ftp_password;
+    if (typeof ftp_password === 'string' && ftp_password && ftp_password !== FTP_PASSWORD_MASK) {
+      sec.ftp_password = ftp_password;
+    }
     if (typeof ftp_remote_dir === 'string') sec.ftp_remote_dir = ftp_remote_dir;
     if (typeof ftp_delete_after_download === 'boolean') sec.ftp_delete_after_download = ftp_delete_after_download;
     if (typeof ftp_in_dir === 'string') sec.ftp_in_dir = ftp_in_dir;
@@ -841,7 +933,7 @@ app.post('/api/config/security', (req, res) => {
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.post('/api/config/ftp/test', async (req, res) => {
+app.post('/api/config/ftp/test', requireRole('admin'), async (req, res) => {
   try {
     const config = req.body;
     const testResult = await testFtpConnection(config);
@@ -898,16 +990,22 @@ app.get('/api/errors', (req, res) => {
   } catch (e) { res.json({ success: true, data: [] }); }
 });
 
-app.post('/api/errors/retry', async (req, res) => {
+app.post('/api/errors/retry', requireRole('admin'), async (req, res) => {
   const { filename } = req.body;
+  if (!isSafeFileName(filename)) {
+    return res.status(400).json({ success: false, error: '非法的文件名' });
+  }
   try {
     const result = await processPackageFile(filename, true);
     res.json(result);
   } catch (e) { res.status(400).json({ success: false, error: e.message }); }
 });
 
-app.delete('/api/errors/:filename', (req, res) => {
+app.delete('/api/errors/:filename', requireRole('admin'), (req, res) => {
   const { filename } = req.params;
+  if (!isSafeFileName(filename)) {
+    return res.status(400).json({ success: false, error: '非法的文件名' });
+  }
   try {
     const target = path.join(ERROR_DIR, filename);
     if (fs.existsSync(target)) fs.unlinkSync(target);
@@ -948,7 +1046,7 @@ app.get('/api/system/health', (req, res) => {
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.post('/api/storage/cleanup', (req, res) => {
+app.post('/api/storage/cleanup', requireRole('admin'), (req, res) => {
   try {
     const files = fs.readdirSync(ARCHIVE_DIR);
     let count = 0;
@@ -976,7 +1074,7 @@ app.get('/api/audit-logs', (req, res) => {
   res.json({ success: true, data: filtered });
 });
 
-app.post('/api/simulate-diode', (req, res) => {
+app.post('/api/simulate-diode', requireRole('admin'), (req, res) => {
   try {
     const ftpOutDir = getFtpOutDir();
     const ftpInDir = getFtpInDir();

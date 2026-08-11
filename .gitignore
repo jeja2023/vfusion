@@ -1,16 +1,19 @@
 node_modules/
 dist_vfusion_v0.9.0/
-storage/ftp_out/*
-storage/ftp_in/*
-storage/archive/*
-storage/error/*
-storage/assets/*
-!storage/ftp_out/.gitkeep
-!storage/ftp_in/.gitkeep
-!storage/archive/.gitkeep
-!storage/error/.gitkeep
-!storage/assets/.gitkeep
+release/
+
+# 运行时数据与密钥：包含 HMAC/Token 密钥、口令哈希、业务数据与现场照片，
+# 一律不纳入版本控制。首次启动时由程序自动生成。
+storage/*
+!storage/**/.gitkeep
+
 *.log
 .DS_Store
 Thumbs.db
-release/
+
+# 环境变量敏感配置文件：排除本地 .env，保留 .env.example 模版
+.env
+.env.local
+.env.*
+!.env.example
+

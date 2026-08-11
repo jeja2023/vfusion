@@ -1,14 +1,18 @@
+require('../common/env_loader').initEnv();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const { formidable } = require('formidable');
 const { packEventPackage } = require('../common/packager');
-const { DEFAULT_FORM_SCHEMA } = require('../common/protocol');
+const { DEFAULT_FORM_SCHEMA, setHmacSecret } = require('../common/protocol');
+const { hashPassword, verifyPassword, generateToken, setTokenSecret } = require('../common/auth');
+const { authMiddleware, requireRole } = require('../common/auth_middleware');
 const { testFtpConnection, uploadToRemoteFtp } = require('../common/ftp_client');
 
 const app = express();
-const PORT = process.env.PORT || 4001;
+const PORT = process.env.COLLECTOR_PORT || process.env.PORT || 5001;
 
 const STORAGE_ROOT = path.resolve(__dirname, '../../storage');
 const SECURITY_CONFIG_FILE = path.join(STORAGE_ROOT, 'security.json');
@@ -41,10 +45,48 @@ if (!fs.existsSync(COLLECTOR_SCHEMA_FILE)) {
   writeJsonAtomic(COLLECTOR_SCHEMA_FILE, DEFAULT_FORM_SCHEMA);
 }
 
+// 加载共享密钥：视频网端签名用的 HMAC 密钥必须与内网端一致，否则数据包无法通过校验
+function loadSecurityConfig() {
+  try {
+    if (fs.existsSync(SECURITY_CONFIG_FILE)) {
+      return JSON.parse(fs.readFileSync(SECURITY_CONFIG_FILE, 'utf8'));
+    }
+  } catch (e) {
+    console.error('[VFusion Collector] 读取安全配置失败:', e.message);
+  }
+  return null;
+}
+
+(function bootSecrets() {
+  let sec = loadSecurityConfig();
+  if (!sec) {
+    sec = {
+      hmac_secret: crypto.randomBytes(32).toString('hex'),
+      token_secret: crypto.randomBytes(32).toString('hex'),
+      pkg_prefix: 'vfusion_'
+    };
+    writeJsonAtomic(SECURITY_CONFIG_FILE, sec);
+    console.log('[VFusion Collector] 已生成随机 HMAC 与 Token 密钥并写入 security.json');
+  }
+  let mutated = false;
+  if (!sec.hmac_secret || sec.hmac_secret === 'vfusion_secret_key_2026') {
+    sec.hmac_secret = crypto.randomBytes(32).toString('hex');
+    mutated = true;
+    console.warn('[VFusion Collector] 已轮换缺失或泄露的默认 HMAC 密钥');
+  }
+  if (!sec.token_secret) {
+    sec.token_secret = crypto.randomBytes(32).toString('hex');
+    mutated = true;
+  }
+  if (mutated) writeJsonAtomic(SECURITY_CONFIG_FILE, sec);
+
+  setHmacSecret(sec.hmac_secret);
+  setTokenSecret(sec.token_secret);
+  console.log('[VFusion Collector] HMAC 签名密钥已加载');
+})();
+
 const COLLECTOR_ASSETS_DIR = path.join(STORAGE_ROOT, 'collector_assets');
 if (!fs.existsSync(COLLECTOR_ASSETS_DIR)) fs.mkdirSync(COLLECTOR_ASSETS_DIR, { recursive: true });
-
-app.use('/collector-assets', express.static(COLLECTOR_ASSETS_DIR));
 
 const SQLiteStorageEngine = require('../common/db_sqlite');
 
@@ -53,16 +95,36 @@ const collectorSqlite = new SQLiteStorageEngine(path.join(STORAGE_ROOT, 'vfusion
 // 初始化视频网本地数据库（用户与审计日志）
 function readCollectorDb() {
   if (!fs.existsSync(COLLECTOR_DB_FILE)) {
+    // 初始密码由环境变量注入，未设置时随机生成并仅打印一次，避免固定弱口令
+    const generated = {};
+    const initialPwd = (envKey, account) => {
+      const fromEnv = process.env[envKey];
+      if (fromEnv) return fromEnv;
+      const random = crypto.randomBytes(9).toString('base64url');
+      generated[account] = random;
+      return random;
+    };
+
     const defaultDb = {
       users: [
-        { id: 1, username: 'admin', password: '123', name: '视频网管理员', role: 'admin', status: 'active' },
-        { id: 2, username: 'operator', password: '123', name: '视频网操作员', role: 'operator', status: 'active' },
-        { id: 3, username: 'auditor', password: '123', name: '视频网审计员', role: 'auditor', status: 'active' }
+        { id: 1, username: 'admin', password: hashPassword(initialPwd('VFUSION_COLLECTOR_ADMIN_PASSWORD', 'admin')), name: '视频网管理员', role: 'admin', status: 'active' },
+        { id: 2, username: 'operator', password: hashPassword(initialPwd('VFUSION_COLLECTOR_OPERATOR_PASSWORD', 'operator')), name: '视频网操作员', role: 'operator', status: 'active' },
+        { id: 3, username: 'auditor', password: hashPassword(initialPwd('VFUSION_COLLECTOR_AUDITOR_PASSWORD', 'auditor')), name: '视频网审计员', role: 'auditor', status: 'active' }
       ],
       audit_logs: [
-        { id: 1, timestamp: new Date().toISOString(), type: 'AUTH_SUCCESS', message: '视频网系统超级管理员 (admin) 登录成功', status: 'SUCCESS' }
+        { id: 1, timestamp: new Date().toISOString(), type: 'SYSTEM_INIT', message: '视频网采集端完成首次初始化', status: 'INFO' }
       ]
     };
+
+    if (Object.keys(generated).length > 0) {
+      console.log('\n=============== VFusion 视频网端初始账号 ===============');
+      console.log(' 首次初始化，已生成随机初始密码，仅显示这一次：');
+      for (const [account, pwd] of Object.entries(generated)) {
+        console.log(`   ${account.padEnd(10)} : ${pwd}`);
+      }
+      console.log('=========================================================\n');
+    }
+
     writeJsonAtomic(COLLECTOR_DB_FILE, defaultDb);
     return defaultDb;
   }
@@ -92,10 +154,26 @@ function addCollectorAuditLog(type, message, status = 'SUCCESS') {
   collectorSqlite.addAuditLog(type, message, status);
 }
 
-app.use(cors());
-app.use(express.json());
+// 仅允许同源与显式白名单来源，避免任意站点携带凭据调用内部接口
+const ALLOWED_ORIGINS = (process.env.VFUSION_ALLOWED_ORIGINS || '')
+  .split(',').map(s => s.trim()).filter(Boolean);
+
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin) return callback(null, true);
+    if (ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('CORS: 来源不被允许'));
+  }
+}));
+app.use(express.json({ limit: '2mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/collector-assets', express.static(COLLECTOR_ASSETS_DIR));
 app.get('/favicon.ico', (req, res) => res.status(204).end());
+
+// 统一鉴权：除登录与静态资源外，所有 /api 路由必须携带有效 Token
+app.use('/api', authMiddleware({ publicPaths: ['/api/auth/login'] }));
 
 // 涉事人员库 API
 app.get('/api/personnel', (req, res) => {
@@ -126,32 +204,51 @@ app.post('/api/personnel', (req, res) => {
 // 登录 API
 app.post('/api/auth/login', (req, res) => {
   const { username, password } = req.body;
-  const db = readCollectorDb();
-  const user = db.users.find(u => u.username === username && u.password === password);
-
-  if (user) {
-    addCollectorAuditLog('AUTH_SUCCESS', `视频网用户 [${user.name}(${user.username})] 登录系统成功 (角色: ${user.role})`, 'SUCCESS');
-    res.json({
-      success: true,
-      data: {
-        token: `vfusion_coll_token_${Date.now()}`,
-        user: { id: user.id, username: user.username, name: user.name, role: user.role }
-      }
-    });
-  } else {
-    addCollectorAuditLog('AUTH_FAIL', `视频网用户尝试登录失败 (用户名: ${username})`, 'WARN');
-    res.status(401).json({ success: false, error: '用户名或密码错误' });
+  if (!username || !password) {
+    return res.status(400).json({ success: false, error: '用户名与密码不能为空' });
   }
+
+  const db = readCollectorDb();
+  const user = db.users.find(u => u.username === username);
+  const pwdCheck = user ? verifyPassword(password, user.password) : { valid: false, needsUpgrade: false };
+
+  if (!user || !pwdCheck.valid) {
+    addCollectorAuditLog('AUTH_FAIL', `视频网用户尝试登录失败 (用户名: ${username})`, 'WARN');
+    return res.status(401).json({ success: false, error: '用户名或密码错误' });
+  }
+
+  if (user.status && user.status !== 'active' && user.status !== 'ACTIVE') {
+    return res.status(403).json({ success: false, error: '该账号已被禁用，请联系管理员' });
+  }
+
+  // 历史明文/旧哈希密码在首次成功登录后自动升级为 PBKDF2
+  if (pwdCheck.needsUpgrade) {
+    user.password = hashPassword(password);
+    saveCollectorDb(db);
+    addCollectorAuditLog('USER_PWD_UPGRADE', `视频网用户 [${user.username}] 的密码已升级为 PBKDF2 存储`, 'INFO');
+  }
+
+  addCollectorAuditLog('AUTH_SUCCESS', `视频网用户 [${user.name}(${user.username})] 登录系统成功 (角色: ${user.role})`, 'SUCCESS');
+  res.json({
+    success: true,
+    data: {
+      token: generateToken(user),
+      user: { id: user.id, username: user.username, name: user.name, role: user.role }
+    }
+  });
 });
 
-// 用户管理 API
-app.get('/api/users', (req, res) => {
+// 用户管理 API（仅管理员）
+app.get('/api/users', requireRole('admin'), (req, res) => {
   const db = readCollectorDb();
   res.json({ success: true, data: db.users.map(u => ({ id: u.id, username: u.username, name: u.name, role: u.role, status: u.status })) });
 });
 
-app.post('/api/users', (req, res) => {
+app.post('/api/users', requireRole('admin'), (req, res) => {
   const { username, password, name, role } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ success: false, error: '用户名与初始密码不能为空' });
+  }
   const db = readCollectorDb();
   if (db.users.some(u => u.username === username)) {
     return res.status(400).json({ success: false, error: '用户名已存在' });
@@ -159,7 +256,7 @@ app.post('/api/users', (req, res) => {
   const newUser = {
     id: Date.now(),
     username,
-    password: password || '123456',
+    password: hashPassword(password),
     name: name || username,
     role: role || 'operator',
     status: 'active'
@@ -167,23 +264,27 @@ app.post('/api/users', (req, res) => {
   db.users.push(newUser);
   saveCollectorDb(db);
   addCollectorAuditLog('USER_ADD', `新增视频网用户 [${name}(${username})] (角色: ${role})`, 'SUCCESS');
-  res.json({ success: true, data: newUser });
+  // 不回传密码哈希
+  res.json({ success: true, data: { id: newUser.id, username: newUser.username, name: newUser.name, role: newUser.role, status: newUser.status } });
 });
 
-app.put('/api/users/:id/reset-password', (req, res) => {
+app.put('/api/users/:id/reset-password', requireRole('admin'), (req, res) => {
   const { id } = req.params;
   const { new_password } = req.body;
+  if (!new_password) {
+    return res.status(400).json({ success: false, error: '新密码不能为空' });
+  }
   const db = readCollectorDb();
   const user = db.users.find(u => u.id === parseInt(id));
   if (!user) return res.status(404).json({ success: false, error: '用户不存在' });
 
-  user.password = new_password || '123456';
+  user.password = hashPassword(new_password);
   saveCollectorDb(db);
   addCollectorAuditLog('USER_PWD_RESET', `重置视频网用户 [${user.name}(${user.username})] 密码成功`, 'SUCCESS');
   res.json({ success: true, message: '密码重置成功' });
 });
 
-app.delete('/api/users/:id', (req, res) => {
+app.delete('/api/users/:id', requireRole('admin'), (req, res) => {
   const { id } = req.params;
   const db = readCollectorDb();
   const idx = db.users.findIndex(u => u.id === parseInt(id));
@@ -448,7 +549,7 @@ app.get('/api/config/ftp', (req, res) => {
           ftp_host: sec.ftp_host || '',
           ftp_port: sec.ftp_port || 21,
           ftp_user: sec.ftp_user || '',
-          ftp_password: sec.ftp_password || '',
+          ftp_password: sec.ftp_password ? '********' : '',
           ftp_remote_dir: sec.ftp_remote_dir || '/vfusion_packages',
           pkg_prefix: sec.pkg_prefix || 'vfusion_'
         }
@@ -461,7 +562,7 @@ app.get('/api/config/ftp', (req, res) => {
   });
 });
 
-app.post('/api/config/ftp', (req, res) => {
+app.post('/api/config/ftp', requireRole('admin'), (req, res) => {
   try {
     let sec = {};
     if (fs.existsSync(SECURITY_CONFIG_FILE)) {
@@ -472,7 +573,9 @@ app.post('/api/config/ftp', (req, res) => {
     if (typeof ftp_host === 'string') sec.ftp_host = ftp_host;
     if (typeof ftp_port === 'number' || typeof ftp_port === 'string') sec.ftp_port = parseInt(ftp_port) || 21;
     if (typeof ftp_user === 'string') sec.ftp_user = ftp_user;
-    if (typeof ftp_password === 'string') sec.ftp_password = ftp_password;
+    if (typeof ftp_password === 'string' && ftp_password && ftp_password !== '********') {
+      sec.ftp_password = ftp_password;
+    }
     if (typeof ftp_remote_dir === 'string') sec.ftp_remote_dir = ftp_remote_dir;
     if (typeof pkg_prefix === 'string') sec.pkg_prefix = pkg_prefix;
 
@@ -484,9 +587,14 @@ app.post('/api/config/ftp', (req, res) => {
   }
 });
 
-app.post('/api/config/ftp/test', async (req, res) => {
+app.post('/api/config/ftp/test', requireRole('admin'), async (req, res) => {
   try {
-    const config = req.body;
+    const config = { ...req.body };
+    // 前端回传的是掩码时，改用已保存的真实口令进行连通性测试
+    if (!config.ftp_password || config.ftp_password === '********') {
+      const sec = loadSecurityConfig();
+      config.ftp_password = (sec && sec.ftp_password) || '';
+    }
     const testResult = await testFtpConnection(config);
     addCollectorAuditLog('FTP_TEST', `视频网端测试 FTP 连接 [${config.ftp_host}:${config.ftp_port}] 成功`, 'SUCCESS');
     res.json(testResult);

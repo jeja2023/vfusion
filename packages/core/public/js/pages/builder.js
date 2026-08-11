@@ -15,10 +15,10 @@ function renderSchemaFields() {
   tbody.innerHTML = (currentSchema.fields || []).map((f, idx) => `
     <tr>
       <td class="col-idx">${idx + 1}</td>
-      <td><code>${f.key}</code></td>
-      <td><strong>${f.label}</strong></td>
-      <td>${f.type}</td>
-      <td>${(f.options || []).join(', ') || '-'}</td>
+      <td><code>${escapeHtml(f.key)}</code></td>
+      <td><strong>${escapeHtml(f.label)}</strong></td>
+      <td>${escapeHtml(f.type)}</td>
+      <td>${escapeHtml((f.options || []).join(', ')) || '-'}</td>
       <td><button class="btn btn-danger" style="padding:0.25rem 0.5rem; font-size:0.75rem; white-space:nowrap;" onclick="removeSchemaField(${idx})">删除</button></td>
     </tr>
   `).join('');

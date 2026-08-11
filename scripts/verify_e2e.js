@@ -11,7 +11,7 @@ async function testE2E() {
   // 简单构造包含 RGB 数据的伪 JPEG 文件体
   fs.writeFileSync(testImgPath, Buffer.from([0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00]));
 
-  // 2. 调用视频网 Collector 提交事件 API (http://localhost:4001/api/publish)
+  // 2. 调用视频网 Collector 提交事件 API (http://localhost:5001/api/publish)
   console.log('\n[1/4] 模拟视频网用户提交“厂区北门抓拍事件”...');
   
   const formBoundary = '----WebKitFormBoundary7MA4YWxkTrZu0gW';
@@ -47,7 +47,7 @@ async function testE2E() {
   const publishRes = await new Promise((resolve, reject) => {
     const req = http.request({
       hostname: 'localhost',
-      port: 4001,
+      port: 5001,
       path: '/api/publish',
       method: 'POST',
       headers: {
@@ -71,12 +71,12 @@ async function testE2E() {
   const ftpOutFiles = fs.readdirSync(path.resolve(__dirname, '../storage/ftp_out'));
   console.log(`\n[2/4] 检查网闸发送目录 (ftp_out): 发现 ${ftpOutFiles.length} 个数据包 [${ftpOutFiles.join(', ')}]`);
 
-  // 4. 调用模拟网闸摆渡 API (http://localhost:4002/api/simulate-diode)
+  // 4. 调用模拟网闸摆渡 API (http://localhost:5002/api/simulate-diode)
   console.log('\n[3/4] 触发网闸单向摆渡 (FTP Sync 到 ftp_in)...');
   const diodeRes = await new Promise((resolve, reject) => {
     const req = http.request({
       hostname: 'localhost',
-      port: 4002,
+      port: 5002,
       path: '/api/simulate-diode',
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
@@ -95,9 +95,9 @@ async function testE2E() {
   console.log('\n[4/4] 等待内网 Core 自动轮询解包、MD5 校验与入库...');
   await new Promise(r => setTimeout(r, 4000));
 
-  // 6. 查询内网事件列表 (http://localhost:4002/api/events)
+  // 6. 查询内网事件列表 (http://localhost:5002/api/events)
   const eventsRes = await new Promise((resolve, reject) => {
-    http.get('http://localhost:4002/api/events', res => {
+    http.get('http://localhost:5002/api/events', res => {
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => resolve(JSON.parse(data)));

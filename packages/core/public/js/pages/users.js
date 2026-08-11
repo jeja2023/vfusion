@@ -39,10 +39,12 @@ function renderUsers() {
     return `
       <tr>
         <td class="col-idx">${globalIdx}</td>
-        <td><code>${item.username}</code></td>
-        <td><strong>${item.name}</strong></td>
-        <td><span class="badge-level ${item.role === 'admin' ? '高' : '低'}">${roleMap[item.role] || item.role}</span></td>
-        <td><span style="color:var(--success); font-weight:600;">启用</span></td>
+        <td><code>${escapeHtml(item.username)}</code></td>
+        <td><strong>${escapeHtml(item.name)}</strong></td>
+        <td><span class="badge-level ${item.role === 'admin' ? '高' : '低'}">${escapeHtml(roleMap[item.role] || item.role)}</span></td>
+        <td>${item.status === 'ACTIVE' || item.status === 'active' || !item.status
+          ? '<span style="color:var(--success); font-weight:600;">启用</span>'
+          : '<span style="color:var(--danger); font-weight:600;">已禁用</span>'}</td>
         <td style="display:flex; gap:0.4rem;">
           <button class="btn btn-primary" style="padding:0.25rem 0.5rem; font-size:0.75rem; white-space:nowrap;" onclick="resetUserPassword(${item.id})">重置密码</button>
           ${item.username !== 'admin' ? `<button class="btn btn-danger" style="padding:0.25rem 0.5rem; font-size:0.75rem; white-space:nowrap;" onclick="deleteUser(${item.id})">删除</button>` : ''}
@@ -80,8 +82,9 @@ async function createNewUser() {
 }
 
 async function resetUserPassword(id) {
-  const newPwd = prompt('请输入新密码 (如 123456):');
+  const newPwd = prompt('请输入新密码 (至少 8 位):');
   if (!newPwd) return;
+  if (newPwd.length < 8) { showToast('密码长度至少 8 位', 'error'); return; }
 
   const res = await fetch(`/api/users/${id}/reset-password`, {
     method: 'PUT',

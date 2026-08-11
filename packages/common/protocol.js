@@ -55,8 +55,13 @@ function calculateHmacSignature(dataStr, customSecret = null) {
 }
 
 function verifyHmacSignature(dataStr, signature, customSecret = null) {
+  if (typeof signature !== 'string' || signature.length === 0) return false;
   const expectedSig = calculateHmacSignature(dataStr, customSecret);
-  return crypto.timingSafeEqual(Buffer.from(expectedSig), Buffer.from(signature));
+  const expectedBuf = Buffer.from(expectedSig, 'utf8');
+  const actualBuf = Buffer.from(signature, 'utf8');
+  // timingSafeEqual 要求两个 Buffer 等长，长度不一致时直接判定失败
+  if (expectedBuf.length !== actualBuf.length) return false;
+  return crypto.timingSafeEqual(expectedBuf, actualBuf);
 }
 
 function encryptPayload(payloadObj, secretKey = null) {
@@ -82,14 +87,29 @@ function decryptPayload(encryptedObj, secretKey = null) {
   return JSON.parse(decrypted);
 }
 
+/**
+ * 计算 info 对象的规范化签名
+ * 约定：签名始终基于 signature 字段置空后的 JSON 文本计算，保证签发与校验两端一致
+ */
+function serializeInfoForSigning(infoObj) {
+  const infoCopy = { ...infoObj, signature: "" };
+  return JSON.stringify(infoCopy, null, 2);
+}
+
+/**
+ * 对 info 对象签名并回填 signature 字段，返回最终用于写入 info.json 的对象与文本
+ */
+function signInfoObject(infoObj, customSecret = null) {
+  const signature = calculateHmacSignature(serializeInfoForSigning(infoObj), customSecret);
+  const signedInfo = { ...infoObj, signature };
+  return { signedInfo, signature, infoJsonStr: JSON.stringify(signedInfo, null, 2) };
+}
+
 function verifyInfoSignature(infoObj, customSecret = null) {
   if (!infoObj) return false;
-  if (!infoObj.signature) return true;
-  const signature = infoObj.signature;
-  const infoCopy = { ...infoObj, signature: "" };
-  const infoJsonStr = JSON.stringify(infoCopy, null, 2);
-  const expectedSig = calculateHmacSignature(infoJsonStr, customSecret);
-  return signature === expectedSig;
+  // 缺失或空签名一律视为校验失败，不得放行未签名的数据包
+  if (typeof infoObj.signature !== 'string' || infoObj.signature.length === 0) return false;
+  return verifyHmacSignature(serializeInfoForSigning(infoObj), infoObj.signature, customSecret);
 }
 
 module.exports = {
@@ -98,6 +118,8 @@ module.exports = {
   calculateHmacSignature,
   verifyHmacSignature,
   verifyInfoSignature,
+  signInfoObject,
+  serializeInfoForSigning,
   encryptPayload,
   decryptPayload,
   setHmacSecret,

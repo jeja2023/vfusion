@@ -38,8 +38,8 @@ async function runDoctor() {
     });
   };
 
-  await checkPort(4001, '视频网发布终端 (Collector)');
-  await checkPort(4002, '内网汇聚中台 (Core)');
+  await checkPort(5001, '视频网发布终端 (Collector)');
+  await checkPort(5002, '内网汇聚中台 (Core)');
 
   // 3. 检查系统配置文件
   console.log('\n[3/4] 检查系统配置文件规范...');

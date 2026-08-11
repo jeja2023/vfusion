@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>视汇 - 内网数据汇聚中台</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
@@ -40,11 +41,11 @@
         <div class="builder-form" style="display:flex; flex-direction:column; background:none; border:none; padding:0; gap:1rem;">
           <div class="form-field-item" style="text-align:left;">
             <label>用户名</label>
-            <input type="text" id="loginUsername" placeholder="管理员 admin / 操作员 operator / 审计员 auditor" required>
+            <input type="text" id="loginUsername" placeholder="请输入用户名" required autocomplete="username">
           </div>
           <div class="form-field-item" style="text-align:left;">
             <label>密码</label>
-            <input type="password" id="loginPassword" placeholder="输入密码 (如 admin123 / op123 / audit123)" required>
+            <input type="password" id="loginPassword" placeholder="请输入密码" required autocomplete="current-password">
           </div>
           <button type="submit" class="btn btn-primary" style="justify-content:center; padding:0.75rem; margin-top:0.5rem;">登录控制台</button>
         </div>

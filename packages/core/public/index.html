@@ -391,7 +391,6 @@
                   <th>交通方式</th>
                   <th>涉事人员</th>
                   <th>现场照片凭证</th>
-                  <th>AI 提取算法特征</th>
                   <th style="text-align:left;">操作</th>
                 </tr>
               </thead>
@@ -989,21 +988,12 @@
       });
 
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:3rem; color:var(--text-muted);">未找到匹配的单据事件数据</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:3rem; color:var(--text-muted);">未找到匹配的单据事件数据</td></tr>`;
         return;
       }
 
       tbody.innerHTML = filtered.map((item, idx) => {
         const p = item.payload || {};
-        
-        // 标准无特殊彩色样式呈现 AI 算法提取特征字段
-        const aiText = (item.ai_tags || ['AI识别']).map(t => {
-          if (t.includes('MD5+HMAC')) return 'HMAC防篡改';
-          if (t.includes('YOLOv8')) return 'YOLOv8';
-          if (t.includes('FaceNet')) return 'FaceNet';
-          if (t.includes('AI交通工具')) return 'AI识别';
-          return t;
-        }).join('、');
 
         const imgsHtml = (item.files || []).map(f => 
           `<img src="${f.url}" style="width:34px; height:34px; object-fit:cover; border-radius:6px; border:1px solid var(--border-color); cursor:pointer; transition:transform 0.15s;" onclick="event.stopPropagation(); openImageLightbox('${f.url}', '现场存照凭证放大预览 (${f.filename || '001.jpg'})')" title="点击在弹窗中放大查看">`
@@ -1023,11 +1013,10 @@
             </td>
             <td><code style="font-size:0.8rem; color:var(--text-sub);">${new Date(item.submit_time || item.timestamp).toLocaleString()}</code></td>
             <td><span style="font-weight:600; color:var(--text-main);">${item.operator || '-'}</span></td>
-            <td><span style="font-weight:500;">${p.location || '-'}</span></td>
+            <td style="max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${p.location || '-'}"><span style="font-weight:500;">${p.location || '-'}</span></td>
             <td><span class="ai-tag-badge" style="background:#f0f9ff; color:#0369a1; border-color:#bae6fd; font-weight:600;">${p.transportation || '-'}</span></td>
             <td>${personStr}</td>
             <td><div style="display:flex; gap:0.3rem;">${imgsHtml || '-'}</div></td>
-            <td><span style="color:var(--text-sub); font-size:0.8rem;" title="${(item.ai_tags || []).join('\n')}">${aiText || '-'}</span></td>
             <td style="text-align:left; white-space:nowrap;">
               <button class="btn btn-diode" style="padding:0.3rem 0.65rem; font-size:0.775rem;" onclick="event.stopPropagation(); openEventDrawer('${item.event_id}')">详情</button>
               <button class="btn btn-export" style="padding:0.3rem 0.65rem; font-size:0.775rem; margin-left:0.35rem;" onclick="event.stopPropagation(); downloadEventZip('${item.event_id}')">Zip存照</button>

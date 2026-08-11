@@ -120,11 +120,11 @@
     .form-field-item label { font-size: 0.8rem; font-weight: 600; color: var(--text-sub); }
     .form-field-item input, .form-field-item select { padding: 0.45rem 0.65rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.825rem; }
 
-    .table-container { overflow-x: auto; max-height: calc(100vh - 280px); overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: left; }
-    th, td { padding: 0.6rem 0.8rem; border: 1px solid var(--border-color); color: var(--text-main); white-space: nowrap; }
+    .table-container { overflow-x: hidden; max-height: calc(100vh - 280px); overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; }
+    table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 0.825rem; text-align: left; }
+    th, td { padding: 0.45rem 0.6rem; border: 1px solid var(--border-color); color: var(--text-main); white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
     th { background: #f8fafc; color: var(--text-muted); font-weight: 700; position: sticky; top: 0; z-index: 2; }
-    th.col-idx, td.col-idx { width: 55px; text-align: center; font-weight: 600; color: var(--text-muted); background: #f8fafc; }
+    th.col-idx, td.col-idx { width: 45px; text-align: center; font-weight: 600; color: var(--text-muted); background: #f8fafc; }
 
     #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
     .toast { pointer-events: auto; padding: 0.75rem 1.25rem; border-radius: 8px; font-size: 0.875rem; font-weight: 600; background: #ffffff; color: var(--text-main); border: 1px solid var(--border-color); box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 0.6rem; animation: toastIn 0.25s ease forwards; white-space: nowrap; }
@@ -380,16 +380,16 @@
             <table>
               <thead>
                 <tr>
-                  <th class="col-idx">序号</th>
-                  <th>事件单据编号</th>
-                  <th>提交时间</th>
-                  <th>录入人员</th>
-                  <th>发生地点</th>
-                  <th>交通方式</th>
-                  <th>涉事人员</th>
-                  <th>现场照片凭证</th>
+                  <th class="col-idx" style="width:45px;">序号</th>
+                  <th style="width:145px;">事件单据编号</th>
+                  <th style="width:130px;">提交时间</th>
+                  <th style="width:110px;">录入人员</th>
+                  <th style="width:75px;">发生地点</th>
+                  <th style="width:70px;">交通方式</th>
+                  <th style="width:75px;">涉事人员</th>
+                  <th style="width:75px;">现场照片</th>
                   <th>AI 提取算法特征</th>
-                  <th style="text-align:right;">操作动作</th>
+                  <th style="width:115px; text-align:right;">操作动作</th>
                 </tr>
               </thead>
               <tbody id="eventTableBody">
@@ -673,6 +673,36 @@
     </div>
   </div>
 
+  <!-- 涉事人员详细档案弹窗 Modal -->
+  <div id="personDetailModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); z-index:1150; align-items:center; justify-content:center;" onclick="closePersonDetailModal()">
+    <div style="position:relative; width:420px; max-width:90vw; background:#ffffff; border-radius:12px; padding:1.5rem; box-shadow:0 20px 25px -5px rgba(0,0,0,0.3); border:1px solid #e2e8f0;" onclick="event.stopPropagation()">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; padding-bottom:0.75rem; border-bottom:1px solid #e2e8f0;">
+        <h3 style="font-size:1.05rem; font-weight:700; color:#1e293b; display:flex; align-items:center; gap:0.5rem;">
+          <svg class="icon-svg" viewBox="0 0 24 24" style="color:#2563eb;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 1 0 7.75"/></svg>
+          涉事人员详细档案
+        </h3>
+        <button onclick="closePersonDetailModal()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#64748b; font-weight:bold;">✕</button>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:0.85rem; font-size:0.875rem;">
+        <div style="display:flex; justify-content:space-between; background:#f8fafc; padding:0.65rem 0.85rem; border-radius:6px;">
+          <span style="color:#64748b;">姓名：</span>
+          <strong id="modalPersonName" style="color:#0f172a; font-size:1rem;">-</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; background:#f8fafc; padding:0.65rem 0.85rem; border-radius:6px;">
+          <span style="color:#64748b;">身份证号码：</span>
+          <code id="modalPersonIdCard" style="color:#0284c7; font-weight:600;">-</code>
+        </div>
+        <div style="display:flex; justify-content:space-between; background:#f8fafc; padding:0.65rem 0.85rem; border-radius:6px;">
+          <span style="color:#64748b;">户籍所在地：</span>
+          <span id="modalPersonDomicile" style="color:#334155; font-weight:600;">-</span>
+        </div>
+      </div>
+      <div style="margin-top:1.25rem; text-align:right;">
+        <button class="btn btn-primary" onclick="closePersonDetailModal()">关闭档案</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     let currentUser = null;
     let eventsData = [];
@@ -726,6 +756,7 @@
       if (e.key === 'Escape') {
         closeDrawer();
         closeImageLightbox();
+        closePersonDetailModal();
       }
     });
 
@@ -740,6 +771,20 @@
 
     function closeImageLightbox() {
       document.getElementById('imageLightboxOverlay').style.display = 'none';
+    }
+
+    function showPersonDetailModal(encodedJson) {
+      try {
+        const p = JSON.parse(decodeURIComponent(encodedJson));
+        document.getElementById('modalPersonName').innerText = p.person_name || '未知';
+        document.getElementById('modalPersonIdCard').innerText = p.person_id_card || '未填';
+        document.getElementById('modalPersonDomicile').innerText = p.person_domicile || '未填';
+        document.getElementById('personDetailModal').style.display = 'flex';
+      } catch (e) { console.error('解析涉事人员信息失败:', e); }
+    }
+
+    function closePersonDetailModal() {
+      document.getElementById('personDetailModal').style.display = 'none';
     }
 
     async function checkAuth() {
@@ -963,7 +1008,7 @@
         ).join(' ');
 
         const personStr = p.person_name 
-          ? `<strong>${p.person_name}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">${p.person_id_card || ''}</span>`
+          ? `<strong style="color:var(--primary); cursor:pointer; text-decoration:underline;" onclick="event.stopPropagation(); showPersonDetailModal('${encodeURIComponent(JSON.stringify(p))}')" title="点击弹窗查看涉事人员完整档案">${p.person_name}</strong>`
           : '<span style="color:var(--text-muted);">-</span>';
 
         return `

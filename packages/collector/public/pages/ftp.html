@@ -1,76 +1,99 @@
-<div class="card" style="padding:1rem 1.25rem;">
-  <div class="card-header" style="margin-bottom:0.65rem; padding-bottom:0.5rem;">
+<div class="card" style="padding: 1.25rem 1.5rem;">
+  <div class="card-header" style="margin-bottom: 1rem; padding-bottom: 0.75rem;">
     <div>
-      <h2 style="font-size:0.95rem;">
+      <h2>
         <svg class="icon-svg" viewBox="0 0 24 24" style="color:var(--primary);"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
         第三方 FTP 服务器通道配置
       </h2>
-      <p style="font-size:0.75rem;">配置视频网端自动推送 Zip 单据数据包至指定的第三方 FTP 服务器 (支持 IP、端口、账号鉴权与远程目录)</p>
+      <p>配置视频网端自动推送 Zip 单据数据包至指定的第三方 FTP 服务器 (支持 IP、端口、账号鉴权与远程目录)</p>
     </div>
-    <div style="display:flex; gap:0.4rem; align-items:center;">
-      <button class="btn btn-diode" style="padding:0.35rem 0.65rem; font-size:0.775rem;" onclick="testCollectorFtpConnection()">
+    <div style="display:flex; gap:0.5rem; align-items:center;">
+      <button class="btn btn-diode" onclick="testCollectorFtpConnection()">
         <svg class="icon-svg" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
         在线测试 FTP 连通性
       </button>
-      <button class="btn btn-primary" style="padding:0.35rem 0.65rem; font-size:0.775rem;" onclick="saveCollectorFtpConfig()">
+      <button class="btn btn-primary" onclick="saveCollectorFtpConfig()">
         <svg class="icon-svg" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
         保存 FTP 通道配置
       </button>
     </div>
   </div>
 
-  <div style="background:var(--bg-main); border:1px solid var(--border-color); border-radius:8px; padding:0.75rem 0.9rem;">
-    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:0.5rem 0.75rem;">
-      <div class="form-group">
-        <label style="font-size:0.775rem;">FTP 自动推送功能开关</label>
-        <div class="toggle-switch-wrapper">
-          <span class="toggle-switch-text" id="collFtpEnableText">关闭远程 FTP</span>
+  <div style="display:flex; flex-direction:column; gap:0.85rem;">
+    <!-- 组一：通道开关 -->
+    <div style="background:#f8fafc; border:1px solid var(--border-color); border-radius:10px; padding:0.85rem 1rem;">
+      <div style="font-size:0.825rem; font-weight:700; color:var(--primary); margin-bottom:0.6rem; display:flex; align-items:center; gap:0.4rem;">
+        <svg class="icon-svg" viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
+        通道控制开关
+      </div>
+      <div class="form-group" style="max-width: 480px;">
+        <label style="font-size:0.8rem; font-weight:600;">FTP 自动推送功能开关</label>
+        <div class="toggle-switch-wrapper" style="height:36px; padding:0.4rem 0.75rem;">
+          <span class="toggle-switch-text" id="collFtpEnableText" style="font-size:0.825rem;">关闭远程 FTP</span>
           <label class="toggle-switch">
             <input type="checkbox" id="collFtpEnableToggle" onchange="document.getElementById('collFtpEnableText').innerText = this.checked ? '开启远程 FTP' : '关闭远程 FTP'">
             <span class="toggle-slider"></span>
           </label>
         </div>
       </div>
+    </div>
 
-      <div class="form-group">
-        <label style="font-size:0.775rem;">FTP 服务器 IP / 域名 (Host)</label>
-        <input type="text" id="collFtpHostInput" placeholder="例如: 192.168.1.100" style="padding:0.35rem 0.55rem; font-size:0.8rem;">
+    <!-- 组二：连接凭据 -->
+    <div style="background:#ffffff; border:1px solid var(--border-color); border-radius:10px; padding:0.85rem 1rem;">
+      <div style="font-size:0.825rem; font-weight:700; color:var(--text-main); margin-bottom:0.6rem; display:flex; align-items:center; gap:0.4rem;">
+        <svg class="icon-svg" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+        FTP 服务器连接凭据 (Host / Account)
       </div>
+      <div style="display:grid; grid-template-columns: 2fr 1fr 1.5fr 1.5fr; gap:0.75rem;">
+        <div class="form-group">
+          <label style="font-size:0.8rem;">IP 地址 / 域名 (Host)</label>
+          <input type="text" id="collFtpHostInput" placeholder="例如: 192.168.1.100" style="padding:0.45rem 0.65rem; font-size:0.825rem;">
+        </div>
 
-      <div class="form-group">
-        <label style="font-size:0.775rem;">FTP 服务端口号 (Port)</label>
-        <input type="number" id="collFtpPortInput" placeholder="默认: 21" value="21" style="padding:0.35rem 0.55rem; font-size:0.8rem;">
+        <div class="form-group">
+          <label style="font-size:0.8rem;">端口号 (Port)</label>
+          <input type="number" id="collFtpPortInput" placeholder="21" value="21" style="padding:0.45rem 0.65rem; font-size:0.825rem;">
+        </div>
+
+        <div class="form-group">
+          <label style="font-size:0.8rem;">登录用户名 (Username)</label>
+          <input type="text" id="collFtpUserInput" placeholder="例如: vfusion_user" style="padding:0.45rem 0.65rem; font-size:0.825rem;">
+        </div>
+
+        <div class="form-group">
+          <label style="font-size:0.8rem;">登录密码 (Password)</label>
+          <input type="password" id="collFtpPasswordInput" placeholder="输入 FTP 密码" style="padding:0.45rem 0.65rem; font-size:0.825rem;">
+        </div>
       </div>
+    </div>
 
-      <div class="form-group">
-        <label style="font-size:0.775rem;">单据包识别匹配前缀 (Prefix)</label>
-        <input type="text" id="collPkgPrefixInput" placeholder="默认: vfusion_" value="vfusion_" style="padding:0.35rem 0.55rem; font-size:0.8rem;">
+    <!-- 组三：路径与策略 -->
+    <div style="background:#ffffff; border:1px solid var(--border-color); border-radius:10px; padding:0.85rem 1rem;">
+      <div style="font-size:0.825rem; font-weight:700; color:var(--text-main); margin-bottom:0.6rem; display:flex; align-items:center; gap:0.4rem;">
+        <svg class="icon-svg" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        目录路径与网闸策略 (Path & Policy)
       </div>
+      <div style="display:grid; grid-template-columns: 2fr 1.5fr 2fr; gap:0.75rem;">
+        <div class="form-group">
+          <label style="font-size:0.8rem;">远程专用上传目录 (Remote Dir)</label>
+          <input type="text" id="collFtpRemoteDirInput" placeholder="例如: /vfusion_packages" value="/vfusion_packages" style="padding:0.45rem 0.65rem; font-size:0.825rem;">
+        </div>
 
-      <div class="form-group">
-        <label style="font-size:0.775rem;">FTP 登录用户名 (Username)</label>
-        <input type="text" id="collFtpUserInput" placeholder="例如: vfusion_user" style="padding:0.35rem 0.55rem; font-size:0.8rem;">
-      </div>
+        <div class="form-group">
+          <label style="font-size:0.8rem;">单据包匹配前缀 (Prefix Filter)</label>
+          <input type="text" id="collPkgPrefixInput" placeholder="默认: vfusion_" value="vfusion_" style="padding:0.45rem 0.65rem; font-size:0.825rem;">
+        </div>
 
-      <div class="form-group">
-        <label style="font-size:0.775rem;">FTP 登录密码 (Password)</label>
-        <input type="password" id="collFtpPasswordInput" placeholder="输入 FTP 密码" style="padding:0.35rem 0.55rem; font-size:0.8rem;">
-      </div>
-
-      <div class="form-group">
-        <label style="font-size:0.775rem;">FTP 远程专用上传目录 (Remote Dir)</label>
-        <input type="text" id="collFtpRemoteDirInput" placeholder="例如: /vfusion_packages" value="/vfusion_packages" style="padding:0.35rem 0.55rem; font-size:0.8rem;">
-      </div>
-
-      <div class="form-group">
-        <label style="font-size:0.775rem;">FTP 传输文件后缀 (Ext Filter)</label>
-        <select id="collFtpExtSelect" style="padding:0.35rem 0.55rem; font-size:0.8rem;">
-          <option value=".jpg">.jpg (强安全网闸伪装模式 - 仅放行 .jpg)</option>
-          <option value=".zip">.zip (标准 Zip 压缩包模式)</option>
-        </select>
+        <div class="form-group">
+          <label style="font-size:0.8rem;">传输后缀策略 (Ext Policy)</label>
+          <select id="collFtpExtSelect" style="padding:0.45rem 0.65rem; font-size:0.825rem;">
+            <option value=".jpg">.jpg (强网闸伪装模式 - 仅放行 .jpg)</option>
+            <option value=".zip">.zip (标准 Zip 压缩包模式)</option>
+          </select>
+        </div>
       </div>
     </div>
   </div>
 
-  <div id="collFtpTestStatusBox" style="margin-top:0.5rem; display:none; padding:0.6rem 0.85rem; border-radius:6px; font-size:0.8rem; font-family:monospace; line-height:1.4;"></div>
+  <div id="collFtpTestStatusBox" style="margin-top:0.75rem; display:none; padding:0.65rem 0.9rem; border-radius:8px; font-size:0.825rem; font-family:monospace; line-height:1.4;"></div>
 </div>

@@ -5,15 +5,28 @@ const fs = require('fs');
 const { formidable } = require('formidable');
 const { packEventPackage } = require('../common/packager');
 const { DEFAULT_FORM_SCHEMA } = require('../common/protocol');
+const { testFtpConnection, uploadToRemoteFtp } = require('../common/ftp_client');
 
 const app = express();
 const PORT = process.env.PORT || 4001;
 
 const STORAGE_ROOT = path.resolve(__dirname, '../../storage');
-const OUTPUT_FTP_DIR = path.join(STORAGE_ROOT, 'ftp_out');
+const SECURITY_CONFIG_FILE = path.join(STORAGE_ROOT, 'security.json');
 const COLLECTOR_SCHEMA_FILE = path.join(STORAGE_ROOT, 'collector_schema.json');
 const COLLECTOR_DB_FILE = path.join(STORAGE_ROOT, 'collector_db.json');
 
+function getFtpOutDir() {
+  if (process.env.FTP_OUT_DIR) return process.env.FTP_OUT_DIR;
+  try {
+    if (fs.existsSync(SECURITY_CONFIG_FILE)) {
+      const sec = JSON.parse(fs.readFileSync(SECURITY_CONFIG_FILE, 'utf8'));
+      if (sec.ftp_out_dir) return sec.ftp_out_dir;
+    }
+  } catch (e) {}
+  return path.join(STORAGE_ROOT, 'ftp_out');
+}
+
+const OUTPUT_FTP_DIR = getFtpOutDir();
 if (!fs.existsSync(OUTPUT_FTP_DIR)) {
   fs.mkdirSync(OUTPUT_FTP_DIR, { recursive: true });
 }
@@ -357,7 +370,7 @@ app.post('/api/publish', (req, res) => {
       }
 
       const result = await packEventPackage({
-        outputDir: OUTPUT_FTP_DIR,
+        outputDir: getFtpOutDir(),
         appId,
         bizType,
         eventId,
@@ -391,9 +404,23 @@ app.post('/api/publish', (req, res) => {
 
       addCollectorAuditLog('INGEST', `成功打包投递单据: ${result.pkgName}.zip (应用租户: ${appId}, 操作员: ${operator})`, 'SUCCESS');
 
+      // 如果配置并启用了第三方远程 FTP 服务器，自动将生成的 Zip 包上传至 FTP
+      try {
+        if (fs.existsSync(SECURITY_CONFIG_FILE)) {
+          const sec = JSON.parse(fs.readFileSync(SECURITY_CONFIG_FILE, 'utf8'));
+          if (sec && sec.ftp_enabled && sec.ftp_host) {
+            await uploadToRemoteFtp(result.zipPath, `${result.pkgName}.zip`, sec);
+            addCollectorAuditLog('FTP_UPLOAD', `同步推送单据至远程 FTP 服务器 [${sec.ftp_host}:${sec.ftp_port || 21}${sec.ftp_remote_dir || '/'}/${result.pkgName}.zip] 成功`, 'SUCCESS');
+          }
+        }
+      } catch (ftpErr) {
+        console.error('[VFusion Collector] 同步远程 FTP 异常:', ftpErr);
+        addCollectorAuditLog('ERROR', `推送到远程 FTP 服务器失败: ${ftpErr.message}`, 'WARN');
+      }
+
       res.json({
         success: true,
-        message: '数据已成功打包并投递至网闸发送目录',
+        message: '数据已成功打包并投递至网闸/FTP发送目录',
         data: {
           pkgName: result.pkgName,
           zipPath: result.zipPath,
@@ -407,6 +434,66 @@ app.post('/api/publish', (req, res) => {
       res.status(500).json({ success: false, error: error.message });
     }
   });
+});
+
+// 视频网采集端：获取与保存 FTP 配置 API
+app.get('/api/config/ftp', (req, res) => {
+  try {
+    if (fs.existsSync(SECURITY_CONFIG_FILE)) {
+      const sec = JSON.parse(fs.readFileSync(SECURITY_CONFIG_FILE, 'utf8'));
+      return res.json({
+        success: true,
+        data: {
+          ftp_enabled: sec.ftp_enabled || false,
+          ftp_host: sec.ftp_host || '',
+          ftp_port: sec.ftp_port || 21,
+          ftp_user: sec.ftp_user || '',
+          ftp_password: sec.ftp_password || '',
+          ftp_remote_dir: sec.ftp_remote_dir || '/vfusion_packages',
+          pkg_prefix: sec.pkg_prefix || 'vfusion_'
+        }
+      });
+    }
+  } catch (e) {}
+  res.json({
+    success: true,
+    data: { ftp_enabled: false, ftp_host: '', ftp_port: 21, ftp_user: '', ftp_password: '', ftp_remote_dir: '/vfusion_packages', pkg_prefix: 'vfusion_' }
+  });
+});
+
+app.post('/api/config/ftp', (req, res) => {
+  try {
+    let sec = {};
+    if (fs.existsSync(SECURITY_CONFIG_FILE)) {
+      sec = JSON.parse(fs.readFileSync(SECURITY_CONFIG_FILE, 'utf8'));
+    }
+    const { ftp_enabled, ftp_host, ftp_port, ftp_user, ftp_password, ftp_remote_dir, pkg_prefix } = req.body;
+    if (typeof ftp_enabled === 'boolean') sec.ftp_enabled = ftp_enabled;
+    if (typeof ftp_host === 'string') sec.ftp_host = ftp_host;
+    if (typeof ftp_port === 'number' || typeof ftp_port === 'string') sec.ftp_port = parseInt(ftp_port) || 21;
+    if (typeof ftp_user === 'string') sec.ftp_user = ftp_user;
+    if (typeof ftp_password === 'string') sec.ftp_password = ftp_password;
+    if (typeof ftp_remote_dir === 'string') sec.ftp_remote_dir = ftp_remote_dir;
+    if (typeof pkg_prefix === 'string') sec.pkg_prefix = pkg_prefix;
+
+    writeJsonAtomic(SECURITY_CONFIG_FILE, sec);
+    addCollectorAuditLog('FTP_CONFIG', `视频网端配置第三方 FTP 服务器 (${sec.ftp_enabled ? '已启用' : '未启用'}, Host: ${sec.ftp_host}:${sec.ftp_port})`, 'SUCCESS');
+    res.json({ success: true, message: '视频网端第三方 FTP 配置保存成功' });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.post('/api/config/ftp/test', async (req, res) => {
+  try {
+    const config = req.body;
+    const testResult = await testFtpConnection(config);
+    addCollectorAuditLog('FTP_TEST', `视频网端测试 FTP 连接 [${config.ftp_host}:${config.ftp_port}] 成功`, 'SUCCESS');
+    res.json(testResult);
+  } catch (err) {
+    addCollectorAuditLog('FTP_TEST', `视频网端测试 FTP 连接失败: ${err.message}`, 'WARN');
+    res.status(400).json({ success: false, error: err.message });
+  }
 });
 
 // 视频网端：获取本人/本终端历史已发布提交记录 API

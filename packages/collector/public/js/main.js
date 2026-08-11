@@ -20,7 +20,7 @@ const auditStatusMap = {
 };
 
 async function loadPageTemplates() {
-  const pages = ['publish', 'history', 'builder', 'audits', 'users'];
+  const pages = ['publish', 'history', 'builder', 'ftp', 'audits', 'users'];
   await Promise.all(pages.map(async (p) => {
     try {
       const res = await fetch(`pages/${p}.html`);
@@ -147,6 +147,7 @@ function switchTab(tabId) {
 
   if (tabId === 'tab-history' && typeof loadPublishedHistory === 'function') loadPublishedHistory();
   if (tabId === 'tab-builder' && typeof loadSchema === 'function') loadSchema();
+  if (tabId === 'tab-ftp' && typeof loadCollectorFtpConfig === 'function') loadCollectorFtpConfig();
   if (tabId === 'tab-audits' && typeof loadFullAuditLogs === 'function') loadFullAuditLogs();
   if (tabId === 'tab-users' && typeof loadUsers === 'function') loadUsers();
 }

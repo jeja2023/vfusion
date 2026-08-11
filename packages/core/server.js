@@ -12,21 +12,56 @@ const { hashPassword, DEFAULT_USERS, generateToken, verifyToken } = require('../
 const SQLiteStorageEngine = require('../common/db_sqlite');
 const { runAiInferencePipeline } = require('../common/ai_pipeline');
 const { ensureSslCertificates } = require('../common/ssl_cert');
+const { testFtpConnection, uploadToRemoteFtp, downloadFromRemoteFtp } = require('../common/ftp_client');
 
 const app = express();
 const PORT = process.env.PORT || 4002;
 
 const STORAGE_ROOT = path.resolve(__dirname, '../../storage');
+const SECURITY_CONFIG_FILE = path.join(STORAGE_ROOT, 'security.json');
+
+function getFtpInDir() {
+  if (process.env.FTP_IN_DIR) return process.env.FTP_IN_DIR;
+  try {
+    if (fs.existsSync(SECURITY_CONFIG_FILE)) {
+      const sec = JSON.parse(fs.readFileSync(SECURITY_CONFIG_FILE, 'utf8'));
+      if (sec.ftp_in_dir) return sec.ftp_in_dir;
+    }
+  } catch (e) {}
+  return path.join(STORAGE_ROOT, 'ftp_in');
+}
+
+function getFtpOutDir() {
+  if (process.env.FTP_OUT_DIR) return process.env.FTP_OUT_DIR;
+  try {
+    if (fs.existsSync(SECURITY_CONFIG_FILE)) {
+      const sec = JSON.parse(fs.readFileSync(SECURITY_CONFIG_FILE, 'utf8'));
+      if (sec.ftp_out_dir) return sec.ftp_out_dir;
+    }
+  } catch (e) {}
+  return path.join(STORAGE_ROOT, 'ftp_out');
+}
+
+function getPkgPrefix() {
+  if (process.env.PKG_PREFIX) return process.env.PKG_PREFIX;
+  try {
+    if (fs.existsSync(SECURITY_CONFIG_FILE)) {
+      const sec = JSON.parse(fs.readFileSync(SECURITY_CONFIG_FILE, 'utf8'));
+      if (sec.pkg_prefix) return sec.pkg_prefix;
+    }
+  } catch (e) {}
+  return 'vfusion_';
+}
+
 const coreSqlite = new SQLiteStorageEngine(path.join(STORAGE_ROOT, 'vfusion_core.db'));
-const FTP_OUT_DIR = path.join(STORAGE_ROOT, 'ftp_out');
-const FTP_IN_DIR = path.join(STORAGE_ROOT, 'ftp_in');
+const FTP_OUT_DIR = getFtpOutDir();
+const FTP_IN_DIR = getFtpInDir();
 const ARCHIVE_DIR = path.join(STORAGE_ROOT, 'archive');
 const ERROR_DIR = path.join(STORAGE_ROOT, 'error');
 const ASSETS_DIR = path.join(STORAGE_ROOT, 'assets');
 const DB_FILE = path.join(STORAGE_ROOT, 'db.json');
 const SCHEMA_FILE = path.join(STORAGE_ROOT, 'schema.json');
 const WEBHOOKS_FILE = path.join(STORAGE_ROOT, 'webhooks.json');
-const SECURITY_CONFIG_FILE = path.join(STORAGE_ROOT, 'security.json');
 const USERS_FILE = path.join(STORAGE_ROOT, 'users.json');
 
 [STORAGE_ROOT, FTP_OUT_DIR, FTP_IN_DIR, ARCHIVE_DIR, ERROR_DIR, ASSETS_DIR].forEach(dir => {
@@ -42,7 +77,7 @@ function writeJsonAtomic(filePath, data) {
 if (!fs.existsSync(DB_FILE)) writeJsonAtomic(DB_FILE, { events: [], audit_logs: [], alerts: [] });
 if (!fs.existsSync(SCHEMA_FILE)) writeJsonAtomic(SCHEMA_FILE, DEFAULT_FORM_SCHEMA);
 if (!fs.existsSync(WEBHOOKS_FILE)) writeJsonAtomic(WEBHOOKS_FILE, []);
-if (!fs.existsSync(SECURITY_CONFIG_FILE)) writeJsonAtomic(SECURITY_CONFIG_FILE, { hmac_secret: 'vfusion_secret_key_2026', auto_diode_interval: 0 });
+if (!fs.existsSync(SECURITY_CONFIG_FILE)) writeJsonAtomic(SECURITY_CONFIG_FILE, { hmac_secret: 'vfusion_secret_key_2026', auto_diode_interval: 0, ftp_in_dir: '', ftp_out_dir: '', pkg_prefix: 'vfusion_' });
 if (!fs.existsSync(USERS_FILE)) writeJsonAtomic(USERS_FILE, DEFAULT_USERS);
 
 try {
@@ -278,7 +313,7 @@ function dispatchWebhooks(eventRecord) {
 }
 
 async function processPackageFile(fileName, isRetry = false) {
-  const sourceDir = isRetry ? ERROR_DIR : FTP_IN_DIR;
+  const sourceDir = isRetry ? ERROR_DIR : getFtpInDir();
   const zipPath = path.join(sourceDir, fileName);
 
   if (!fs.existsSync(zipPath)) {
@@ -390,8 +425,11 @@ async function processPackageFile(fileName, isRetry = false) {
 
 async function scanLoop() {
   try {
-    const files = fs.readdirSync(FTP_IN_DIR);
-    const zipFiles = files.filter(f => f.endsWith('.zip') && !f.endsWith('.tmp'));
+    const ftpInDir = getFtpInDir();
+    if (!fs.existsSync(ftpInDir)) fs.mkdirSync(ftpInDir, { recursive: true });
+    const prefix = getPkgPrefix();
+    const files = fs.readdirSync(ftpInDir);
+    const zipFiles = files.filter(f => f.startsWith(prefix) && f.endsWith('.zip') && !f.endsWith('.tmp'));
     for (const fileName of zipFiles) {
       try { await processPackageFile(fileName, false); } catch (e) {}
     }
@@ -408,9 +446,14 @@ function setAutoDiodeInterval(seconds) {
   if (seconds > 0) {
     autoDiodeTimer = setInterval(() => {
       try {
-        const files = fs.readdirSync(FTP_OUT_DIR).filter(f => f.endsWith('.zip') && !f.endsWith('.tmp'));
+        const ftpOutDir = getFtpOutDir();
+        const ftpInDir = getFtpInDir();
+        const prefix = getPkgPrefix();
+        if (!fs.existsSync(ftpOutDir)) fs.mkdirSync(ftpOutDir, { recursive: true });
+        if (!fs.existsSync(ftpInDir)) fs.mkdirSync(ftpInDir, { recursive: true });
+        const files = fs.readdirSync(ftpOutDir).filter(f => f.startsWith(prefix) && f.endsWith('.zip') && !f.endsWith('.tmp'));
         for (const f of files) {
-          fs.copyFileSync(path.join(FTP_OUT_DIR, f), path.join(FTP_IN_DIR, f));
+          fs.copyFileSync(path.join(ftpOutDir, f), path.join(ftpInDir, f));
         }
       } catch (e) {}
     }, seconds * 1000);
@@ -595,14 +638,49 @@ app.delete('/api/webhooks/:id', (req, res) => {
 app.get('/api/config/security', (req, res) => {
   try {
     const sec = JSON.parse(fs.readFileSync(SECURITY_CONFIG_FILE, 'utf8'));
-    res.json({ success: true, data: { hmac_secret_masked: sec.hmac_secret.slice(0, 4) + '****' + sec.hmac_secret.slice(-4), auto_diode_interval: sec.auto_diode_interval || 0 } });
+    res.json({
+      success: true,
+      data: {
+        hmac_secret_masked: sec.hmac_secret ? (sec.hmac_secret.slice(0, 4) + '****' + sec.hmac_secret.slice(-4)) : 'vfus****2026',
+        auto_diode_interval: sec.auto_diode_interval || 0,
+        ftp_enabled: sec.ftp_enabled || false,
+        ftp_host: sec.ftp_host || '',
+        ftp_port: sec.ftp_port || 21,
+        ftp_user: sec.ftp_user || '',
+        ftp_password: sec.ftp_password || '',
+        ftp_remote_dir: sec.ftp_remote_dir || '/vfusion_packages',
+        ftp_delete_after_download: sec.ftp_delete_after_download !== false,
+        ftp_in_dir: sec.ftp_in_dir || getFtpInDir(),
+        ftp_out_dir: sec.ftp_out_dir || getFtpOutDir(),
+        pkg_prefix: sec.pkg_prefix || getPkgPrefix()
+      }
+    });
   } catch (e) {
-    res.json({ success: true, data: { hmac_secret_masked: 'vfus****2026', auto_diode_interval: 0 } });
+    res.json({
+      success: true,
+      data: {
+        hmac_secret_masked: 'vfus****2026',
+        auto_diode_interval: 0,
+        ftp_enabled: false,
+        ftp_host: '',
+        ftp_port: 21,
+        ftp_user: '',
+        ftp_password: '',
+        ftp_remote_dir: '/vfusion_packages',
+        ftp_delete_after_download: true,
+        ftp_in_dir: getFtpInDir(),
+        ftp_out_dir: getFtpOutDir(),
+        pkg_prefix: getPkgPrefix()
+      }
+    });
   }
 });
 
 app.post('/api/config/security', (req, res) => {
-  const { hmac_secret, auto_diode_interval } = req.body;
+  const {
+    hmac_secret, auto_diode_interval, ftp_in_dir, ftp_out_dir, pkg_prefix,
+    ftp_enabled, ftp_host, ftp_port, ftp_user, ftp_password, ftp_remote_dir, ftp_delete_after_download
+  } = req.body;
   try {
     const sec = JSON.parse(fs.readFileSync(SECURITY_CONFIG_FILE, 'utf8'));
     if (hmac_secret) {
@@ -615,9 +693,33 @@ app.post('/api/config/security', (req, res) => {
       setAutoDiodeInterval(auto_diode_interval);
       addAuditLog('DIODE_CONFIG', `网闸自动摆渡轮询频率设置为: ${auto_diode_interval}秒`, 'INFO');
     }
+    if (typeof ftp_enabled === 'boolean') sec.ftp_enabled = ftp_enabled;
+    if (typeof ftp_host === 'string') sec.ftp_host = ftp_host;
+    if (typeof ftp_port === 'number' || typeof ftp_port === 'string') sec.ftp_port = parseInt(ftp_port) || 21;
+    if (typeof ftp_user === 'string') sec.ftp_user = ftp_user;
+    if (typeof ftp_password === 'string') sec.ftp_password = ftp_password;
+    if (typeof ftp_remote_dir === 'string') sec.ftp_remote_dir = ftp_remote_dir;
+    if (typeof ftp_delete_after_download === 'boolean') sec.ftp_delete_after_download = ftp_delete_after_download;
+    if (typeof ftp_in_dir === 'string') sec.ftp_in_dir = ftp_in_dir;
+    if (typeof ftp_out_dir === 'string') sec.ftp_out_dir = ftp_out_dir;
+    if (typeof pkg_prefix === 'string') sec.pkg_prefix = pkg_prefix;
+
     writeJsonAtomic(SECURITY_CONFIG_FILE, sec);
-    res.json({ success: true, message: '安全与摆渡配置更新成功' });
+    addAuditLog('FTP_CONFIG', `第三方 FTP 通道配置更新 (${sec.ftp_enabled ? '启用' : '关闭'}, Host: ${sec.ftp_host}:${sec.ftp_port})`, 'SUCCESS');
+    res.json({ success: true, message: '安全与 FTP 通道可视化配置更新成功' });
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.post('/api/config/ftp/test', async (req, res) => {
+  try {
+    const config = req.body;
+    const testResult = await testFtpConnection(config);
+    addAuditLog('FTP_TEST', `管理员测试 FTP 远程通道连接 [${config.ftp_host}:${config.ftp_port}] 成功`, 'SUCCESS');
+    res.json(testResult);
+  } catch (err) {
+    addAuditLog('FTP_TEST', `管理员测试 FTP 远程通道连接 [${req.body.ftp_host}] 失败: ${err.message}`, 'WARN');
+    res.status(400).json({ success: false, error: err.message });
+  }
 });
 
 app.get('/api/events/export', (req, res) => {
@@ -745,11 +847,16 @@ app.get('/api/audit-logs', (req, res) => {
 
 app.post('/api/simulate-diode', (req, res) => {
   try {
-    const files = fs.readdirSync(FTP_OUT_DIR).filter(f => f.endsWith('.zip') && !f.endsWith('.tmp'));
+    const ftpOutDir = getFtpOutDir();
+    const ftpInDir = getFtpInDir();
+    const prefix = getPkgPrefix();
+    if (!fs.existsSync(ftpOutDir)) fs.mkdirSync(ftpOutDir, { recursive: true });
+    if (!fs.existsSync(ftpInDir)) fs.mkdirSync(ftpInDir, { recursive: true });
+    const files = fs.readdirSync(ftpOutDir).filter(f => f.startsWith(prefix) && f.endsWith('.zip') && !f.endsWith('.tmp'));
     let copiedCount = 0;
     for (const f of files) {
-      const src = path.join(FTP_OUT_DIR, f);
-      const dest = path.join(FTP_IN_DIR, f);
+      const src = path.join(ftpOutDir, f);
+      const dest = path.join(ftpInDir, f);
       fs.copyFileSync(src, dest);
       copiedCount++;
     }

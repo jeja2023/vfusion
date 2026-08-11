@@ -34,7 +34,7 @@ const auditStatusMap = {
 };
 
 async function loadPageTemplates() {
-  const pages = ['events', 'analytics', 'builder', 'webhooks', 'audits', 'personnel', 'users', 'errors', 'system'];
+  const pages = ['events', 'analytics', 'builder', 'ftp', 'webhooks', 'audits', 'personnel', 'users', 'errors', 'system'];
   await Promise.all(pages.map(async (p) => {
     try {
       const res = await fetch(`pages/${p}.html`);
@@ -213,6 +213,7 @@ function switchTab(tabId) {
 
   if (tabId === 'tab-analytics' && typeof loadAnalytics === 'function') loadAnalytics();
   if (tabId === 'tab-builder' && typeof loadSchema === 'function') loadSchema();
+  if (tabId === 'tab-ftp' && typeof loadCoreFtpConfig === 'function') loadCoreFtpConfig();
   if (tabId === 'tab-webhooks' && typeof loadWebhooks === 'function') loadWebhooks();
   if (tabId === 'tab-audits' && typeof loadFullAuditLogs === 'function') loadFullAuditLogs();
   if (tabId === 'tab-personnel' && typeof loadPersonnelArchive === 'function') loadPersonnelArchive();

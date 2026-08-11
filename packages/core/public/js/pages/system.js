@@ -7,6 +7,16 @@ async function loadSystemHealth() {
     if (secJson.success) {
       const currentKeyEl = document.getElementById('currentKeyMasked');
       if (currentKeyEl) currentKeyEl.innerText = secJson.data.hmac_secret_masked;
+
+      const d = secJson.data;
+      if (document.getElementById('ftpEnableSelect')) document.getElementById('ftpEnableSelect').value = String(d.ftp_enabled || false);
+      if (document.getElementById('ftpHostInput')) document.getElementById('ftpHostInput').value = d.ftp_host || '';
+      if (document.getElementById('ftpPortInput')) document.getElementById('ftpPortInput').value = d.ftp_port || 21;
+      if (document.getElementById('ftpUserInput')) document.getElementById('ftpUserInput').value = d.ftp_user || '';
+      if (document.getElementById('ftpPasswordInput')) document.getElementById('ftpPasswordInput').value = d.ftp_password || '';
+      if (document.getElementById('ftpRemoteDirInput')) document.getElementById('ftpRemoteDirInput').value = d.ftp_remote_dir || '/vfusion_packages';
+      if (document.getElementById('pkgPrefixInput')) document.getElementById('pkgPrefixInput').value = d.pkg_prefix || 'vfusion_';
+      if (document.getElementById('ftpDeleteSelect')) document.getElementById('ftpDeleteSelect').value = String(d.ftp_delete_after_download !== false);
     }
 
     if (json.success) {
@@ -112,5 +122,84 @@ async function runOnlineDiagnostics() {
       `).join('');
     }
     showToast('系统在线自检与拓扑诊断完成');
+  }
+}
+
+function getFtpFormValues() {
+  return {
+    ftp_enabled: document.getElementById('ftpEnableSelect').value === 'true',
+    ftp_host: document.getElementById('ftpHostInput').value.trim(),
+    ftp_port: parseInt(document.getElementById('ftpPortInput').value) || 21,
+    ftp_user: document.getElementById('ftpUserInput').value.trim(),
+    ftp_password: document.getElementById('ftpPasswordInput').value,
+    ftp_remote_dir: document.getElementById('ftpRemoteDirInput').value.trim() || '/vfusion_packages',
+    pkg_prefix: document.getElementById('pkgPrefixInput').value.trim() || 'vfusion_',
+    ftp_delete_after_download: document.getElementById('ftpDeleteSelect').value === 'true'
+  };
+}
+
+async function saveFtpChannelConfig() {
+  const configData = getFtpFormValues();
+  const res = await fetch('/api/config/security', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(configData)
+  });
+  const json = await res.json();
+  if (json.success) {
+    showToast(json.message);
+  } else {
+    showToast(json.error || '保存 FTP 配置失败', 'error');
+  }
+}
+
+async function testFtpServerConnection() {
+  const configData = getFtpFormValues();
+  const box = document.getElementById('ftpTestStatusBox');
+  if (!configData.ftp_host) {
+    showToast('请填写 FTP 服务器 IP 地址或域名！', 'error');
+    return;
+  }
+
+  if (box) {
+    box.style.display = 'block';
+    box.style.background = '#eff6ff';
+    box.style.border = '1px solid #bfdbfe';
+    box.style.color = '#1d4ed8';
+    box.innerText = `正在连接 FTP 服务器 [${configData.ftp_host}:${configData.ftp_port}] 并验证权限，请稍候...`;
+  }
+
+  try {
+    const res = await fetch('/api/config/ftp/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(configData)
+    });
+    const json = await res.json();
+    if (json.success) {
+      if (box) {
+        box.style.background = '#f0fdf4';
+        box.style.border = '1px solid #bbf7d0';
+        box.style.color = '#15803d';
+        box.innerText = `✓ ${json.message}`;
+      }
+      showToast('FTP 远程服务器连通性测试通过！');
+    } else {
+      if (box) {
+        box.style.background = '#fef2f2';
+        box.style.border = '1px solid #fecaca';
+        box.style.color = '#b91c1c';
+        box.innerText = `✕ 测试失败: ${json.error}`;
+      }
+      showToast(json.error, 'error');
+    }
+  } catch (e) {
+    if (box) {
+      box.style.background = '#fef2f2';
+      box.style.border = '1px solid #fecaca';
+      box.style.color = '#b91c1c';
+      box.innerText = `✕ 网络错误: ${e.message}`;
+    }
+    showToast('无法连接到服务端校验接口', 'error');
   }
 }

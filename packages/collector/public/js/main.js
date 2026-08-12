@@ -42,6 +42,15 @@ async function apiFetch(url, options = {}) {
   return res;
 }
 
+// 全局拦截：让各页面已有的 fetch('/api/...') 调用自动携带 Token 并统一处理登录态失效
+window.fetch = function (input, init) {
+  const url = typeof input === 'string' ? input : (input && input.url) || '';
+  if (!url.startsWith('/api/') || url.startsWith('/api/auth/login')) {
+    return nativeFetch(input, init);
+  }
+  return apiFetch(url, init || {});
+};
+
 const auditTypeMap = {
   'AUTH_SUCCESS': '用户登录',
   'AUTH_FAIL': '登录失败',

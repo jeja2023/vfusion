@@ -117,6 +117,11 @@ try {
 
   setHmacSecret(secConf.hmac_secret);
   setTokenSecret(secConf.token_secret);
+
+  const diodeInterval = (typeof secConf.auto_diode_interval === 'number' && secConf.auto_diode_interval > 0)
+    ? secConf.auto_diode_interval
+    : (secConf.ftp_enabled ? 0 : 3);
+  setAutoDiodeInterval(diodeInterval);
 } catch (e) {
   console.error('[VFusion Core] 读取安全配置失败:', e.message);
   process.exit(1);
@@ -664,6 +669,9 @@ function dispatchWebhooks(eventRecord) {
     data: eventRecord
   });
 
+  const hmacSecret = getHmacSecret();
+  const signature = crypto.createHmac('sha256', hmacSecret).update(payloadStr).digest('hex');
+
   hooks.forEach(hook => {
     try {
       const urlObj = new URL(hook.url);
@@ -674,7 +682,7 @@ function dispatchWebhooks(eventRecord) {
         headers: {
           'Content-Type': 'application/json',
           'Content-Length': Buffer.byteLength(payloadStr),
-          'X-VFusion-Signature': eventRecord.signature || ''
+          'X-VFusion-Signature': signature
         }
       }, res => {
         addAuditLog('WEBHOOK', `消息分发 [${hook.name}]: HTTP ${res.statusCode}`, res.statusCode < 400 ? 'SUCCESS' : 'WARN');

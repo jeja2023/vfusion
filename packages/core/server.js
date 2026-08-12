@@ -135,6 +135,7 @@ function setAutoDiodeInterval(seconds) {
           const destPath = path.join(ftpInDir, f);
           if (!fs.existsSync(destPath)) {
             fs.copyFileSync(srcPath, destPath);
+            try { fs.unlinkSync(srcPath); } catch (e) {}
             console.log(`[VFusion Diode] 自动单向摆渡传输本地数据包: ${f} -> ftp_in`);
           }
         }
@@ -1576,6 +1577,7 @@ app.post('/api/simulate-diode', requireRole('admin'), (req, res) => {
       const src = path.join(ftpOutDir, f);
       const dest = path.join(ftpInDir, f);
       fs.copyFileSync(src, dest);
+      try { fs.unlinkSync(src); } catch (e) {}
       copiedCount++;
     }
     addAuditLog('DIODE_SIM', `网闸模拟摆渡传输了 ${copiedCount} 个数据包`, 'INFO');

@@ -6,7 +6,7 @@ async function loadSystemHealth() {
 
     if (secJson.success) {
       const currentKeyEl = document.getElementById('currentKeyMasked');
-      if (currentKeyEl) currentKeyEl.innerText = secJson.data.hmac_secret_masked;
+      if (currentKeyEl) currentKeyEl.innerText = secJson.data.hmac_secret || secJson.data.hmac_secret_masked || '未设置';
 
       const d = secJson.data;
       if (document.getElementById('ftpEnableSelect')) document.getElementById('ftpEnableSelect').value = String(d.ftp_enabled || false);

@@ -1163,7 +1163,8 @@ app.get('/api/config/security', requireRole('admin'), (req, res) => {
     res.json({
       success: true,
       data: {
-        hmac_secret_masked: sec.hmac_secret ? (sec.hmac_secret.slice(0, 4) + '****' + sec.hmac_secret.slice(-4)) : '未设置',
+        hmac_secret: sec.hmac_secret || '',
+        hmac_secret_masked: sec.hmac_secret || '未设置',
         auto_diode_interval: sec.auto_diode_interval || 0,
         ftp_enabled: sec.ftp_enabled || false,
         ftp_host: sec.ftp_host || '',

@@ -1255,25 +1255,25 @@ app.post('/api/webhooks/:id/test', async (req, res) => {
           res.json({ success: true, message: `测试推送成功！目标系统响应 HTTP ${testRes.statusCode}` });
         } else {
           addAuditLog('WEBHOOK_TEST', `测试发送 Webhook 到 [${hook.name}]: 目标返回 HTTP ${testRes.statusCode}`, 'WARN');
-          res.status(400).json({ success: false, error: `目标服务响应状态码 HTTP ${testRes.statusCode}` });
+          res.json({ success: false, error: `目标服务响应状态码 HTTP ${testRes.statusCode}` });
         }
       });
     });
 
     testReq.on('error', (err) => {
       addAuditLog('WEBHOOK_TEST', `测试发送 Webhook 到 [${hook.name}] 失败: ${err.message}`, 'WARN');
-      res.status(400).json({ success: false, error: `网络连接失败: ${err.message}` });
+      res.json({ success: false, error: `网络连接失败: ${err.message}` });
     });
 
     testReq.on('timeout', () => {
       testReq.destroy();
-      res.status(408).json({ success: false, error: '连接目标 Webhook 接口超时 (8秒未响应)' });
+      res.json({ success: false, error: '连接目标 Webhook 接口超时 (8秒未响应)' });
     });
 
     testReq.write(payloadStr);
     testReq.end();
   } catch (err) {
-    res.status(400).json({ success: false, error: `URL 格式错误: ${err.message}` });
+    res.json({ success: false, error: `URL 格式错误: ${err.message}` });
   }
 });
 

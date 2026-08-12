@@ -115,6 +115,34 @@ try {
   }
   if (mutated) writeJsonAtomic(SECURITY_CONFIG_FILE, secConf);
 
+let autoDiodeTimer = null;
+function setAutoDiodeInterval(seconds) {
+  if (autoDiodeTimer) { clearInterval(autoDiodeTimer); autoDiodeTimer = null; }
+  if (seconds > 0) {
+    autoDiodeTimer = setInterval(() => {
+      try {
+        const sec = getFtpConfig();
+        if (sec && sec.ftp_enabled && sec.ftp_host) return;
+
+        const ftpOutDir = getFtpOutDir();
+        const ftpInDir = getFtpInDir();
+        const prefix = getPkgPrefix();
+        if (!fs.existsSync(ftpOutDir)) fs.mkdirSync(ftpOutDir, { recursive: true });
+        if (!fs.existsSync(ftpInDir)) fs.mkdirSync(ftpInDir, { recursive: true });
+        const files = fs.readdirSync(ftpOutDir).filter(f => f.startsWith(prefix) && (f.endsWith('.zip') || f.endsWith('.jpg')) && !f.endsWith('.tmp'));
+        for (const f of files) {
+          const srcPath = path.join(ftpOutDir, f);
+          const destPath = path.join(ftpInDir, f);
+          if (!fs.existsSync(destPath)) {
+            fs.copyFileSync(srcPath, destPath);
+            console.log(`[VFusion Diode] 自动单向摆渡传输本地数据包: ${f} -> ftp_in`);
+          }
+        }
+      } catch (e) {}
+    }, seconds * 1000);
+  }
+}
+
   setHmacSecret(secConf.hmac_secret);
   setTokenSecret(secConf.token_secret);
 
@@ -998,25 +1026,7 @@ app.post('/api/ftp/poll-interval', requireRole('admin'), (req, res) => {
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-let autoDiodeTimer = null;
-function setAutoDiodeInterval(seconds) {
-  if (autoDiodeTimer) { clearInterval(autoDiodeTimer); autoDiodeTimer = null; }
-  if (seconds > 0) {
-    autoDiodeTimer = setInterval(() => {
-      try {
-        const ftpOutDir = getFtpOutDir();
-        const ftpInDir = getFtpInDir();
-        const prefix = getPkgPrefix();
-        if (!fs.existsSync(ftpOutDir)) fs.mkdirSync(ftpOutDir, { recursive: true });
-        if (!fs.existsSync(ftpInDir)) fs.mkdirSync(ftpInDir, { recursive: true });
-        const files = fs.readdirSync(ftpOutDir).filter(f => f.startsWith(prefix) && (f.endsWith('.zip') || f.endsWith('.jpg')) && !f.endsWith('.tmp'));
-        for (const f of files) {
-          fs.copyFileSync(path.join(ftpOutDir, f), path.join(ftpInDir, f));
-        }
-      } catch (e) {}
-    }, seconds * 1000);
-  }
-}
+
 
 // 在线自检与拓扑诊断 API
 app.get('/api/system/diagnose', (req, res) => {

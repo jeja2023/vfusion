@@ -44,12 +44,15 @@ function copyNodeModulesSync(destDir) {
   const destModules = path.join(destDir, 'node_modules');
   try {
     if (process.platform === 'win32') {
-      execSync(`xcopy "${path.join(ROOT_DIR, 'node_modules')}" "${destModules}" /E /I /Q /Y /K /R`, { stdio: 'ignore' });
+      execSync(`robocopy "${path.join(ROOT_DIR, 'node_modules')}" "${destModules}" /E /MT:8 /NFL /NDL /NJH /NJS /nc /ns /np`, { stdio: 'ignore' });
     } else {
       execSync(`cp -R "${path.join(ROOT_DIR, 'node_modules')}" "${destModules}"`, { stdio: 'ignore' });
     }
   } catch (e) {
-    copyDirSync(path.join(ROOT_DIR, 'node_modules'), destModules);
+    // robocopy 退出码 0-7 均为成功/复制完成状态
+    if (e.status > 7) {
+      copyDirSync(path.join(ROOT_DIR, 'node_modules'), destModules);
+    }
   }
 }
 

@@ -1160,8 +1160,13 @@ app.post('/api/webhooks/:id/test', async (req, res) => {
   const hook = list.find(h => String(h.id) === String(req.params.id));
   if (!hook) return res.status(404).json({ success: false, error: '未找到指定的 Webhook 订阅节点' });
 
-  const sec = loadSecurityConfig();
-  const hmacSecret = (sec && sec.hmac_secret) ? sec.hmac_secret : 'vfusion_secret_key_2026';
+  let hmacSecret = 'vfusion_secret_key_2026';
+  try {
+    if (fs.existsSync(SECURITY_CONFIG_FILE)) {
+      const sec = JSON.parse(fs.readFileSync(SECURITY_CONFIG_FILE, 'utf8'));
+      if (sec && sec.hmac_secret) hmacSecret = sec.hmac_secret;
+    }
+  } catch (e) {}
 
   const testEvent = {
     id: Date.now(),

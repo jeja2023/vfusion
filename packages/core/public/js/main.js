@@ -76,7 +76,7 @@ const auditTypeMap = {
   'USER_ADD': '新增用户',
   'USER_PWD_RESET': '重置密码',
   'USER_DEL': '删除用户',
-  'INGEST': '单据入库',
+  'INGEST': '事件入库',
   'SCANNER': '目录扫描',
   'IDEMPOTENCY': '幂等归档',
   'DIODE_SIM': '网闸摆渡',
@@ -136,13 +136,37 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-function openImageLightbox(url, title = '现场照片大图凭证') {
+function openImageLightbox(url, captionData) {
   const overlay = document.getElementById('imageLightboxOverlay');
   const img = document.getElementById('lightboxImg');
-  const caption = document.getElementById('lightboxCaption');
-  img.src = url;
-  caption.innerText = title;
-  overlay.style.display = 'flex';
+  const captionEl = document.getElementById('lightboxCaption');
+  if (img) img.src = url;
+
+  if (captionEl) {
+    if (typeof captionData === 'object' && captionData !== null) {
+      const { description, timestamp, location, uploader } = captionData;
+      const descHtml = description
+        ? `<div style="font-size:0.9rem; font-weight:600; color:#1e293b; background:#f1f5f9; padding:0.55rem 0.85rem; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:0.4rem; text-align:left; width:100%;">${escapeHtml(description)}</div>`
+        : `<div style="font-size:0.85rem; color:#94a3b8; font-style:italic; margin-bottom:0.4rem;">(暂无图片描述)</div>`;
+      
+      const metaParts = [];
+      if (timestamp) metaParts.push(`<span style="display:inline-flex; align-items:center; gap:0.25rem;"><svg class="icon-svg" viewBox="0 0 24 24" style="width:14px; height:14px; color:#0284c7;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><strong>时间:</strong> ${escapeHtml(timestamp)}</span>`);
+      if (location) metaParts.push(`<span style="display:inline-flex; align-items:center; gap:0.25rem;"><svg class="icon-svg" viewBox="0 0 24 24" style="width:14px; height:14px; color:#0284c7;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><strong>地点:</strong> ${escapeHtml(location)}</span>`);
+      if (uploader) metaParts.push(`<span style="display:inline-flex; align-items:center; gap:0.25rem;"><svg class="icon-svg" viewBox="0 0 24 24" style="width:14px; height:14px; color:#0284c7;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><strong>提交人:</strong> ${escapeHtml(uploader)}</span>`);
+
+      captionEl.innerHTML = `
+        <div style="display:flex; flex-direction:column; align-items:center; gap:0.25rem; width:100%; max-width:680px; margin-top:0.5rem;">
+          ${descHtml}
+          <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:1.25rem; font-size:0.8rem; color:#475569;">
+            ${metaParts.join('')}
+          </div>
+        </div>
+      `;
+    } else {
+      captionEl.innerHTML = `<span style="font-size:0.875rem; font-weight:600; color:var(--text-main);">${escapeHtml(captionData || '现场照片')}</span>`;
+    }
+  }
+  if (overlay) overlay.style.display = 'flex';
 }
 
 function closeImageLightbox() {
@@ -278,6 +302,22 @@ function switchTab(tabId) {
   const targetTab = document.getElementById(tabId);
   if (targetTab) targetTab.classList.add('active');
 
+  const pageTitles = {
+    'tab-events': '跨网数据汇聚',
+    'tab-builder': '表单设计器',
+    'tab-ftp': 'FTP 通道配置',
+    'tab-webhooks': '第三方消息分发',
+    'tab-audits': '系统审计日志',
+    'tab-personnel': '涉事人员档案库',
+    'tab-users': '用户与权限管理',
+    'tab-errors': '死信与纠错中心',
+    'tab-system': '系统运行诊断'
+  };
+  const titleEl = document.getElementById('currentPageTitle');
+  if (titleEl && pageTitles[tabId]) {
+    titleEl.innerText = pageTitles[tabId];
+  }
+
   if (tabId === 'tab-builder' && typeof loadSchema === 'function') loadSchema();
   if (tabId === 'tab-ftp' && typeof loadCoreFtpConfig === 'function') loadCoreFtpConfig();
   if (tabId === 'tab-webhooks' && typeof loadWebhooks === 'function') loadWebhooks();
@@ -292,27 +332,88 @@ function openEventDrawer(eventId) {
   const evt = eventsData.find(e => e.event_id === eventId);
   if (!evt) return;
 
-  document.getElementById('drawerTitle').innerText = `单据详情分析与存照: ${evt.event_id}`;
+  const p = evt.payload || {};
+  document.getElementById('drawerTitle').innerText = `事件详情: ${evt.event_id}`;
   document.getElementById('drawerDownloadZipBtn').onclick = () => downloadEventZip(evt.event_id);
 
-  const aiTagsHtml = (evt.ai_tags || []).map(t => `<span class="ai-tag-badge">${escapeHtml(t)}</span>`).join(' ');
+  const aiTagsHtml = (evt.ai_tags || []).length > 0
+    ? (evt.ai_tags || []).map(t => `<span class="ai-tag-badge">${escapeHtml(t)}</span>`).join(' ')
+    : `<span style="color:var(--text-muted); font-size:0.8rem;">暂无标签</span>`;
+
+  // 图片展示
+  const files = evt.files || [];
+  const imgsHtml = files.length > 0
+    ? files.map(f => `
+        <div style="display:flex; flex-direction:column; gap:0.35rem; background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:0.5rem; cursor:pointer;" onclick="openImageLightbox('${escapeJsString(f.url)}', { description:'${escapeJsString(f.description || '')}', timestamp:'${escapeJsString(f.timestamp || '')}', location:'${escapeJsString(f.location || '')}', uploader:'${escapeJsString((f.uploader_name || f.uploader_username || '').split('(')[0].trim())}' })">
+          <div style="width:100%; height:110px; background:#0f172a; border-radius:6px; overflow:hidden;">
+            <img src="${escapeHtml(f.url)}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none'">
+          </div>
+          <div style="font-size:0.7rem; color:#64748b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(f.filename || '')}">${escapeHtml(f.filename || '图片')}</div>
+        </div>`).join('')
+    : `<div style="color:var(--text-muted); font-size:0.8rem; padding:1rem 0;">暂无上传图片</div>`;
+
+  // 基本字段行
+  function field(label, value, mono = false) {
+    return `<div style="display:flex; gap:0.5rem; padding:0.5rem 0; border-bottom:1px solid #f1f5f9; align-items:flex-start; min-width:0;">
+      <span style="font-size:0.775rem; color:#64748b; font-weight:600; white-space:nowrap; min-width:90px; flex-shrink:0;">${label}</span>
+      <span style="font-size:0.8rem; color:var(--text-main); ${mono ? 'font-family:monospace; word-break:break-all;' : 'overflow:hidden; text-overflow:ellipsis; white-space:nowrap;'} flex:1; min-width:0;">${value}</span>
+    </div>`;
+  }
+
+  const sig = evt.signature || '';
+  const sigShort = sig.length > 48 ? sig.slice(0, 48) + '...' : sig;
 
   document.getElementById('drawerBody').innerHTML = `
-    <div style="margin-bottom:1.5rem;">
-      <h4 style="font-size:0.875rem; color:var(--text-muted); margin-bottom:0.5rem;">要素提取分析标签</h4>
-      <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">${aiTagsHtml}</div>
-    </div>
-    <div style="margin-bottom:1.5rem;">
-      <h4 style="font-size:0.875rem; color:var(--text-muted); margin-bottom:0.5rem;">数字签名 (HMAC-SHA256)</h4>
-      <div style="font-family:monospace; font-size:0.8rem; background:#f8fafc; padding:0.6rem; border-radius:6px; border:1px solid var(--border-color); word-break:break-all;">${escapeHtml(evt.signature || '未签名')}</div>
-    </div>
-    <div style="margin-bottom:1.5rem;">
-      <h4 style="font-size:0.875rem; color:var(--text-muted); margin-bottom:0.5rem;">数据包摘要校验和 (MD5)</h4>
-      <div style="font-family:monospace; font-size:0.8rem; background:#f8fafc; padding:0.6rem; border-radius:6px; border:1px solid var(--border-color);">${escapeHtml(evt.zip_hash)}</div>
-    </div>
-    <div>
-      <h4 style="font-size:0.875rem; color:var(--text-muted); margin-bottom:0.5rem;">结构化元数据</h4>
-      <pre style="font-family:monospace; font-size:0.8rem; background:#0f172a; color:#38bdf8; padding:1rem; border-radius:8px; overflow-x:auto;">${escapeHtml(JSON.stringify(evt, null, 2))}</pre>
+    <div style="display:flex; flex-direction:column; gap:1rem; min-width:0;">
+
+      <!-- 事件基础信息 -->
+      <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:0.85rem 1rem;">
+        <div style="font-size:0.775rem; font-weight:700; color:#1e40af; margin-bottom:0.6rem; text-transform:uppercase; letter-spacing:0.5px;">事件基础信息</div>
+        ${field('事件编号', escapeHtml(evt.event_id), true)}
+        ${field('所属任务', escapeHtml(evt.task_name || '-'))}
+        ${field('任务编号', escapeHtml(evt.task_code || '-'), true)}
+        ${field('提交时间', escapeHtml(new Date(evt.submit_time || evt.timestamp).toLocaleString()))}
+        ${field('录入人员', escapeHtml((evt.operator || '-').split('(')[0].trim()))}
+        ${field('业务类型', escapeHtml(evt.biz_type || '-'))}
+      </div>
+
+      <!-- 现场信息 -->
+      <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:0.85rem 1rem;">
+        <div style="font-size:0.775rem; font-weight:700; color:#15803d; margin-bottom:0.6rem; text-transform:uppercase; letter-spacing:0.5px;">现场信息</div>
+        ${field('发生地点', escapeHtml(p.location || '-'))}
+        ${field('交通方式', escapeHtml(p.transportation || '-'))}
+        ${p.person_name ? field('涉事姓名', `<strong style="color:var(--primary); cursor:pointer;" onclick="event.stopPropagation(); showPersonDetailModal('${escapeJsString(encodeURIComponent(JSON.stringify(p)))}')">${escapeHtml(p.person_name)}</strong>`) : ''}
+        ${p.person_id_card ? field('身份证号', escapeHtml(p.person_id_card), true) : ''}
+        ${p.person_domicile ? field('户籍地址', escapeHtml(p.person_domicile)) : ''}
+        ${p.description ? field('现场描述', escapeHtml(p.description)) : ''}
+      </div>
+
+      <!-- AI 标签 -->
+      <div style="background:#fafafa; border:1px solid #e2e8f0; border-radius:10px; padding:0.85rem 1rem;">
+        <div style="font-size:0.775rem; font-weight:700; color:#334155; margin-bottom:0.5rem;">要素提取标签</div>
+        <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">${aiTagsHtml}</div>
+      </div>
+
+      <!-- 上传图片 -->
+      ${files.length > 0 ? `
+      <div style="background:#fafafa; border:1px solid #e2e8f0; border-radius:10px; padding:0.85rem 1rem;">
+        <div style="font-size:0.775rem; font-weight:700; color:#334155; margin-bottom:0.65rem;">上传图片 (${files.length} 张)</div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:0.6rem;">${imgsHtml}</div>
+      </div>` : ''}
+
+      <!-- 完整性校验 -->
+      <div style="background:#fafafa; border:1px solid #e2e8f0; border-radius:10px; padding:0.85rem 1rem;">
+        <div style="font-size:0.775rem; font-weight:700; color:#334155; margin-bottom:0.6rem;">数据完整性</div>
+        <div style="margin-bottom:0.5rem;">
+          <div style="font-size:0.725rem; color:#64748b; margin-bottom:0.2rem;">数字签名 (HMAC-SHA256)</div>
+          <div style="font-family:monospace; font-size:0.725rem; color:#0369a1; background:#f0f9ff; padding:0.4rem 0.6rem; border-radius:6px; border:1px solid #bae6fd; word-break:break-all;">${escapeHtml(evt.signature || '未签名')}</div>
+        </div>
+        <div>
+          <div style="font-size:0.725rem; color:#64748b; margin-bottom:0.2rem;">包摘要校验和 (MD5 / ZIP Hash)</div>
+          <div style="font-family:monospace; font-size:0.725rem; color:#334155; background:#f8fafc; padding:0.4rem 0.6rem; border-radius:6px; border:1px solid #e2e8f0; word-break:break-all;">${escapeHtml(evt.zip_hash || '-')}</div>
+        </div>
+      </div>
+
     </div>
   `;
   document.getElementById('drawerOverlay').classList.add('open');

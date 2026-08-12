@@ -29,7 +29,7 @@ function renderErrors() {
   if (document.getElementById('errorNextBtn')) document.getElementById('errorNextBtn').disabled = errorCurrentPage >= totalPages;
 
   if (totalCount === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:3rem; color:var(--text-muted);">隔离区暂无异常损坏单据包</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:3rem; color:var(--text-muted);">隔离区暂无异常损坏数据包</td></tr>`;
     return;
   }
   const paged = cachedErrorData.slice((errorCurrentPage - 1) * errorPageSize, errorCurrentPage * errorPageSize);

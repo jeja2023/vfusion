@@ -67,9 +67,9 @@
       </div>
 
       <nav class="sidebar-nav">
-        <button class="nav-item active" id="tabBtn-publish" onclick="switchTab('tab-publish')">
-          <svg class="icon-svg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-          <span>新建事件发布</span>
+        <button class="nav-item active" id="tabBtn-tasks" onclick="switchTab('tab-tasks')">
+          <svg class="icon-svg" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          <span>任务管理中心</span>
         </button>
         <button class="nav-item" id="tabBtn-history" onclick="switchTab('tab-history')">
           <svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -103,13 +103,17 @@
     <main class="app-main">
       <header class="app-header">
         <div style="font-size:0.95rem; font-weight:700; color:var(--text-main); display:flex; align-items:center; gap:0.5rem;">
-          <span>视频网发布终端控制台</span>
+          <span style="color:var(--text-muted); font-size:0.875rem; font-weight:500;">视频网发布终端</span>
+          <span style="color:#cbd5e1; font-size:0.875rem;">/</span>
+          <span id="currentPageTitle" style="color:var(--primary); font-weight:700;">任务管理中心</span>
         </div>
       </header>
 
       <!-- 页签容器，通过 pages/*.html 模板装载 -->
       <div class="app-content">
-        <div id="tab-publish" class="tab-content active"></div>
+        <div id="tab-tasks" class="tab-content active"></div>
+        <div id="tab-task-images" class="tab-content"></div>
+        <div id="tab-publish" class="tab-content"></div>
         <div id="tab-history" class="tab-content"></div>
         <div id="tab-builder" class="tab-content"></div>
         <div id="tab-ftp" class="tab-content"></div>
@@ -120,11 +124,11 @@
   </div>
 
   <!-- 照片放大弹窗 Modal Lightbox -->
-  <div id="imageLightboxOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.85); backdrop-filter:blur(6px); z-index:1100; align-items:center; justify-content:center;" onclick="closeImageLightbox()">
+  <div id="imageLightboxOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.85); backdrop-filter:blur(6px); z-index:20000; align-items:center; justify-content:center;" onclick="closeImageLightbox()">
     <div style="position:relative; max-width:85vw; max-height:85vh; display:flex; flex-direction:column; align-items:center; background:#ffffff; border-radius:12px; padding:1.25rem; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);" onclick="event.stopPropagation()">
       <button onclick="closeImageLightbox()" style="position:absolute; top:-12px; right:-12px; width:32px; height:32px; border-radius:50%; background:#ef4444; color:#ffffff; border:none; font-size:1.1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:bold; box-shadow:0 4px 6px -1px rgba(0,0,0,0.3);">✕</button>
       <img id="lightboxImg" src="" style="max-width:80vw; max-height:75vh; object-fit:contain; border-radius:8px; border:1px solid #e2e8f0; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);">
-      <div id="lightboxCaption" style="margin-top:0.75rem; font-size:0.875rem; font-weight:600; color:var(--text-main);">现场照片大图凭证</div>
+      <div id="lightboxCaption" style="margin-top:0.75rem; font-size:0.875rem; font-weight:600; color:var(--text-main);">现场照片放大预览</div>
     </div>
   </div>
 
@@ -159,6 +163,8 @@
   </div>
 
   <script src="js/main.js"></script>
+  <script src="js/pages/tasks.js"></script>
+  <script src="js/pages/task_images.js"></script>
   <script src="js/pages/publish.js"></script>
   <script src="js/pages/history.js"></script>
   <script src="js/pages/builder.js"></script>

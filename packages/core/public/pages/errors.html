@@ -1,6 +1,6 @@
 <div class="card">
   <div class="card-title">
-    <span>异常单据死信隔离区控制台</span>
+    <span>死信隔离区控制台</span>
     <button class="btn btn-diode" onclick="loadErrors()">刷新隔离区文件</button>
   </div>
 
@@ -30,21 +30,22 @@
     <svg class="icon-svg" viewBox="0 0 24 24" style="color:#2563eb;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
     <span><strong>死信保护机制说明：</strong>当隔离网摆渡的数据 Zip 包遇到文件破损、HMAC 签名不匹配或 MD5 摘要校验失败时，系统将自动隔离至该目录保护主业务通道。修正后可点击【重试解包】。</span>
   </div>
+  <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:1rem;">展示校验失败、签名不匹配或损坏的隔离摆渡包</p>
 
   <div class="table-container">
     <table>
       <thead>
         <tr>
           <th class="col-idx">序号</th>
-          <th>隔离包文件名</th>
-          <th>包体积大小</th>
+          <th>文件包名</th>
           <th>隔离时间</th>
-          <th>隔离原因状态</th>
-          <th>操作</th>
+          <th>隔离原因</th>
+          <th>包文件大小</th>
+          <th style="text-align:left;">操作</th>
         </tr>
       </thead>
       <tbody id="errorTableBody">
-        <tr><td colspan="6" style="text-align:center; padding:3rem; color:var(--text-muted);">隔离区暂无异常损坏单据包</td></tr>
+        <tr><td colspan="6" style="text-align:center; padding:3rem; color:var(--text-muted);">隔离区暂无异常损坏数据包</td></tr>
       </tbody>
     </table>
   </div>

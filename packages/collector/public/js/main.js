@@ -11,6 +11,11 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function escapeJsString(str) {
+  if (!str) return '';
+  return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+}
+
 function getAuthToken() {
   return localStorage.getItem('vfusion_collector_token') || '';
 }
@@ -57,10 +62,10 @@ const auditStatusMap = {
 };
 
 async function loadPageTemplates() {
-  const pages = ['publish', 'history', 'builder', 'ftp', 'audits', 'users'];
+  const pages = ['tasks', 'task_images', 'publish', 'history', 'builder', 'ftp', 'audits', 'users'];
   await Promise.all(pages.map(async (p) => {
     try {
-      const res = await fetch(`pages/${p}.html`);
+      const res = await fetch(`pages/${p}.html?v=${Date.now()}`);
       if (res.ok) {
         const html = await res.text();
         const container = document.getElementById(`tab-${p}`);
@@ -72,9 +77,35 @@ async function loadPageTemplates() {
   }));
 }
 
-function openImageLightbox(url, caption) {
-  document.getElementById('lightboxImg').src = url;
-  document.getElementById('lightboxCaption').innerText = caption || '现场照片凭证';
+function openImageLightbox(url, captionData) {
+  const imgEl = document.getElementById('lightboxImg');
+  const captionEl = document.getElementById('lightboxCaption');
+  if (imgEl) imgEl.src = url;
+
+  if (captionEl) {
+    if (typeof captionData === 'object' && captionData !== null) {
+      const { description, timestamp, location, uploader } = captionData;
+      const descHtml = description
+        ? `<div style="font-size:0.9rem; font-weight:600; color:#1e293b; background:#f1f5f9; padding:0.55rem 0.85rem; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:0.4rem; text-align:left; width:100%;">${escapeHtml(description)}</div>`
+        : `<div style="font-size:0.85rem; color:#94a3b8; font-style:italic; margin-bottom:0.4rem;">(暂无图片描述)</div>`;
+      
+      const metaParts = [];
+      if (timestamp) metaParts.push(`<span style="display:inline-flex; align-items:center; gap:0.25rem;"><svg class="icon-svg" viewBox="0 0 24 24" style="width:14px; height:14px; color:#0284c7;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><strong>时间:</strong> ${escapeHtml(timestamp)}</span>`);
+      if (location) metaParts.push(`<span style="display:inline-flex; align-items:center; gap:0.25rem;"><svg class="icon-svg" viewBox="0 0 24 24" style="width:14px; height:14px; color:#0284c7;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><strong>地点:</strong> ${escapeHtml(location)}</span>`);
+      if (uploader) metaParts.push(`<span style="display:inline-flex; align-items:center; gap:0.25rem;"><svg class="icon-svg" viewBox="0 0 24 24" style="width:14px; height:14px; color:#0284c7;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><strong>提交人:</strong> ${escapeHtml(uploader)}</span>`);
+
+      captionEl.innerHTML = `
+        <div style="display:flex; flex-direction:column; align-items:center; gap:0.25rem; width:100%; max-width:680px; margin-top:0.5rem;">
+          ${descHtml}
+          <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:1.25rem; font-size:0.8rem; color:#475569;">
+            ${metaParts.join('')}
+          </div>
+        </div>
+      `;
+    } else {
+      captionEl.innerHTML = `<span style="font-size:0.875rem; font-weight:600; color:var(--text-main);">${escapeHtml(captionData || '现场照片')}</span>`;
+    }
+  }
   document.getElementById('imageLightboxOverlay').style.display = 'flex';
 }
 
@@ -123,6 +154,7 @@ async function checkAuth() {
     document.getElementById('userInfoTag').innerText = `${currentUser.name} (${currentUser.username})`;
     applyRolePermissions();
     if (typeof loadSchema === 'function') loadSchema();
+    if (typeof loadTaskList === 'function') loadTaskList();
   } else {
     document.getElementById('loginOverlay').style.display = 'flex';
   }
@@ -178,10 +210,34 @@ function handleLogout() {
 function switchTab(tabId) {
   document.querySelectorAll('.nav-item, .tab-btn').forEach(btn => btn.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-  if (event && event.currentTarget) event.currentTarget.classList.add('active');
+  if (typeof event !== 'undefined' && event && event.currentTarget && event.currentTarget.classList) {
+    event.currentTarget.classList.add('active');
+  }
   const targetTab = document.getElementById(tabId);
   if (targetTab) targetTab.classList.add('active');
 
+  const navBtnId = tabId.replace('tab-', 'tabBtn-');
+  const navBtn = document.getElementById(navBtnId);
+  if (navBtn) navBtn.classList.add('active');
+
+  const pageTitles = {
+    'tab-tasks': '任务管理中心',
+    'tab-task-images': '任务图片库',
+    'tab-publish': '上传图片',
+    'tab-history': '已提交历史存照',
+    'tab-builder': '视频网表单设计器',
+    'tab-ftp': 'FTP 通道配置',
+    'tab-audits': '系统审计日志',
+    'tab-users': '用户与权限管理'
+  };
+  const titleEl = document.getElementById('currentPageTitle');
+  if (titleEl && pageTitles[tabId]) {
+    titleEl.innerText = pageTitles[tabId];
+  }
+
+  if (tabId === 'tab-tasks' && typeof loadTaskList === 'function') loadTaskList();
+  if (tabId === 'tab-task-images' && typeof initTaskImagesPage === 'function') initTaskImagesPage();
+  if (tabId === 'tab-publish' && typeof loadTaskOptions === 'function') loadTaskOptions();
   if (tabId === 'tab-publish' && typeof loadSchema === 'function') loadSchema();
   if (tabId === 'tab-history' && typeof loadPublishedHistory === 'function') loadPublishedHistory();
   if (tabId === 'tab-builder' && typeof loadSchema === 'function') loadSchema();
@@ -195,4 +251,5 @@ window.addEventListener('DOMContentLoaded', async () => {
   bindPublishFormSubmit();
   await checkAuth();
   if (typeof loadSchema === 'function') await loadSchema();
+  if (typeof loadTaskList === 'function') await loadTaskList();
 });

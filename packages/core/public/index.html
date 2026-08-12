@@ -55,20 +55,20 @@
   <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer(event)">
     <div class="drawer-panel" onclick="event.stopPropagation()">
       <div class="drawer-header">
-        <h3 id="drawerTitle" style="font-size:1.1rem; color:var(--primary);">单据详情分析与存照</h3>
-        <div style="display:flex; gap:0.5rem; align-items:center;">
+        <h3 id="drawerTitle" style="font-size:1rem; color:var(--primary); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-right:0.5rem;">事件详情与解析</h3>
+        <div style="display:flex; gap:0.5rem; align-items:center; flex-shrink:0;">
           <button class="btn btn-export" style="padding:0.35rem 0.65rem;" id="drawerDownloadZipBtn">
             <svg class="icon-svg" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            下载单据 Zip 存照
+            下载
           </button>
           <button class="btn btn-diode" style="padding:0.35rem 0.65rem;" onclick="window.print()">
             <svg class="icon-svg" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-            打印存照凭证
+            打印
           </button>
           <button class="drawer-close-btn" onclick="closeDrawer()">✕</button>
         </div>
       </div>
-      <div id="drawerBody"></div>
+      <div id="drawerBody" style="overflow:hidden; min-width:0; word-break:break-word;"></div>
     </div>
   </div>
 
@@ -122,7 +122,7 @@
         </button>
         <button class="nav-item" id="tabBtn-errors" onclick="switchTab('tab-errors')">
           <svg class="icon-svg" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-          <span>异常单据隔离区</span>
+          <span>死信隔离区</span>
         </button>
         <button class="nav-item" id="tabBtn-system" onclick="switchTab('tab-system')">
           <svg class="icon-svg" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
@@ -140,7 +140,9 @@
     <main class="app-main">
       <header class="app-header">
         <div style="font-size:0.95rem; font-weight:700; color:var(--text-main); display:flex; align-items:center; gap:0.5rem;">
-          <span>内网数据汇聚中台控制台</span>
+          <span style="color:var(--text-muted); font-size:0.875rem; font-weight:500;">内网数据中台</span>
+          <span style="color:#cbd5e1; font-size:0.875rem;">/</span>
+          <span id="currentPageTitle" style="color:var(--primary); font-weight:700;">跨网数据汇聚</span>
         </div>
         <div class="header-actions">
           <div class="alert-bell-wrapper">
@@ -192,11 +194,11 @@
   </div>
 
   <!-- 照片放大弹窗 Modal Lightbox -->
-  <div id="imageLightboxOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.85); backdrop-filter:blur(6px); z-index:1100; align-items:center; justify-content:center;" onclick="closeImageLightbox()">
+  <div id="imageLightboxOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.85); backdrop-filter:blur(6px); z-index:20000; align-items:center; justify-content:center;" onclick="closeImageLightbox()">
     <div style="position:relative; max-width:85vw; max-height:85vh; display:flex; flex-direction:column; align-items:center; background:#ffffff; border-radius:12px; padding:1.25rem; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);" onclick="event.stopPropagation()">
       <button onclick="closeImageLightbox()" style="position:absolute; top:-12px; right:-12px; width:32px; height:32px; border-radius:50%; background:#ef4444; color:#ffffff; border:none; font-size:1.1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:bold; box-shadow:0 4px 6px -1px rgba(0,0,0,0.3);">✕</button>
       <img id="lightboxImg" src="" style="max-width:80vw; max-height:75vh; object-fit:contain; border-radius:8px; border:1px solid #e2e8f0; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);">
-      <div id="lightboxCaption" style="margin-top:0.75rem; font-size:0.875rem; font-weight:600; color:var(--text-main);">现场照片大图凭证</div>
+      <div id="lightboxCaption" style="margin-top:0.75rem; font-size:0.875rem; font-weight:600; color:var(--text-main);">现场照片放大预览</div>
     </div>
   </div>
 

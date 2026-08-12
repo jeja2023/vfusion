@@ -1,10 +1,12 @@
 let selectedFiles = [];
 let registeredPersonnel = [];
 
-async function loadPersonnelList() {
+async function loadPersonnelList(taskCode) {
   try {
     const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
-    const res = await fetchFn('/api/personnel');
+    const code = taskCode || selectedTaskCode || localStorage.getItem('vfusion_selected_task_code') || '';
+    const url = code ? `/api/personnel?task_code=${encodeURIComponent(code)}` : '/api/personnel';
+    const res = await fetchFn(url);
     const json = await res.json();
     if (json.success) registeredPersonnel = json.data || [];
   } catch (e) {}
@@ -27,6 +29,40 @@ function autoFillPersonnel(valIdx) {
   showToast(`已提取并填入人员: ${person.name} (${person.id_card})`);
 }
 
+let availableTasks = [];
+let selectedTaskCode = '';
+
+async function loadTaskOptions() {
+  try {
+    const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
+    const res = await fetchFn('/api/tasks');
+    const json = await res.json();
+    if (json.success) {
+      availableTasks = (json.data || []).filter(t => t.status === 'ACTIVE' || t.is_shared);
+      const storedCode = selectedTaskCode || localStorage.getItem('vfusion_selected_task_code') || '';
+      if (storedCode && availableTasks.some(t => t.task_code === storedCode)) {
+        selectedTaskCode = storedCode;
+      } else if (availableTasks.length > 0) {
+        selectedTaskCode = availableTasks[0].task_code;
+      }
+      await loadPersonnelList(selectedTaskCode);
+    }
+  } catch (e) {
+    console.error('加载任务数据失败:', e);
+  }
+}
+
+function selectTaskForPublish(taskCode) {
+  selectedTaskCode = taskCode;
+  localStorage.setItem('vfusion_selected_task_code', taskCode);
+  loadPersonnelList(taskCode);
+}
+
+function publishToTask(taskCode) {
+  selectTaskForPublish(taskCode);
+  if (typeof switchTab === 'function') switchTab('tab-publish');
+}
+
 function renderDynamicForm(fields) {
   const grid = document.getElementById('dynamicFormGrid');
   if (!grid) return;
@@ -40,58 +76,57 @@ function renderDynamicForm(fields) {
 
   const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 19);
 
+  const storedCode = selectedTaskCode || localStorage.getItem('vfusion_selected_task_code') || '';
+  const currentTask = availableTasks.find(t => t.task_code === storedCode) || (availableTasks.length > 0 ? availableTasks[0] : null);
+
+  const taskName = currentTask ? currentTask.task_name : '未指定任务';
+  const taskCode = currentTask ? currentTask.task_code : (storedCode || '');
+
+  // 顶部当前发布任务状态只读提示卡片 (不含切换按钮，需通过任务中心进行任务切换)
   const taskGroup = document.createElement('div');
   taskGroup.className = 'form-group full-width';
-  taskGroup.style.cssText = 'background:#f8fafc; border:1px solid var(--border-color); padding:0.5rem 0.75rem; border-radius:8px; display:grid; grid-template-columns: 1.1fr 0.9fr; gap:0.65rem;';
-  
-  const defaultTaskCode = 'TASK_' + new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 12);
-  const savedTaskName = escapeHtml(existingValues['task_name'] || '厂区周界安防例行巡检');
-  const savedTaskCode = escapeHtml(existingValues['task_code'] || defaultTaskCode);
+  taskGroup.style.cssText = 'background:#f0f9ff; border:1px solid #bae6fd; padding:0.65rem 0.85rem; border-radius:8px; display:flex; align-items:center; justify-content:center;';
 
   taskGroup.innerHTML = `
-    <div>
-      <label style="color:var(--text-main); font-weight:700; font-size:0.8rem; display:flex; align-items:center; gap:0.35rem;">
-        <svg class="icon-svg" viewBox="0 0 24 24" style="color:var(--primary);"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-        所属任务名称 <span class="req">*</span>
-      </label>
-      <input type="text" name="task_name" required placeholder="如: 厂区周界巡检 / 北门安全排查" value="${savedTaskName}" style="width:100%; margin-top:0.15rem;">
+    <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; justify-content:center;">
+      <span style="font-size:0.8rem; color:#0369a1; font-weight:600;">当前发布任务:</span>
+      <strong style="font-size:0.9rem; color:#0284c7;">${escapeHtml(taskName)}</strong>
+      <code style="font-size:0.775rem; color:#0284c7; font-weight:600;">(${escapeHtml(taskCode)})</code>
     </div>
-    <div>
-      <label style="color:var(--text-main); font-weight:700; font-size:0.8rem; display:flex; align-items:center; gap:0.35rem;">
-        <svg class="icon-svg" viewBox="0 0 24 24" style="color:var(--primary);"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        关联任务编号 <span class="req">*</span>
-      </label>
-      <input type="text" name="task_code" required placeholder="任务唯一代号 (如: TASK_20260811_01)" value="${savedTaskCode}" style="width:100%; margin-top:0.15rem; font-family:monospace; color:var(--primary); font-weight:600;">
-    </div>
+    <input type="hidden" name="task_name" value="${escapeHtml(taskName)}">
+    <input type="hidden" name="task_code" value="${escapeHtml(taskCode)}">
   `;
   grid.appendChild(taskGroup);
 
+  // 美化后的本任务涉事人员档案下拉组
   const pGroup = document.createElement('div');
   pGroup.className = 'form-group full-width';
-  pGroup.style.cssText = 'background:#eff6ff; border:1.5px dashed #3b82f6; padding:0.5rem 0.75rem; border-radius:8px;';
-  
+  pGroup.style.cssText = 'background:#ffffff; border:1px solid #e2e8f0; padding:0.75rem 0.9rem; border-radius:8px; box-shadow:0 1px 2px rgba(0,0,0,0.03);';
+
   const optsHtml = registeredPersonnel.length > 0
     ? registeredPersonnel.map((p, idx) => `<option value="${idx}">${escapeHtml(p.name)} - 身份证: ${escapeHtml(p.id_card) || '未填'} (户籍: ${escapeHtml(p.domicile) || '未填'})</option>`).join('')
-    : '<option value="" disabled>暂无历史人员档案 (首次录入提交后将自动存档)</option>';
+    : '<option value="" disabled>-- 本任务暂无关联登记人员 (输入姓名身份证提交后将自动关联本任务) --</option>';
 
   pGroup.innerHTML = `
-    <label style="color:#1d4ed8; font-weight:700; font-size:0.875rem; display:flex; align-items:center; justify-content:space-between;">
-      <span style="display:flex; align-items:center; gap:0.45rem;">
-        <svg class="icon-svg" viewBox="0 0 24 24" style="color:#2563eb;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 1 0 7.75"/></svg>
-        涉事人员历史档案 (点击选择一键填入)
-      </span>
-      <span style="font-size:0.75rem; font-weight:normal; color:#2563eb;">已有 ${registeredPersonnel.length} 人档案</span>
+    <label style="color:#334155; font-weight:600; font-size:0.825rem; display:flex; align-items:center; justify-content:space-between; margin-bottom:0.45rem;">
+      <span>本任务涉事人员档案 (点击选择一键填入)</span>
+      <span style="font-size:0.75rem; font-weight:normal; color:#64748b;">本任务已有 ${registeredPersonnel.length} 人</span>
     </label>
-    <select id="personnelSelectBox" style="border:1px solid #93c5fd; background:#ffffff; font-weight:600; cursor:pointer;" onchange="autoFillPersonnel(this.value)">
-      <option value="">-- 点击下拉框选择已登记人员 (自动填入姓名/身份证/户籍) --</option>
+    <select id="personnelSelectBox" style="width:100%; border:1px solid #cbd5e1; background:#ffffff; font-size:0.85rem; font-weight:500; color:#1e293b; padding:0.5rem 0.75rem; border-radius:6px; outline:none; cursor:pointer;" onchange="autoFillPersonnel(this.value)">
+      <option value="">-- 点击选择已登记人员 (自动关联关联姓名/身份证/户籍) --</option>
       ${optsHtml}
     </select>
+    <input type="hidden" name="person_name" value="">
+    <input type="hidden" name="person_id_card" value="">
+    <input type="hidden" name="person_domicile" value="">
   `;
   grid.appendChild(pGroup);
 
   (fields || []).forEach(field => {
+    if (['person_name', 'person_id_card', 'person_domicile'].includes(field.key)) return;
+
     const group = document.createElement('div');
-    const isFullWidth = field.type === 'textarea' || field.key === 'location' || field.key === 'person_domicile';
+    const isFullWidth = field.type === 'textarea' || field.key === 'location';
     group.className = 'form-group' + (isFullWidth ? ' full-width' : '');
 
     const curVal = existingValues[field.key] !== undefined ? existingValues[field.key] : (field.key === 'event_time' ? nowStr : '');
@@ -124,10 +159,15 @@ function renderDynamicForm(fields) {
     `;
     grid.appendChild(group);
   });
+
+  loadTaskOptions();
 }
 
 function handleFileSelect(e) {
-  selectedFiles = Array.from(e.target.files).slice(0, 1);
+  const newFiles = Array.from(e.target.files);
+  if (newFiles.length > 0) {
+    selectedFiles = selectedFiles.concat(newFiles);
+  }
   renderFilePreviews();
 }
 
@@ -151,48 +191,55 @@ function renderFilePreviews() {
     return;
   }
 
-  const file = selectedFiles[0];
-  const imgUrl = URL.createObjectURL(file);
   promptEl.style.display = 'none';
   previewEl.style.display = 'flex';
+  previewEl.style.flexDirection = 'column';
   previewEl.style.width = '100%';
   previewEl.style.height = '100%';
   if (uploadZone) {
-    uploadZone.style.padding = '0';
+    uploadZone.style.padding = '0.5rem';
     uploadZone.style.background = '#0f172a';
     uploadZone.style.borderColor = '#3b82f6';
   }
 
+  const fileThumbnails = selectedFiles.map((file, idx) => {
+    const imgUrl = URL.createObjectURL(file);
+    return `
+      <div style="position:relative; width:90px; height:90px; border-radius:8px; overflow:hidden; border:1px solid rgba(255,255,255,0.2); background:#1e293b; flex-shrink:0;">
+        <img src="${imgUrl}" style="width:100%; height:100%; object-fit:cover; cursor:pointer;" onclick="event.stopPropagation(); if(typeof openImageLightbox === 'function') openImageLightbox('${imgUrl}', '图片预览: ${escapeHtml(file.name)}')" title="${escapeHtml(file.name)}">
+        <button type="button" style="position:absolute; top:2px; right:2px; width:20px; height:20px; border-radius:50%; background:#ef4444; color:#fff; border:none; font-size:0.75rem; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center;" onclick="event.stopPropagation(); removeSelectedFile(${idx})">✕</button>
+        <div style="position:absolute; bottom:0; inset-x:0; background:rgba(0,0,0,0.6); color:#fff; font-size:0.65rem; padding:1px 3px; text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${(file.size / 1024).toFixed(0)}KB</div>
+      </div>
+    `;
+  }).join('');
+
   previewEl.innerHTML = `
-    <div style="position:relative; width:100%; height:100%; min-height:280px; display:flex; align-items:center; justify-content:center; overflow:hidden; background:#0f172a; border-radius:10px;">
-      <!-- 毛玻璃背景 Layer -->
-      <div style="position:absolute; inset:0; background-image:url('${imgUrl}'); background-size:cover; background-position:center; filter:blur(20px) brightness(0.45); transform:scale(1.1); pointer-events:none;"></div>
-      
-      <!-- 主图：自动等比缩放适配容器 (object-fit: contain) -->
-      <img src="${imgUrl}" 
-           title="点击放大预览" 
-           style="position:relative; z-index:1; max-width:96%; max-height:calc(100% - 56px); width:auto; height:auto; object-fit:contain; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.5); cursor:pointer; transition:transform 0.2s ease;" 
-           onmouseover="this.style.transform='scale(1.02)'" 
-           onmouseout="this.style.transform='scale(1.0)'" 
-           onclick="event.stopPropagation(); if(typeof openImageLightbox === 'function') openImageLightbox('${imgUrl}', '现场凭证抓拍大图: ${escapeHtml(file.name)}')">
-      
-      <!-- 底部浮层信息栏 -->
-      <div style="position:absolute; bottom:0; left:0; right:0; z-index:2; background:linear-gradient(to top, rgba(15,23,42,0.95) 0%, rgba(15,23,42,0.7) 75%, transparent 100%); backdrop-filter:blur(8px); padding:0.6rem 0.9rem; border-radius:0 0 10px 10px; display:flex; justify-content:space-between; align-items:center; color:#ffffff;">
-        <div style="display:flex; flex-direction:column; text-align:left; overflow:hidden; padding-right:0.5rem;">
-          <span style="font-size:0.85rem; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</span>
-          <span style="font-size:0.725rem; color:#cbd5e1; font-weight:500;">${(file.size / 1024).toFixed(1)} KB · 自动等比缩放适配就绪</span>
+    <div style="display:flex; flex-direction:column; width:100%; height:100%; justify-content:space-between;">
+      <div style="display:flex; flex-wrap:wrap; gap:0.6rem; padding:0.5rem; max-height:220px; overflow-y:auto;">
+        ${fileThumbnails}
+        <div style="width:90px; height:90px; border-radius:8px; border:2px dashed rgba(255,255,255,0.4); display:flex; flex-direction:column; align-items:center; justify-content:center; color:#bfdbfe; cursor:pointer; background:rgba(255,255,255,0.05);" onclick="document.getElementById('photoInput').click()">
+          <span style="font-size:1.4rem; font-weight:bold;">+</span>
+          <span style="font-size:0.7rem;">加图</span>
         </div>
-        <div style="display:flex; gap:0.4rem; flex-shrink:0;">
-          <button type="button" class="btn" style="padding:0.3rem 0.6rem; font-size:0.75rem; white-space:nowrap; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25); color:#fff; cursor:pointer;" onclick="event.stopPropagation(); if(typeof openImageLightbox === 'function') openImageLightbox('${imgUrl}', '现场凭证抓拍大图: ${escapeHtml(file.name)}')">
-            🔍 放大
-          </button>
-          <button type="button" class="btn btn-danger" style="padding:0.3rem 0.75rem; font-size:0.75rem; white-space:nowrap; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.3);" onclick="event.stopPropagation(); removeSelectedFile(0)">
-            更换照片
-          </button>
-        </div>
+      </div>
+      <div style="background:rgba(15,23,42,0.9); padding:0.5rem 0.8rem; border-radius:6px; display:flex; justify-content:space-between; align-items:center; color:#fff; font-size:0.8rem;">
+        <span>已选择 <strong style="color:#60a5fa;">${selectedFiles.length}</strong> 张现场照片</span>
+        <button type="button" class="btn btn-danger" style="padding:0.2rem 0.5rem; font-size:0.75rem;" onclick="clearAllSelectedFiles()">清空图片</button>
       </div>
     </div>
   `;
+}
+
+function removeSelectedFile(idx) {
+  selectedFiles.splice(idx, 1);
+  renderFilePreviews();
+}
+
+function clearAllSelectedFiles() {
+  selectedFiles = [];
+  const photoInput = document.getElementById('photoInput');
+  if (photoInput) photoInput.value = '';
+  renderFilePreviews();
 }
 
 function initUploadZoneDragAndDrop() {
@@ -228,7 +275,7 @@ function initUploadZoneDragAndDrop() {
         selectedFiles = [imageFiles[0]];
         renderFilePreviews();
       } else {
-        if (typeof showToast === 'function') showToast('请上传有效的图片凭证文件！', 'error');
+        if (typeof showToast === 'function') showToast('请上传有效的图片文件！', 'error');
       }
     }
   }, false);
@@ -253,6 +300,9 @@ function bindPublishFormSubmit() {
     btn.innerHTML = '正在计算摘要校验与数字签名并封装数据包...';
 
     const formData = new FormData(e.target);
+    formData.delete('images');
+    selectedFiles.forEach(f => formData.append('images', f));
+
     const appId = 'sys_gate_security';
     formData.append('app_id', appId);
     formData.append('event_id', 'EVT_' + Date.now());
@@ -274,12 +324,13 @@ function bindPublishFormSubmit() {
       const result = await res.json();
 
       if (result.success) {
-        showToast(result.message || '数据摆渡包已成功生成！');
-        const logCard = document.getElementById('logCard');
-        const logCode = document.getElementById('logCode');
-        if (logCard) logCard.style.display = 'block';
-        if (logCode) logCode.innerText = JSON.stringify(result.data, null, 2);
-        if (logCard) logCard.scrollIntoView({ behavior: 'smooth' });
+        showToast('打包成功！已完成原子重命名并存入发送目录');
+
+        const submittedTaskCode = formData.get('task_code');
+        if (submittedTaskCode) {
+          localStorage.setItem('vfusion_selected_task_code', submittedTaskCode);
+          if (typeof selectedTaskCode !== 'undefined') selectedTaskCode = submittedTaskCode;
+        }
 
         e.target.reset();
         selectedFiles = [];

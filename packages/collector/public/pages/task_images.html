@@ -1,0 +1,86 @@
+<div style="display:flex; flex-direction:column; gap:1.25rem;">
+  <!-- 顶栏与过滤面板 -->
+  <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:1.25rem; box-shadow:0 2px 4px rgba(0,0,0,0.03);">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1rem; border-bottom:1px solid #f1f5f9; padding-bottom:0.85rem;">
+      <div>
+        <h3 style="font-size:1.15rem; font-weight:700; color:#0f172a; display:flex; align-items:center; gap:0.5rem; margin-bottom:0.25rem;">
+          <svg class="icon-svg" viewBox="0 0 24 24" style="color:var(--primary); width:22px; height:22px;">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+          任务图片墙与时间线展示
+        </h3>
+        <p style="font-size:0.8rem; color:#64748b;">支持按时间顺序查看任务下所有现场照片存照，并进行动态描述修改与删除控制</p>
+      </div>
+
+      <div style="display:flex; gap:0.6rem; align-items:center;">
+        <button class="btn" id="btnSortOrderToggle" style="background:#f8fafc; border:1px solid #cbd5e1; color:#334155; font-size:0.8rem; font-weight:600; padding:0.45rem 0.85rem; display:flex; align-items:center; gap:0.4rem; cursor:pointer;" onclick="toggleImageSortOrder()">
+          <span id="sortOrderLabel">时间正序 (从早到晚)</span>
+        </button>
+        <button class="btn btn-primary" style="font-size:0.8rem; padding:0.45rem 0.85rem;" onclick="loadTaskImagesPage()">
+          刷新图片
+        </button>
+        <button class="btn" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#475569; font-size:0.8rem; font-weight:600; padding:0.45rem 0.85rem; cursor:pointer;" onclick="switchTab('tab-tasks')">
+          返回列表
+        </button>
+      </div>
+    </div>
+
+    <!-- 筛选面板 -->
+    <div style="display:flex; gap:0.85rem; flex-wrap:wrap; align-items:center;">
+      <div style="flex:1; min-width:220px;">
+        <label style="font-size:0.75rem; font-weight:600; color:#475569; display:block; margin-bottom:0.3rem;">选择展示任务：</label>
+        <select id="galleryTaskSelect" style="width:100%; padding:0.45rem 0.75rem; border-radius:6px; border:1px solid #cbd5e1; font-size:0.85rem; background:#fff;" onchange="loadTaskImagesPage()">
+          <option value="">加载中...</option>
+        </select>
+      </div>
+
+      <div style="flex:1.5; min-width:240px;">
+        <label style="font-size:0.75rem; font-weight:600; color:#475569; display:block; margin-bottom:0.3rem;">关键词搜索：</label>
+        <input type="text" id="gallerySearchKeyword" placeholder="搜索图片描述、地点、上传者账号/姓名..." style="width:100%; padding:0.45rem 0.75rem; border-radius:6px; border:1px solid #cbd5e1; font-size:0.85rem;" oninput="renderGalleryGrid()">
+      </div>
+
+      <div style="align-self:flex-end;">
+        <span id="galleryCountTag" style="background:#eff6ff; color:#1d4ed8; font-size:0.8rem; font-weight:700; padding:0.45rem 0.85rem; border-radius:6px; border:1px solid #bfdbfe; display:inline-block;">
+          共 0 张照片
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 图片网格容器 -->
+  <div id="galleryImageGrid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:1.25rem;">
+    <div style="grid-column:1/-1; text-align:center; padding:3rem; color:var(--text-muted);">正在加载任务照片...</div>
+  </div>
+</div>
+
+<!-- 修改图片描述与元数据 Modal -->
+<div id="editImageModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); z-index:1150; align-items:center; justify-content:center;" onclick="closeEditImageModal()">
+  <div style="position:relative; width:440px; max-width:92vw; background:#ffffff; border-radius:12px; padding:1.5rem; box-shadow:0 20px 25px -5px rgba(0,0,0,0.3); border:1px solid #e2e8f0;" onclick="event.stopPropagation()">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; padding-bottom:0.75rem; border-bottom:1px solid #e2e8f0;">
+      <h3 style="font-size:1.05rem; font-weight:700; color:#1e293b; display:flex; align-items:center; gap:0.5rem;">
+        编辑图片信息
+      </h3>
+      <button onclick="closeEditImageModal()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#64748b;">✕</button>
+    </div>
+
+    <form id="editImageForm" onsubmit="handleSaveImageEdit(event)">
+      <input type="hidden" id="editImgId">
+      <div style="margin-bottom:1rem;">
+        <label style="display:block; font-size:0.8rem; font-weight:600; color:#334155; margin-bottom:0.35rem;">图片描述 / 备注：</label>
+        <textarea id="editImgDesc" rows="3" style="width:100%; padding:0.5rem; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;" placeholder="输入图片文字描述信息..."></textarea>
+      </div>
+
+      <div style="margin-bottom:1.25rem;">
+        <label style="display:block; font-size:0.8rem; font-weight:600; color:#334155; margin-bottom:0.35rem;">发生地点：</label>
+        <input type="text" id="editImgLocation" style="width:100%; padding:0.5rem; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;" placeholder="例如：厂区北门、1号楼...">
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:0.6rem;">
+        <button type="button" class="btn" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#475569;" onclick="closeEditImageModal()">取消</button>
+        <button type="submit" class="btn btn-primary">保存修改</button>
+      </div>
+    </form>
+  </div>
+</div>

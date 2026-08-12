@@ -171,6 +171,7 @@ app.use(cors({
 app.use(express.json({ limit: '2mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/collector-assets', express.static(COLLECTOR_ASSETS_DIR));
+app.use('/assets', express.static(COLLECTOR_ASSETS_DIR));
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
 // 统一鉴权：除登录与静态资源外，所有 /api 路由必须携带有效 Token
@@ -209,7 +210,12 @@ app.post('/api/schema', (req, res) => {
 // 涉事人员库 API
 app.get('/api/personnel', (req, res) => {
   const db = readCollectorDb();
-  res.json({ success: true, data: db.personnel || [] });
+  let list = db.personnel || [];
+  const taskCode = req.query.task_code;
+  if (taskCode) {
+    list = list.filter(p => p.task_code === taskCode || (p.task_codes && p.task_codes.includes(taskCode)));
+  }
+  res.json({ success: true, data: list });
 });
 
 app.post('/api/personnel', (req, res) => {
@@ -230,6 +236,43 @@ app.post('/api/personnel', (req, res) => {
 
   saveCollectorDb(db);
   res.json({ success: true, message: '人员档案保存成功', data: personRecord });
+});
+
+// 编辑涉事人员档案 (管理员)
+app.put('/api/personnel/:id', requireRole('admin'), (req, res) => {
+  const { id } = req.params;
+  const { name, id_card, domicile } = req.body;
+  const db = readCollectorDb();
+  if (!db.personnel) db.personnel = [];
+
+  const idx = db.personnel.findIndex(p => String(p.id) === String(id));
+  if (idx < 0) return res.status(404).json({ success: false, error: '涉事人员记录不存在' });
+
+  db.personnel[idx] = {
+    ...db.personnel[idx],
+    name: name !== undefined ? name : db.personnel[idx].name,
+    id_card: id_card !== undefined ? id_card : db.personnel[idx].id_card,
+    domicile: domicile !== undefined ? domicile : db.personnel[idx].domicile
+  };
+
+  saveCollectorDb(db);
+  addCollectorAuditLog('PERSONNEL_EDIT', `编辑涉事人员档案 [${db.personnel[idx].name}]`, 'SUCCESS');
+  res.json({ success: true, message: '人员档案已成功修改', data: db.personnel[idx] });
+});
+
+// 删除涉事人员档案 (管理员)
+app.delete('/api/personnel/:id', requireRole('admin'), (req, res) => {
+  const { id } = req.params;
+  const db = readCollectorDb();
+  if (!db.personnel) db.personnel = [];
+
+  const idx = db.personnel.findIndex(p => String(p.id) === String(id));
+  if (idx < 0) return res.status(404).json({ success: false, error: '涉事人员记录不存在' });
+
+  const deleted = db.personnel.splice(idx, 1)[0];
+  saveCollectorDb(db);
+  addCollectorAuditLog('PERSONNEL_DELETE', `删除涉事人员档案 [${deleted.name}]`, 'WARN');
+  res.json({ success: true, message: '人员档案已成功删除' });
 });
 
 // 登录 API
@@ -418,6 +461,337 @@ app.post('/api/schema', (req, res) => {
   }
 });
 
+// 任务管理 API (视频网采集端)
+app.get('/api/tasks', async (req, res) => {
+  try {
+    const tasks = await collectorSqlite.getTasks();
+    const events = await collectorSqlite.getEvents();
+
+    const taskStatsMap = {};
+    events.forEach(evt => {
+      const code = evt.task_code || 'TASK_DEFAULT';
+      if (!taskStatsMap[code]) {
+        taskStatsMap[code] = {
+          event_count: 0,
+          photo_count: 0,
+          contributors: new Set(),
+          latest_timestamp: evt.timestamp || evt.created_at
+        };
+      }
+      const fileCount = Array.isArray(evt.files) ? evt.files.length : (typeof evt.files === 'string' ? JSON.parse(evt.files || '[]').length : 0);
+      taskStatsMap[code].event_count += 1;
+      taskStatsMap[code].photo_count += fileCount;
+      if (evt.operator) taskStatsMap[code].contributors.add(evt.operator);
+      if (new Date(evt.timestamp) > new Date(taskStatsMap[code].latest_timestamp)) {
+        taskStatsMap[code].latest_timestamp = evt.timestamp;
+      }
+    });
+
+    // 针对历史在 events 中出现但 tasks 表中尚无记录的任务，自动补充缺省任务定义
+    const knownCodes = new Set(tasks.map(t => t.task_code));
+    events.forEach(evt => {
+      const code = evt.task_code || 'TASK_DEFAULT';
+      if (!knownCodes.has(code)) {
+        const autoTask = {
+          task_code: code,
+          task_name: evt.task_name || '历史关联任务',
+          description: '系统自动导入的历史关联任务',
+          creator_username: 'operator',
+          creator_name: '视频网操作员',
+          share_code: code,
+          is_shared: true,
+          status: 'ACTIVE',
+          created_at: evt.timestamp || new Date().toISOString()
+        };
+        collectorSqlite.saveTask(autoTask);
+        tasks.unshift(autoTask);
+        knownCodes.add(code);
+      }
+    });
+
+    const enrichedTasks = tasks.map(t => {
+      const stats = taskStatsMap[t.task_code] || { event_count: 0, photo_count: 0, contributors: new Set(), latest_timestamp: t.created_at };
+      return {
+        ...t,
+        event_count: stats.event_count,
+        photo_count: stats.photo_count,
+        contributors: Array.from(stats.contributors),
+        contributor_count: stats.contributors.size,
+        latest_timestamp: stats.latest_timestamp
+      };
+    });
+
+    res.json({ success: true, data: enrichedTasks });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.post('/api/tasks', async (req, res) => {
+  try {
+    const { task_name, task_code, description, is_shared } = req.body;
+    if (!task_name) return res.status(400).json({ success: false, error: '任务名称不能为空' });
+
+    const user = req.user || { username: 'operator', name: '视频网操作员' };
+    const datePrefix = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 8);
+    const finalCode = task_code && task_code.trim()
+      ? task_code.trim()
+      : `TASK_${datePrefix}_${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const existing = await collectorSqlite.getTaskByCode(finalCode);
+    if (existing) {
+      return res.status(400).json({ success: false, error: `任务编号 [${finalCode}] 已存在` });
+    }
+
+    const newTask = collectorSqlite.saveTask({
+      task_code: finalCode,
+      task_name: task_name.trim(),
+      description: description || '',
+      creator_username: user.username,
+      creator_name: user.name || user.username,
+      share_code: finalCode,
+      is_shared: is_shared !== undefined ? Boolean(is_shared) : true,
+      status: 'ACTIVE'
+    });
+
+    addCollectorAuditLog('TASK_CREATE', `创建新发布任务 [${newTask.task_name}] (编号: ${newTask.task_code})`, 'SUCCESS');
+    res.json({ success: true, message: '任务创建成功', data: newTask });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.post('/api/tasks/join', async (req, res) => {
+  try {
+    const { share_code } = req.body;
+    if (!share_code) return res.status(400).json({ success: false, error: '分享码/任务编号不能为空' });
+
+    const task = await collectorSqlite.getTaskByCode(share_code.trim());
+    if (!task) {
+      return res.status(404).json({ success: false, error: '未找到匹配的共享任务，请检查分享码' });
+    }
+
+    res.json({ success: true, message: `已成功接入任务: ${task.task_name}`, data: task });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.put('/api/tasks/:code/status', async (req, res) => {
+  try {
+    const { code } = req.params;
+    const { status } = req.body;
+    if (!['ACTIVE', 'COMPLETED'].includes(status)) {
+      return res.status(400).json({ success: false, error: '无效的任务状态' });
+    }
+    const task = await collectorSqlite.getTaskByCode(code);
+    if (!task) return res.status(404).json({ success: false, error: '任务不存在' });
+
+    const currentUser = req.user || { username: 'operator' };
+    const isAdmin = currentUser.role === 'admin';
+    const isCreator = task.creator_username === currentUser.username;
+
+    if (!isAdmin && !isCreator) {
+      return res.status(403).json({ success: false, error: '权限不足：只有任务创建者或管理员可以更新此任务状态' });
+    }
+
+    collectorSqlite.updateTaskStatus(code, status);
+    addCollectorAuditLog('TASK_STATUS', `任务 [${code}] 状态更新为 ${status === 'COMPLETED' ? '已完成' : '进行中'}`, 'SUCCESS');
+    res.json({ success: true, message: `任务状态已更新为 ${status === 'COMPLETED' ? '已完成' : '进行中'}` });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.get('/api/users/list', (req, res) => {
+  const db = readCollectorDb();
+  res.json({
+    success: true,
+    data: (db.users || []).map(u => ({ username: u.username, name: u.name, role: u.role }))
+  });
+});
+
+// 设置任务共享（任务创建者 & 管理员可向指定用户共享任务）
+app.put('/api/tasks/:code/share', async (req, res) => {
+  try {
+    const { code } = req.params;
+    const { shared_users, is_shared } = req.body;
+    const task = await collectorSqlite.getTaskByCode(code);
+    if (!task) return res.status(404).json({ success: false, error: '任务不存在' });
+
+    const currentUser = req.user || { username: 'operator' };
+    const isAdmin = currentUser.role === 'admin';
+    const isCreator = task.creator_username === currentUser.username;
+
+    if (!isAdmin && !isCreator) {
+      return res.status(403).json({ success: false, error: '权限不足：只有任务创建者或管理员可以设置任务共享' });
+    }
+
+    const updatedTask = await collectorSqlite.updateTaskDetails(code, {
+      shared_users: Array.isArray(shared_users) ? shared_users : [],
+      is_shared: is_shared !== undefined ? is_shared : task.is_shared
+    });
+    addCollectorAuditLog('TASK_SHARE_UPDATE', `更新任务 [${code}] 共享配置 (共享指定用户: ${(updatedTask.shared_users || []).join(', ')})`, 'SUCCESS');
+    res.json({ success: true, message: '任务共享用户更新成功', data: updatedTask });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// 编辑任务 (任务创建者 & 管理员)
+app.put('/api/tasks/:code', async (req, res) => {
+  try {
+    const { code } = req.params;
+    const { task_name, description, is_shared, status } = req.body;
+    const task = await collectorSqlite.getTaskByCode(code);
+    if (!task) return res.status(404).json({ success: false, error: '任务不存在' });
+
+    const currentUser = req.user || { username: 'operator' };
+    const isAdmin = currentUser.role === 'admin';
+    const isCreator = task.creator_username === currentUser.username;
+
+    if (!isAdmin && !isCreator) {
+      return res.status(403).json({ success: false, error: '权限不足：只有任务创建者或管理员可以修改此任务' });
+    }
+
+    const updatedTask = await collectorSqlite.updateTaskDetails(code, { task_name, description, is_shared, status });
+    addCollectorAuditLog('TASK_EDIT', `修改任务 [${code}] 信息 (名称: ${updatedTask.task_name})`, 'SUCCESS');
+    res.json({ success: true, message: '任务信息更新成功', data: updatedTask });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// 删除任务 (任务创建者 & 管理员)
+app.delete('/api/tasks/:code', async (req, res) => {
+  try {
+    const { code } = req.params;
+    const task = await collectorSqlite.getTaskByCode(code);
+    if (!task) return res.status(404).json({ success: false, error: '任务不存在' });
+
+    const currentUser = req.user || { username: 'operator' };
+    const isAdmin = currentUser.role === 'admin';
+    const isCreator = task.creator_username === currentUser.username;
+
+    if (!isAdmin && !isCreator) {
+      return res.status(403).json({ success: false, error: '权限不足：只有任务创建者或管理员可以删除此任务' });
+    }
+
+    await collectorSqlite.deleteTask(code);
+    addCollectorAuditLog('TASK_DELETE', `删除任务 [${task.task_name}] (${code})`, 'WARN');
+    res.json({ success: true, message: '任务已成功删除' });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.get('/api/tasks/:code', async (req, res) => {
+  try {
+    const { code } = req.params;
+    const task = await collectorSqlite.getTaskByCode(code);
+    if (!task) return res.status(404).json({ success: false, error: '任务不存在' });
+
+    const allEvents = await collectorSqlite.getEvents();
+    const taskEvents = allEvents.filter(e => e.task_code === code);
+
+    res.json({ success: true, data: { ...task, events: taskEvents } });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// 获取任务下按时间顺序排列的所有图片，并注入权限标识
+app.get('/api/tasks/:code/images', async (req, res) => {
+  try {
+    const { code } = req.params;
+    const order = (req.query.order || 'ASC').toUpperCase();
+    const task = await collectorSqlite.getTaskByCode(code);
+    if (!task) return res.status(404).json({ success: false, error: '任务不存在' });
+
+    const currentUser = req.user || { username: 'operator' };
+    const isAdmin = currentUser.role === 'admin';
+    const isCreator = task.creator_username === currentUser.username;
+
+    const rawImages = await collectorSqlite.getTaskImages(code, order);
+    const enrichedImages = rawImages.map(img => {
+      const isUploader = img.uploader_username === currentUser.username;
+      const canEdit = isAdmin || isCreator || isUploader;
+      const canDelete = isAdmin || isCreator || isUploader;
+      return {
+        ...img,
+        can_edit: canEdit,
+        can_delete: canDelete,
+        is_own: isUploader
+      };
+    });
+
+    res.json({
+      success: true,
+      task: {
+        ...task,
+        can_edit: isAdmin || isCreator,
+        can_delete: isAdmin || isCreator
+      },
+      data: enrichedImages
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// 编辑修改图片 (上传者、任务创建者、管理员)
+app.put('/api/images/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { description, location, timestamp } = req.body;
+    const allImages = await collectorSqlite.getTaskImages(null, 'ASC');
+    const img = allImages.find(i => i.id === id);
+    if (!img) return res.status(404).json({ success: false, error: '未找到对应图片记录' });
+
+    const task = await collectorSqlite.getTaskByCode(img.task_code);
+    const currentUser = req.user || { username: 'operator' };
+    const isAdmin = currentUser.role === 'admin';
+    const isCreator = task && task.creator_username === currentUser.username;
+    const isUploader = img.uploader_username === currentUser.username;
+
+    if (!isAdmin && !isCreator && !isUploader) {
+      return res.status(403).json({ success: false, error: '权限不足：只有图片上传者、任务创建者或管理员可以修改此图片' });
+    }
+
+    const updated = await collectorSqlite.updateImageMetadata(id, { description, location, timestamp });
+    addCollectorAuditLog('TASK_IMAGE_EDIT', `修改图片 [${id}] 描述为: ${description || '无'}`, 'SUCCESS');
+    res.json({ success: true, message: '图片信息已成功更新', data: updated });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// 删除图片 (上传者、任务创建者、管理员)
+app.delete('/api/images/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const allImages = await collectorSqlite.getTaskImages(null, 'ASC');
+    const img = allImages.find(i => i.id === id);
+    if (!img) return res.status(404).json({ success: false, error: '未找到对应图片记录' });
+
+    const task = await collectorSqlite.getTaskByCode(img.task_code);
+    const currentUser = req.user || { username: 'operator' };
+    const isAdmin = currentUser.role === 'admin';
+    const isCreator = task && task.creator_username === currentUser.username;
+    const isUploader = img.uploader_username === currentUser.username;
+
+    if (!isAdmin && !isCreator && !isUploader) {
+      return res.status(403).json({ success: false, error: '权限不足：只有图片上传者、任务创建者或管理员可以删除此图片' });
+    }
+
+    await collectorSqlite.deleteImage(id);
+    addCollectorAuditLog('TASK_IMAGE_DELETE', `删除任务 [${img.task_code}] 下的图片 [${id}]`, 'WARN');
+    res.json({ success: true, message: '图片已成功删除' });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // 单据发布 API
 app.post('/api/publish', (req, res) => {
   const form = formidable({
@@ -459,11 +833,15 @@ app.post('/api/publish', (req, res) => {
           id: Date.now(),
           name: payload.person_name || '未知',
           id_card: payload.person_id_card || '',
-          domicile: payload.person_domicile || ''
+          domicile: payload.person_domicile || '',
+          task_code: taskCode || ''
         };
         if (existingIdx >= 0) {
-          db.personnel[existingIdx] = { ...db.personnel[existingIdx], ...personRec };
+          const oldCodes = db.personnel[existingIdx].task_codes || [];
+          if (taskCode && !oldCodes.includes(taskCode)) oldCodes.push(taskCode);
+          db.personnel[existingIdx] = { ...db.personnel[existingIdx], ...personRec, task_codes: oldCodes };
         } else {
+          personRec.task_codes = taskCode ? [taskCode] : [];
           db.personnel.unshift(personRec);
         }
         saveCollectorDb(db);
@@ -487,8 +865,14 @@ app.post('/api/publish', (req, res) => {
           const localDest = path.join(eventAssetDir, filename);
           try { fs.copyFileSync(fileObj.filepath, localDest); } catch (e) {}
           savedFileRecords.push({
+            id: `img_${eventId}_${i}_${Math.floor(Math.random() * 10000)}`,
             filename: filename,
-            url: `/collector-assets/${eventId}/${filename}`
+            url: `/collector-assets/${eventId}/${filename}`,
+            timestamp: submitTime,
+            uploader_username: operatorUsername,
+            uploader_name: operatorName,
+            description: payload.description || payload.notes || '',
+            location: payload.location || ''
           });
         }
       }
@@ -533,6 +917,27 @@ app.post('/api/publish', (req, res) => {
         signature: '',
         status: 'PACKED'
       });
+
+      // 确保/更新任务定义记录
+      const existingTask = await collectorSqlite.getTaskByCode(taskCode);
+      if (!existingTask) {
+        collectorSqlite.saveTask({
+          task_code: taskCode,
+          task_name: taskName,
+          description: '例行采集任务',
+          creator_username: operatorUsername,
+          creator_name: operatorName,
+          share_code: taskCode,
+          is_shared: true,
+          status: 'ACTIVE'
+        });
+      } else {
+        collectorSqlite.saveTask({
+          ...existingTask,
+          task_name: taskName || existingTask.task_name,
+          updated_at: new Date().toISOString()
+        });
+      }
 
       // 如果配置并启用了第三方远程 FTP 服务器，自动将生成的 Zip 包上传至 FTP
       let ftpNotice = ' (远程 FTP 未开启，包已存入本地网闸目录)';

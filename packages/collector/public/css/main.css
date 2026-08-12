@@ -174,7 +174,7 @@ body { background-color: var(--bg-main); color: var(--text-main); padding: 0; ma
 .tabs-nav { display: none; }
 
 .tab-content { display: none; flex: 1; overflow: hidden; }
-.tab-content.active { display: flex; flex-direction: column; overflow: hidden; }
+.tab-content.active { display: flex; flex-direction: column; overflow-y: auto; }
 
 .card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem 1.25rem; box-shadow: var(--shadow-md); margin-bottom: 0.5rem; flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
 .card-header { margin-bottom: 0.65rem; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
@@ -234,11 +234,11 @@ th, td { padding: 0.65rem 0.85rem; border: 1px solid var(--border-color); color:
 th { background: #f8fafc; color: var(--text-muted); font-weight: 700; position: sticky; top: 0; z-index: 2; }
 th.col-idx, td.col-idx { width: 55px; text-align: center; font-weight: 600; color: var(--text-muted); background: #f8fafc; }
 
-#toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
-.toast { pointer-events: auto; padding: 0.75rem 1.25rem; border-radius: 8px; font-size: 0.875rem; font-weight: 600; background: #ffffff; color: var(--text-main); border: 1px solid var(--border-color); box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 0.6rem; animation: toastIn 0.25s ease forwards; white-space: nowrap; }
-.toast.success { border-color: var(--success-border); background: #f0fdf4; color: var(--success); }
+#toast-container { position: fixed; top: 30px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; align-items: center; gap: 10px; pointer-events: none; }
+.toast { pointer-events: auto; padding: 0.85rem 1.6rem; border-radius: 10px; font-size: 0.925rem; font-weight: 700; background: #ffffff; color: var(--text-main); border: 1px solid var(--border-color); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.08); display: flex; align-items: center; gap: 0.65rem; animation: toastIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; white-space: nowrap; }
+.toast.success { border-color: #bbf7d0; background: #f0fdf4; color: #15803d; }
 .toast.error { border-color: var(--danger-border); background: #fef2f2; color: var(--danger); }
-@keyframes toastIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes toastIn { from { opacity: 0; transform: translate(-50%, -15px) scale(0.95); } to { opacity: 1; transform: translate(0, 0) scale(1); } }
 
 .pagination-bar { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.75rem 0.25rem 0.75rem; margin-top: 0.4rem; border-top: 1px solid var(--border-color); font-size: 0.8rem; color: var(--text-sub); flex-wrap: wrap; gap: 0.5rem; flex-shrink: 0; }
 .pagination-info { display: flex; gap: 0.85rem; align-items: center; }

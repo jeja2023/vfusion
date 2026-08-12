@@ -3,11 +3,15 @@ const path = require('path');
 const archiver = require('archiver');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
-const RELEASE_DIR = path.join(ROOT_DIR, 'release');
-const PORTABLE_DIR = path.join(RELEASE_DIR, 'vfusion-v0.11.0-portable');
-const ZIP_OUTPUT_PATH = path.join(RELEASE_DIR, 'vfusion-v0.11.0-portable-windows.zip');
+const pkg = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, 'package.json'), 'utf8'));
+const VERSION = pkg.version || '0.15.0';
 
-console.log('=== 开始构建 视汇 (VFusion v0.11.0) 绿色免安装部署包 ===\n');
+const RELEASE_DIR = path.join(ROOT_DIR, 'release');
+const PORTABLE_DIR_NAME = `vfusion-v${VERSION}-portable`;
+const PORTABLE_DIR = path.join(RELEASE_DIR, PORTABLE_DIR_NAME);
+const ZIP_OUTPUT_PATH = path.join(RELEASE_DIR, `vfusion-v${VERSION}-portable-windows.zip`);
+
+console.log(`=== 开始构建 视汇 (VFusion v${VERSION}) 绿色免安装部署包 ===\n`);
 
 // 1. 清理并新建 release 目录
 try {
@@ -98,7 +102,7 @@ cd /d "%~dp0"
 set NODE_EXE=%~dp0node.exe
 if not exist "%NODE_EXE%" set NODE_EXE=node
 
-title 视汇 - 视频网数据采集与发布终端 (v0.11.0)
+title 视汇 - 视频网数据采集与发布终端 (v${VERSION})
 echo ===================================================
 echo   正在启动 [视汇 - 视频网数据采集/发布终端] ...
 echo   端口: 5001
@@ -112,7 +116,7 @@ cd /d "%~dp0"
 set NODE_EXE=%~dp0node.exe
 if not exist "%NODE_EXE%" set NODE_EXE=node
 
-title 视汇 - 内网数据汇聚与管理中台 (v0.11.0)
+title 视汇 - 内网数据汇聚与管理中台 (v${VERSION})
 echo ===================================================
 echo   正在启动 [视汇 - 内网数据汇聚与管理中台] ...
 echo   端口: 5002
@@ -124,9 +128,9 @@ pause
 const batAll = `@echo off
 cd /d "%~dp0"
 
-title 视汇 (VFusion v0.11.0) - 一键双端服务启动器
+title 视汇 (VFusion v${VERSION}) - 一键双端服务启动器
 echo ===================================================
-echo   视汇通用跨隔离网数据交换与汇聚中台 (v0.11.0)
+echo   视汇通用跨隔离网数据交换与汇聚中台 (v${VERSION})
 echo ===================================================
 echo 1. 正在启动 [视频网数据采集/发布终端] (Port 5001)...
 start "视汇-视频网发布终端" "%~dp0启动视频网发布终端.bat"
@@ -214,5 +218,5 @@ archive.on('error', function (err) {
 });
 
 archive.pipe(output);
-archive.directory(PORTABLE_DIR, 'vfusion-v0.11.0-portable');
+archive.directory(PORTABLE_DIR, PORTABLE_DIR_NAME);
 archive.finalize();

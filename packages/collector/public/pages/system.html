@@ -1,0 +1,54 @@
+<div class="card" style="padding: 0.75rem 1rem;">
+  <div class="card-header" style="margin-bottom: 0.4rem; padding-bottom: 0.35rem;">
+    <div>
+      <h2 style="font-size:0.9rem;">
+        <svg class="icon-svg" viewBox="0 0 24 24" style="color:var(--primary);"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        视频网采集端 - 系统安全与升级维护
+      </h2>
+      <p style="font-size:0.725rem; margin-top:1px;">管理跨隔离网防篡改 HMAC 数字签名秘钥，以及通过 Web 控制台平滑进行零停机无损热升级</p>
+    </div>
+  </div>
+
+  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
+    <!-- 左栏：HMAC 防篡改签名秘钥维护 -->
+    <div style="background:#ffffff; border:1px solid var(--border-color); border-radius:8px; padding:0.75rem;">
+      <div style="font-size:0.825rem; font-weight:700; color:var(--text-main); margin-bottom:0.4rem; display:flex; align-items:center; gap:0.4rem;">
+        <svg class="icon-svg" viewBox="0 0 24 24" style="width:16px; height:16px; color:var(--primary);"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        HMAC-SHA256 数字签名秘钥
+      </div>
+      <div style="font-size:0.75rem; color:var(--text-sub); margin-bottom:0.6rem; line-height:1.4;">
+        视频网数据包打包时将自动使用此秘钥计算 64 位防篡改签名。<span style="color:var(--danger);">必须与内网数据中台的 HMAC 秘钥保持一致！</span>
+      </div>
+      <div class="form-group" style="gap:0.3rem; margin-bottom:0.6rem;">
+        <label style="font-size:0.75rem; font-weight:600;">当前生效的秘钥：</label>
+        <div style="font-family:monospace; font-size:0.8rem; color:var(--primary); background:#f8fafc; padding:0.35rem 0.55rem; border-radius:6px; border:1px solid var(--border-color);" id="collectorCurrentHmacKeyStr">加载中...</div>
+      </div>
+      <div class="form-group" style="gap:0.3rem; margin-bottom:0.6rem;">
+        <label style="font-size:0.75rem; font-weight:600;">在线更新 / 轮换秘钥：</label>
+        <input type="text" id="collectorHmacSecretInput" placeholder="输入新的 64 位 HMAC 秘钥" style="padding:0.35rem 0.55rem; font-size:0.775rem; font-family:monospace;">
+      </div>
+      <button class="btn btn-primary" style="width:100%; justify-content:center; padding:0.4rem; font-size:0.775rem;" onclick="saveCollectorHmacSecret()">
+        保存并更新 HMAC 签名秘钥
+      </button>
+    </div>
+
+    <!-- 右栏：Web 一键在线无损热升级 -->
+    <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:0.75rem;">
+      <div style="font-size:0.825rem; font-weight:700; color:#0369a1; margin-bottom:0.4rem; display:flex; align-items:center; gap:0.4rem;">
+        <svg class="icon-svg" viewBox="0 0 24 24" style="width:16px; height:16px; color:#0284c7;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Web 控制台一键无损热升级 (系统热补丁)
+      </div>
+      <div style="font-size:0.75rem; color:#0369a1; margin-bottom:0.6rem; line-height:1.4;">
+        在 Web 界面直接上传增量升级补丁包（<code>vfusion-patch-v*.zip</code>），系统将自动备份数据库并在 3 秒内平滑重载生效，运维人员无需登录服务器。
+      </div>
+      <div class="form-group" style="gap:0.3rem; margin-bottom:0.6rem;">
+        <label style="font-size:0.75rem; font-weight:600; color:#0369a1;">选择升级补丁文件 (.zip)：</label>
+        <input type="file" id="collWebUpgradeFileInput" accept=".zip" style="font-size:0.75rem; width:100%; background:#ffffff; padding:0.3rem 0.5rem; border:1px solid #7dd3fc; border-radius:6px;">
+      </div>
+      <button class="btn btn-primary" style="width:100%; justify-content:center; padding:0.4rem; font-size:0.775rem;" onclick="uploadCollectorWebPatchUpgrade()">
+        上传补丁并一键无损更新
+      </button>
+      <div id="collWebUpgradeStatusBox" style="display:none; margin-top:0.5rem; font-size:0.75rem; padding:0.45rem 0.6rem; border-radius:6px; font-family:monospace;"></div>
+    </div>
+  </div>
+</div>

@@ -309,7 +309,7 @@ function switchTab(tabId) {
     'tab-personnel': '涉事人员档案库',
     'tab-users': '用户与权限管理',
     'tab-errors': '死信与纠错中心',
-    'tab-system': '系统运行诊断'
+    'tab-system': '系统安全与升级维护'
   };
   const titleEl = document.getElementById('currentPageTitle');
   if (titleEl && pageTitles[tabId]) {

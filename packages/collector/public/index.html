@@ -88,6 +88,10 @@
           <svg class="icon-svg" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 1 0 7.75"/></svg>
           <span>用户与权限管理</span>
         </button>
+        <button class="nav-item" id="tabBtn-system" onclick="switchTab('tab-system')">
+          <svg class="icon-svg" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <span>系统安全与升级维护</span>
+        </button>
       </nav>
 
       <div class="sidebar-footer">
@@ -116,6 +120,7 @@
         <div id="tab-ftp" class="tab-content"></div>
         <div id="tab-audits" class="tab-content"></div>
         <div id="tab-users" class="tab-content"></div>
+        <div id="tab-system" class="tab-content"></div>
       </div>
     </main>
   </div>
@@ -168,5 +173,6 @@
   <script src="js/pages/ftp.js"></script>
   <script src="js/pages/audits.js"></script>
   <script src="js/pages/users.js"></script>
+  <script src="js/pages/system.js"></script>
 </body>
 </html>

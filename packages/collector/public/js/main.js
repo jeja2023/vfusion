@@ -62,7 +62,7 @@ const auditStatusMap = {
 };
 
 async function loadPageTemplates() {
-  const pages = ['tasks', 'task_images', 'publish', 'history', 'builder', 'ftp', 'audits', 'users'];
+  const pages = ['tasks', 'task_images', 'publish', 'history', 'builder', 'ftp', 'audits', 'users', 'system'];
   await Promise.all(pages.map(async (p) => {
     try {
       const res = await fetch(`pages/${p}.html?v=${Date.now()}`);
@@ -168,13 +168,15 @@ function applyRolePermissions() {
   const ftpBtn = document.getElementById('tabBtn-ftp');
   const auditsBtn = document.getElementById('tabBtn-audits');
   const usersBtn = document.getElementById('tabBtn-users');
+  const systemBtn = document.getElementById('tabBtn-system');
 
   if (builderBtn) builderBtn.style.display = isAdmin ? 'inline-flex' : 'none';
   if (ftpBtn) ftpBtn.style.display = isAdmin ? 'inline-flex' : 'none';
   if (auditsBtn) auditsBtn.style.display = isAdmin ? 'inline-flex' : 'none';
   if (usersBtn) usersBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+  if (systemBtn) systemBtn.style.display = isAdmin ? 'inline-flex' : 'none';
 
-  if (!isAdmin && ['tab-builder', 'tab-ftp', 'tab-audits', 'tab-users'].includes(currentTab)) {
+  if (!isAdmin && ['tab-builder', 'tab-ftp', 'tab-audits', 'tab-users', 'tab-system'].includes(currentTab)) {
     switchTab('tab-tasks');
   }
 }
@@ -234,7 +236,8 @@ function switchTab(tabId) {
     'tab-builder': '视频网表单设计器',
     'tab-ftp': 'FTP 通道配置',
     'tab-audits': '系统审计日志',
-    'tab-users': '用户与权限管理'
+    'tab-users': '用户与权限管理',
+    'tab-system': '系统安全与升级维护'
   };
   const titleEl = document.getElementById('currentPageTitle');
   if (titleEl && pageTitles[tabId]) {
@@ -250,6 +253,7 @@ function switchTab(tabId) {
   if (tabId === 'tab-ftp' && typeof loadCollectorFtpConfig === 'function') loadCollectorFtpConfig();
   if (tabId === 'tab-audits' && typeof loadFullAuditLogs === 'function') loadFullAuditLogs();
   if (tabId === 'tab-users' && typeof loadUsers === 'function') loadUsers();
+  if (tabId === 'tab-system' && typeof loadCollectorSystemConfig === 'function') loadCollectorSystemConfig();
 }
 
 window.addEventListener('DOMContentLoaded', async () => {

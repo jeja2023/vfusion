@@ -152,21 +152,9 @@
             </div>
           </div>
 
-          <div style="display:inline-flex; align-items:center; background:#ffffff; border:1px solid var(--border-color); border-radius:8px; padding:0.15rem 0.55rem; font-size:0.825rem; white-space:nowrap; flex-shrink:0;">
-            <span class="pulse-dot disabled" id="diodePulseDot"></span>
-            <select id="autoDiodeSelect" onchange="updateAutoDiodeConfig()" style="border:none; background:transparent; padding:0.3rem 0.2rem; font-weight:600; cursor:pointer; white-space:nowrap;">
-              <option value="0">手动摆渡模式</option>
-              <option value="3">每 3 秒自动摆渡</option>
-              <option value="5">每 5 秒自动摆渡</option>
-            </select>
-          </div>
           <button class="btn btn-export" onclick="exportCsvReport()">
             <svg class="icon-svg" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             导出 Excel 报表
-          </button>
-          <button class="btn btn-diode" onclick="triggerDiodeSimulation()">
-            <svg class="icon-svg" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-            手动单向摆渡
           </button>
         </div>
       </header>

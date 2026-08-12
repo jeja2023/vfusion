@@ -34,7 +34,7 @@ function renderUsers() {
     return;
   }
 
-  const roleMap = { admin: '超级管理员', operator: '操作员', auditor: '审计员' };
+  const roleMap = { admin: '管理员', user: '普通用户', operator: '普通用户', auditor: '普通用户' };
   const paged = cachedUsersData.slice((usersCurrentPage - 1) * usersPageSize, usersCurrentPage * usersPageSize);
 
   tbody.innerHTML = paged.map((item, idx) => {

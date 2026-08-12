@@ -32,7 +32,7 @@ function renderUsers() {
     tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">暂无用户记录</td></tr>`;
     return;
   }
-  const roleMap = { admin: '超级管理员', operator: '操作员', auditor: '审计员' };
+  const roleMap = { admin: '管理员', user: '普通用户', operator: '普通用户', auditor: '普通用户' };
   const paged = cachedUsersData.slice((usersCurrentPage - 1) * usersPageSize, usersCurrentPage * usersPageSize);
   tbody.innerHTML = paged.map((item, idx) => {
     const globalIdx = (usersCurrentPage - 1) * usersPageSize + idx + 1;

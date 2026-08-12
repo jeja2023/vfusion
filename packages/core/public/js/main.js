@@ -237,15 +237,13 @@ function handleLogout() {
 
 function applyRolePermissions() {
   if (!currentUser) return;
-  const role = currentUser.role;
+  const isAdmin = currentUser.role === 'admin';
 
-  if (role === 'operator') {
-    document.getElementById('tabBtn-users').style.display = 'none';
-    document.getElementById('tabBtn-system').style.display = 'none';
-  } else {
-    document.getElementById('tabBtn-users').style.display = 'inline-flex';
-    document.getElementById('tabBtn-system').style.display = 'inline-flex';
-  }
+  const usersBtn = document.getElementById('tabBtn-users');
+  const systemBtn = document.getElementById('tabBtn-system');
+
+  if (usersBtn) usersBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+  if (systemBtn) systemBtn.style.display = isAdmin ? 'inline-flex' : 'none';
 }
 
 async function loadAlerts() {

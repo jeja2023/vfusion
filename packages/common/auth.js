@@ -90,7 +90,7 @@ function buildDefaultUsers() {
       console.log(`   ${account.padEnd(10)} : ${pwd}`);
     }
     console.log(' 也可通过环境变量预设: VFUSION_ADMIN_USERNAME 与 VFUSION_ADMIN_PASSWORD');
-    console.log(' 其他业务/审计账号请在登录控制台后由管理员账号手动创建。');
+    console.log(' 其他普通账号请在登录控制台后由管理员账号手动创建。');
     console.log('=================================================================\n');
   }
 

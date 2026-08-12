@@ -162,14 +162,20 @@ async function checkAuth() {
 
 function applyRolePermissions() {
   if (!currentUser) return;
-  const role = currentUser.role;
+  const isAdmin = currentUser.role === 'admin';
 
-  if (role === 'operator') {
-    document.getElementById('tabBtn-audits').style.display = 'none';
-    document.getElementById('tabBtn-users').style.display = 'none';
-  } else {
-    document.getElementById('tabBtn-audits').style.display = 'inline-flex';
-    document.getElementById('tabBtn-users').style.display = 'inline-flex';
+  const builderBtn = document.getElementById('tabBtn-builder');
+  const ftpBtn = document.getElementById('tabBtn-ftp');
+  const auditsBtn = document.getElementById('tabBtn-audits');
+  const usersBtn = document.getElementById('tabBtn-users');
+
+  if (builderBtn) builderBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+  if (ftpBtn) ftpBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+  if (auditsBtn) auditsBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+  if (usersBtn) usersBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+
+  if (!isAdmin && ['tab-builder', 'tab-ftp', 'tab-audits', 'tab-users'].includes(currentTab)) {
+    switchTab('tab-tasks');
   }
 }
 

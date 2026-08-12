@@ -202,21 +202,15 @@ writeBatFileSync(path.join(ROOT_DIR, '一键无损升级(保留历史数据).bat
 
 // 4. 压缩打包为绿色 ZIP 压缩文件
 console.log('[3/4] 正在将绿色免安装包打包压缩为 Zip ...');
-const output = fs.createWriteStream(ZIP_OUTPUT_PATH);
-const archive = archiver('zip', { zlib: { level: 9 } });
-
-output.on('close', function () {
-  const sizeMB = (archive.pointer() / (1024 * 1024)).toFixed(2);
+try {
+  if (fs.existsSync(ZIP_OUTPUT_PATH)) fs.unlinkSync(ZIP_OUTPUT_PATH);
+  execSync(`tar -a -c -f "${ZIP_OUTPUT_PATH}" -C "${RELEASE_DIR}" "${PORTABLE_DIR_NAME}"`, { stdio: 'inherit' });
+  const stat = fs.statSync(ZIP_OUTPUT_PATH);
+  const sizeMB = (stat.size / (1024 * 1024)).toFixed(2);
   console.log(`\n=== 绿色免安装包构建完全成功！===`);
   console.log(`- 绿色包目录: ${PORTABLE_DIR}`);
   console.log(`- 免安装 Zip 包: ${ZIP_OUTPUT_PATH} (${sizeMB} MB)`);
   console.log(`\n使用说明: 将 Zip 文件解压到目标电脑的任意文件夹，双击 [一键双端双开启动.bat] 即可运行！`);
-});
-
-archive.on('error', function (err) {
-  throw err;
-});
-
-archive.pipe(output);
-archive.directory(PORTABLE_DIR, PORTABLE_DIR_NAME);
-archive.finalize();
+} catch (err) {
+  console.error('打包 Zip 出现异常:', err.message);
+}

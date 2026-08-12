@@ -1155,6 +1155,88 @@ app.delete('/api/webhooks/:id', (req, res) => {
   res.json({ success: true, message: '订阅节点已删除' });
 });
 
+app.post('/api/webhooks/:id/test', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const list = readWebhooks();
+  const hook = list.find(h => h.id === id);
+  if (!hook) return res.status(404).json({ success: false, error: '未找到指定的 Webhook 订阅节点' });
+
+  const sec = loadSecurityConfig();
+  const hmacSecret = (sec && sec.hmac_secret) ? sec.hmac_secret : 'vfusion_secret_key_2026';
+
+  const testEvent = {
+    id: Date.now(),
+    event_id: 'EVT_TEST_' + Date.now(),
+    task_code: 'TASK_TEST_001',
+    task_name: 'Webhook 联调测试任务',
+    schema_id: 'sys_gate_security',
+    timestamp: new Date().toISOString(),
+    submit_time: new Date().toISOString(),
+    operator: '系统联调员 (admin)',
+    operator_username: 'admin',
+    operator_name: '系统联调员',
+    payload: {
+      location: '模拟测试大门',
+      person_name: '测试人员',
+      person_id_card: '110101199001011234',
+      description: '视汇中台 Webhook 联调连通性测试消息'
+    },
+    files: ['test_photo.jpg'],
+    photos: [`http://${req.headers.host || 'localhost:5002'}/assets/test_photo.jpg`],
+    created_at: new Date().toISOString()
+  };
+
+  const payloadStr = JSON.stringify({
+    event: 'EVENT_INGESTED',
+    timestamp: new Date().toISOString(),
+    data: testEvent
+  });
+
+  const signature = crypto.createHmac('sha256', hmacSecret).update(payloadStr).digest('hex');
+
+  try {
+    const urlObj = new URL(hook.url);
+    const reqModule = urlObj.protocol === 'https:' ? https : http;
+
+    const testReq = reqModule.request(hook.url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payloadStr),
+        'X-VFusion-Signature': signature
+      },
+      timeout: 8000
+    }, (testRes) => {
+      let body = '';
+      testRes.on('data', chunk => body += chunk);
+      testRes.on('end', () => {
+        if (testRes.statusCode >= 200 && testRes.statusCode < 300) {
+          addAuditLog('WEBHOOK_TEST', `测试发送 Webhook 到 [${hook.name}]: 成功 HTTP ${testRes.statusCode}`, 'SUCCESS');
+          res.json({ success: true, message: `测试推送成功！目标系统响应 HTTP ${testRes.statusCode}` });
+        } else {
+          addAuditLog('WEBHOOK_TEST', `测试发送 Webhook 到 [${hook.name}]: 目标返回 HTTP ${testRes.statusCode}`, 'WARN');
+          res.status(400).json({ success: false, error: `目标服务响应状态码 HTTP ${testRes.statusCode}` });
+        }
+      });
+    });
+
+    testReq.on('error', (err) => {
+      addAuditLog('WEBHOOK_TEST', `测试发送 Webhook 到 [${hook.name}] 失败: ${err.message}`, 'WARN');
+      res.status(400).json({ success: false, error: `网络连接失败: ${err.message}` });
+    });
+
+    testReq.on('timeout', () => {
+      testReq.destroy();
+      res.status(408).json({ success: false, error: '连接目标 Webhook 接口超时 (8秒未响应)' });
+    });
+
+    testReq.write(payloadStr);
+    testReq.end();
+  } catch (err) {
+    res.status(400).json({ success: false, error: `URL 格式错误: ${err.message}` });
+  }
+});
+
 const FTP_PASSWORD_MASK = '********';
 
 app.get('/api/config/security', requireRole('admin'), (req, res) => {

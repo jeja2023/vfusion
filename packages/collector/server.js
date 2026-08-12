@@ -978,7 +978,7 @@ app.post('/api/publish', (req, res) => {
   });
 });
 
-// 视频网采集端：获取与保存 FTP 配置 API
+// 视频网采集端：获取与保存 FTP 与 HMAC 配置 API
 app.get('/api/config/ftp', (req, res) => {
   try {
     if (fs.existsSync(SECURITY_CONFIG_FILE)) {
@@ -993,14 +993,15 @@ app.get('/api/config/ftp', (req, res) => {
           ftp_password: sec.ftp_password ? '********' : '',
           ftp_remote_dir: sec.ftp_remote_dir || '/vfusion_packages',
           pkg_prefix: sec.pkg_prefix || 'vfusion_',
-          ftp_file_ext: sec.ftp_file_ext || '.jpg'
+          ftp_file_ext: sec.ftp_file_ext || '.jpg',
+          hmac_secret: sec.hmac_secret || ''
         }
       });
     }
   } catch (e) {}
   res.json({
     success: true,
-    data: { ftp_enabled: false, ftp_host: '', ftp_port: 21, ftp_user: '', ftp_password: '', ftp_remote_dir: '/vfusion_packages', pkg_prefix: 'vfusion_', ftp_file_ext: '.jpg' }
+    data: { ftp_enabled: false, ftp_host: '', ftp_port: 21, ftp_user: '', ftp_password: '', ftp_remote_dir: '/vfusion_packages', pkg_prefix: 'vfusion_', ftp_file_ext: '.jpg', hmac_secret: '' }
   });
 });
 
@@ -1010,7 +1011,7 @@ app.post('/api/config/ftp', requireRole('admin'), (req, res) => {
     if (fs.existsSync(SECURITY_CONFIG_FILE)) {
       sec = JSON.parse(fs.readFileSync(SECURITY_CONFIG_FILE, 'utf8'));
     }
-    const { ftp_enabled, ftp_host, ftp_port, ftp_user, ftp_password, ftp_remote_dir, pkg_prefix, ftp_file_ext } = req.body;
+    const { ftp_enabled, ftp_host, ftp_port, ftp_user, ftp_password, ftp_remote_dir, pkg_prefix, ftp_file_ext, hmac_secret } = req.body;
     if (typeof ftp_enabled === 'boolean') sec.ftp_enabled = ftp_enabled;
     if (typeof ftp_host === 'string') sec.ftp_host = ftp_host;
     if (typeof ftp_port === 'number' || typeof ftp_port === 'string') sec.ftp_port = parseInt(ftp_port) || 21;
@@ -1022,9 +1023,14 @@ app.post('/api/config/ftp', requireRole('admin'), (req, res) => {
     if (typeof pkg_prefix === 'string') sec.pkg_prefix = pkg_prefix;
     if (typeof ftp_file_ext === 'string') sec.ftp_file_ext = ftp_file_ext;
 
+    if (typeof hmac_secret === 'string' && hmac_secret.trim().length > 0) {
+      sec.hmac_secret = hmac_secret.trim();
+      setHmacSecret(sec.hmac_secret);
+    }
+
     writeJsonAtomic(SECURITY_CONFIG_FILE, sec);
-    addCollectorAuditLog('FTP_CONFIG', `视频网端配置第三方 FTP 服务器 (${sec.ftp_enabled ? '已启用' : '未启用'}, Host: ${sec.ftp_host}:${sec.ftp_port})`, 'SUCCESS');
-    res.json({ success: true, message: '视频网端第三方 FTP 配置保存成功' });
+    addCollectorAuditLog('FTP_CONFIG', `视频网端更新传输与 HMAC 签名配置 (Host: ${sec.ftp_host || '无'}:${sec.ftp_port || 21})`, 'SUCCESS');
+    res.json({ success: true, message: '视频网端配置与 HMAC 签名秘钥保存成功' });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }

@@ -634,6 +634,26 @@ app.delete('/api/users/:id', requireRole('admin'), (req, res) => {
   res.json({ success: true, message: '用户已删除' });
 });
 
+app.put('/api/users/:id', requireRole('admin'), (req, res) => {
+  const id = parseInt(req.params.id);
+  const { name, role, status } = req.body;
+  if (!name) return res.status(400).json({ success: false, error: '姓名不能为空' });
+
+  const users = readUsers();
+  const user = users.find(u => u.id === id);
+  if (!user) return res.status(404).json({ success: false, error: '用户不存在' });
+  if (user.username === 'admin') return res.status(400).json({ success: false, error: '超级管理员内置账号不能编辑' });
+
+  user.name = name;
+  if (role) user.role = role;
+  if (status) user.status = status;
+
+  writeUsers(users);
+  addAuditLog('USER_UPDATE', `更新用户 [${user.name}(${user.username})], 角色: ${user.role}, 状态: ${user.status}`, 'SUCCESS');
+  res.json({ success: true, message: '用户信息更新成功', data: user });
+});
+
+
 function dispatchWebhooks(eventRecord) {
   const hooks = readWebhooks();
   if (hooks.length === 0) return;
@@ -1153,6 +1173,22 @@ app.delete('/api/webhooks/:id', (req, res) => {
   writeWebhooks(list);
   addAuditLog('WEBHOOK_DEL', `移除消息订阅节点`, 'WARN');
   res.json({ success: true, message: '订阅节点已删除' });
+});
+
+app.put('/api/webhooks/:id', (req, res) => {
+  const id = parseInt(req.params.id);
+  const { name, url } = req.body;
+  if (!name || !url) return res.status(400).json({ success: false, error: '名称与 URL 均不能为空' });
+
+  const list = readWebhooks();
+  const hook = list.find(h => h.id === id);
+  if (!hook) return res.status(404).json({ success: false, error: '未找到指定的 Webhook 节点' });
+
+  hook.name = name;
+  hook.url = url;
+  writeWebhooks(list);
+  addAuditLog('WEBHOOK_UPDATE', `更新消息订阅节点: ${name}`, 'SUCCESS');
+  res.json({ success: true, message: '订阅节点更新成功', data: hook });
 });
 
 app.post('/api/webhooks/:id/test', async (req, res) => {

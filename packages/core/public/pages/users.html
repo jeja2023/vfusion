@@ -47,3 +47,47 @@
     </div>
   </div>
 </div>
+
+<!-- 编辑用户账号 Modal -->
+<div id="editUserModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); z-index:1150; align-items:center; justify-content:center;" onclick="closeEditUserModal()">
+  <div style="position:relative; width:440px; max-width:92vw; background:#ffffff; border-radius:12px; padding:1.5rem; box-shadow:0 20px 25px -5px rgba(0,0,0,0.3); border:1px solid #e2e8f0;" onclick="event.stopPropagation()">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; padding-bottom:0.75rem; border-bottom:1px solid #e2e8f0;">
+      <h3 style="font-size:1.05rem; font-weight:700; color:#1e293b;">编辑用户信息</h3>
+      <button onclick="closeEditUserModal()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#64748b; font-weight:bold;">✕</button>
+    </div>
+
+    <form onsubmit="handleSaveUser(event)">
+      <input type="hidden" id="editUserId">
+      <div style="display:flex; flex-direction:column; gap:1rem;">
+        <div>
+          <label style="display:block; font-size:0.85rem; font-weight:600; color:var(--text-main); margin-bottom:0.35rem;">用户名</label>
+          <input type="text" id="editUsername" disabled style="width:100%; padding:0.5rem 0.75rem; border:1px solid var(--border-color); border-radius:6px; font-size:0.875rem; background:#f8fafc; color:#64748b;">
+        </div>
+        <div>
+          <label style="display:block; font-size:0.85rem; font-weight:600; color:var(--text-main); margin-bottom:0.35rem;">真实姓名 <span style="color:red;">*</span></label>
+          <input type="text" id="editFullname" required style="width:100%; padding:0.5rem 0.75rem; border:1px solid var(--border-color); border-radius:6px; font-size:0.875rem;">
+        </div>
+        <div>
+          <label style="display:block; font-size:0.85rem; font-weight:600; color:var(--text-main); margin-bottom:0.35rem;">指派角色</label>
+          <select id="editUserRole" style="width:100%; padding:0.5rem 0.75rem; border:1px solid var(--border-color); border-radius:6px; font-size:0.875rem;">
+            <option value="user">普通用户 (user)</option>
+            <option value="admin">管理员 (admin)</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block; font-size:0.85rem; font-weight:600; color:var(--text-main); margin-bottom:0.35rem;">账号状态</label>
+          <select id="editUserStatus" style="width:100%; padding:0.5rem 0.75rem; border:1px solid var(--border-color); border-radius:6px; font-size:0.875rem;">
+            <option value="ACTIVE">启用 (ACTIVE)</option>
+            <option value="INACTIVE">禁用 (INACTIVE)</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-top:1.5rem; text-align:right; display:flex; justify-content:flex-end; gap:0.5rem;">
+        <button type="button" class="btn" style="background:#f1f5f9; color:#475569;" onclick="closeEditUserModal()">取消</button>
+        <button type="submit" class="btn btn-primary" style="padding:0.5rem 1.25rem;">保存修改</button>
+      </div>
+    </form>
+  </div>
+</div>
+

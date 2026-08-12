@@ -373,6 +373,25 @@ app.delete('/api/users/:id', requireRole('admin'), (req, res) => {
   res.json({ success: true, message: '用户已删除' });
 });
 
+app.put('/api/users/:id', requireRole('admin'), (req, res) => {
+  const { id } = req.params;
+  const { name, role, status } = req.body;
+  if (!name) return res.status(400).json({ success: false, error: '姓名不能为空' });
+
+  const db = readCollectorDb();
+  const user = db.users.find(u => u.id === parseInt(id));
+  if (!user) return res.status(404).json({ success: false, error: '用户不存在' });
+  if (user.username === 'admin') return res.status(403).json({ success: false, error: '超级管理员账号不可编辑' });
+
+  user.name = name;
+  if (role) user.role = role;
+  if (status) user.status = status;
+
+  saveCollectorDb(db);
+  addCollectorAuditLog('USER_UPDATE', `更新视频网用户 [${user.name}(${user.username})] (角色: ${user.role}, 状态: ${user.status})`, 'SUCCESS');
+  res.json({ success: true, message: '用户信息更新成功', data: { id: user.id, username: user.username, name: user.name, role: user.role, status: user.status } });
+});
+
 // 审计日志 API
 app.get('/api/audit-logs', (req, res) => {
   const { keyword, status } = req.query;

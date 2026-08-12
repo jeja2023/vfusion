@@ -50,29 +50,45 @@ function renderPersonnelArchive() {
   }).join('');
 }
 
-async function editPersonnel(id, curName, curIdCard, curDomicile) {
-  const name = prompt('请输入人员姓名:', curName);
-  if (name === null) return;
-  const id_card = prompt('请输入身份证号:', curIdCard);
-  if (id_card === null) return;
-  const domicile = prompt('请输入户籍地址:', curDomicile);
-  if (domicile === null) return;
+function editPersonnel(id, curName, curIdCard, curDomicile) {
+  document.getElementById('editPersonnelId').value = id || '';
+  document.getElementById('editPersonnelName').value = curName || '';
+  document.getElementById('editPersonnelIdCard').value = (curIdCard && curIdCard !== '-') ? curIdCard : '';
+  document.getElementById('editPersonnelDomicile').value = (curDomicile && curDomicile !== '-') ? curDomicile : '';
+  const modal = document.getElementById('editPersonnelModal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeEditPersonnelModal() {
+  const modal = document.getElementById('editPersonnelModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function handleSavePersonnel(e) {
+  if (e) e.preventDefault();
+  const id = document.getElementById('editPersonnelId').value;
+  const name = document.getElementById('editPersonnelName').value.trim();
+  const id_card = document.getElementById('editPersonnelIdCard').value.trim();
+  const domicile = document.getElementById('editPersonnelDomicile').value.trim();
+
+  if (!name) { showToast('人员姓名不能为空！', 'error'); return; }
 
   try {
     const res = await fetch(`/api/personnel/${encodeURIComponent(id)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: name.trim(), id_card: id_card.trim(), domicile: domicile.trim() })
+      body: JSON.stringify({ name, id_card, domicile })
     });
     const json = await res.json();
     if (json.success) {
-      alert(json.message);
+      showToast('涉事人员档案更新成功！');
+      closeEditPersonnelModal();
       loadPersonnelArchive();
     } else {
-      alert('编辑失败: ' + json.error);
+      showToast('编辑失败: ' + json.error, 'error');
     }
-  } catch (e) {
-    alert('编辑请求错误: ' + e.message);
+  } catch (err) {
+    showToast('编辑请求错误: ' + err.message, 'error');
   }
 }
 

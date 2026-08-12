@@ -49,7 +49,10 @@ function renderSchemaFields() {
         <td><strong>${escapeHtml(f.label)}</strong></td>
         <td>${escapeHtml(f.type)}</td>
         <td>${escapeHtml((f.options || []).join(', ')) || '-'}</td>
-        <td><button class="btn-submit" style="width:auto; min-width:55px; margin-top:0; padding:0.25rem 0.55rem; font-size:0.75rem; background:var(--danger); white-space:nowrap; flex-shrink:0;" onclick="removeSchemaField(${realIdx})">删除</button></td>
+        <td style="display:flex; gap:0.4rem;">
+          <button class="btn-submit" style="width:auto; min-width:45px; margin-top:0; padding:0.25rem 0.55rem; font-size:0.75rem; background:var(--primary); white-space:nowrap; flex-shrink:0;" onclick="openEditFieldModal(${realIdx})">编辑</button>
+          <button class="btn-submit" style="width:auto; min-width:45px; margin-top:0; padding:0.25rem 0.55rem; font-size:0.75rem; background:var(--danger); white-space:nowrap; flex-shrink:0;" onclick="removeSchemaField(${realIdx})">删除</button>
+        </td>
       </tr>
     `;
   }).join('');
@@ -78,6 +81,43 @@ function addFieldToSchema() {
   document.getElementById('newFieldKey').value = '';
   document.getElementById('newFieldLabel').value = '';
   document.getElementById('newFieldOptions').value = '';
+}
+
+function openEditFieldModal(idx) {
+  const f = currentSchema.fields[idx];
+  if (!f) return;
+  document.getElementById('editFieldIndex').value = idx;
+  document.getElementById('editFieldKey').value = f.key || '';
+  document.getElementById('editFieldLabel').value = f.label || '';
+  document.getElementById('editFieldType').value = f.type || 'text';
+  document.getElementById('editFieldOptions').value = (f.options || []).join(', ');
+  const modal = document.getElementById('editFieldModal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeEditFieldModal() {
+  const modal = document.getElementById('editFieldModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function handleSaveField(e) {
+  if (e) e.preventDefault();
+  const idx = parseInt(document.getElementById('editFieldIndex').value);
+  if (isNaN(idx) || !currentSchema.fields[idx]) return;
+
+  const label = document.getElementById('editFieldLabel').value.trim();
+  const type = document.getElementById('editFieldType').value;
+  const optionsStr = document.getElementById('editFieldOptions').value.trim();
+
+  if (!label) { showToast('中文标签不能为空！', 'error'); return; }
+
+  currentSchema.fields[idx].label = label;
+  currentSchema.fields[idx].type = type;
+  currentSchema.fields[idx].options = optionsStr ? optionsStr.split(',').map(s=>s.trim()) : [];
+
+  renderSchemaFields();
+  closeEditFieldModal();
+  showToast('字段属性已更新');
 }
 
 function removeSchemaField(idx) {

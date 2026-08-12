@@ -1,3 +1,5 @@
+let cachedWebhooksData = [];
+
 async function loadWebhooks() {
   try {
     const res = await fetch('/api/webhooks');
@@ -5,15 +7,18 @@ async function loadWebhooks() {
     const tbody = document.getElementById('webhookTableBody');
     if (!tbody) return;
     if (!json.success || json.data.length === 0) {
+      cachedWebhooksData = [];
       tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">暂无注册的订阅节点</td></tr>`;
       return;
     }
+    cachedWebhooksData = json.data;
     tbody.innerHTML = json.data.map((item, idx) => `
       <tr>
         <td class="col-idx">${idx + 1}</td>
         <td><strong>${escapeHtml(item.name)}</strong></td>
         <td><code>${escapeHtml(item.url)}</code></td>
         <td style="display:flex; gap:0.4rem;">
+          <button class="btn btn-secondary" style="padding:0.25rem 0.5rem; font-size:0.75rem; white-space:nowrap;" onclick="openEditWebhookModal(${item.id})">编辑</button>
           <button class="btn btn-primary" style="padding:0.25rem 0.5rem; font-size:0.75rem; white-space:nowrap;" onclick="testWebhook(${item.id})">测试推送</button>
           <button class="btn btn-danger" style="padding:0.25rem 0.5rem; font-size:0.75rem; white-space:nowrap;" onclick="deleteWebhook(${item.id})">移除</button>
         </td>
@@ -40,6 +45,48 @@ async function addWebhookNode() {
     document.getElementById('hookName').value = '';
     document.getElementById('hookUrl').value = '';
     loadWebhooks();
+  }
+}
+
+function openEditWebhookModal(id) {
+  const item = cachedWebhooksData.find(h => h.id === id);
+  if (!item) return;
+  document.getElementById('editWebhookId').value = item.id;
+  document.getElementById('editWebhookName').value = item.name || '';
+  document.getElementById('editWebhookUrl').value = item.url || '';
+  const modal = document.getElementById('editWebhookModal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeEditWebhookModal() {
+  const modal = document.getElementById('editWebhookModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function handleSaveWebhook(e) {
+  if (e) e.preventDefault();
+  const id = document.getElementById('editWebhookId').value;
+  const name = document.getElementById('editWebhookName').value.trim();
+  const url = document.getElementById('editWebhookUrl').value.trim();
+
+  if (!name || !url) { showToast('请输入系统名称和回调地址！', 'error'); return; }
+
+  try {
+    const res = await fetch(`/api/webhooks/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, url })
+    });
+    const json = await res.json();
+    if (json.success) {
+      showToast('第三方订阅节点更新成功！');
+      closeEditWebhookModal();
+      loadWebhooks();
+    } else {
+      showToast(json.error || '更新失败', 'error');
+    }
+  } catch (err) {
+    showToast('请求发生错误: ' + err.message, 'error');
   }
 }
 
@@ -90,3 +137,4 @@ async function deleteWebhook(id) {
   showToast('订阅节点已移除', 'error');
   loadWebhooks();
 }
+

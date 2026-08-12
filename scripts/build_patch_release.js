@@ -4,7 +4,7 @@ const { execSync } = require('child_process');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
 const pkg = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, 'package.json'), 'utf8'));
-const VERSION = pkg.version || '0.16.0';
+const VERSION = pkg.version || '0.17.0';
 
 const RELEASE_DIR = path.join(ROOT_DIR, 'release');
 const PATCH_DIR_NAME = `vfusion-patch-v${VERSION}`;

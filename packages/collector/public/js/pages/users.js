@@ -50,6 +50,7 @@ function renderUsers() {
           ? '<span style="color:var(--success); font-weight:600;">启用</span>'
           : '<span style="color:var(--danger); font-weight:600;">已禁用</span>'}</td>
         <td style="display:flex; gap:0.4rem;">
+          ${item.username !== 'admin' ? `<button class="btn-submit" style="width:auto; min-width:45px; margin-top:0; padding:0.25rem 0.55rem; font-size:0.75rem; background:var(--primary); white-space:nowrap; flex-shrink:0;" onclick="openEditUserModal(${item.id})">编辑</button>` : ''}
           <button class="btn-submit" style="width:auto; min-width:55px; margin-top:0; padding:0.25rem 0.55rem; font-size:0.75rem; white-space:nowrap; flex-shrink:0;" onclick="resetUserPassword(${item.id})">重置密码</button>
           ${item.username !== 'admin' ? `<button class="btn-submit" style="width:auto; min-width:45px; margin-top:0; padding:0.25rem 0.55rem; font-size:0.75rem; background:var(--danger); white-space:nowrap; flex-shrink:0;" onclick="deleteUser(${item.id})">删除</button>` : ''}
         </td>
@@ -86,6 +87,53 @@ async function createNewUser() {
   } else { showToast(json.error, 'error'); }
 }
 
+function openEditUserModal(id) {
+  const user = cachedUsersData.find(u => u.id === id);
+  if (!user) return;
+  if (user.username === 'admin') { showToast('超级管理员内置账号不能编辑', 'error'); return; }
+  document.getElementById('editUserId').value = user.id;
+  document.getElementById('editUsername').value = user.username || '';
+  document.getElementById('editFullname').value = user.name || '';
+  document.getElementById('editUserRole').value = user.role || 'user';
+  document.getElementById('editUserStatus').value = (user.status || 'active').toLowerCase();
+  const modal = document.getElementById('editUserModal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeEditUserModal() {
+  const modal = document.getElementById('editUserModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function handleSaveUser(e) {
+  if (e) e.preventDefault();
+  const id = document.getElementById('editUserId').value;
+  const name = document.getElementById('editFullname').value.trim();
+  const role = document.getElementById('editUserRole').value;
+  const status = document.getElementById('editUserStatus').value;
+
+  if (!name) { showToast('真实姓名不能为空', 'error'); return; }
+
+  try {
+    const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
+    const res = await fetchFn(`/api/users/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, role, status })
+    });
+    const json = await res.json();
+    if (json.success) {
+      showToast('视频网用户信息更新成功！');
+      closeEditUserModal();
+      loadUsers();
+    } else {
+      showToast(json.error || '更新失败', 'error');
+    }
+  } catch (err) {
+    showToast('请求发生错误: ' + err.message, 'error');
+  }
+}
+
 async function resetUserPassword(id) {
   const newPwd = prompt('请输入新密码 (如 123456):');
   if (!newPwd) return;
@@ -109,3 +157,4 @@ async function deleteUser(id) {
   if (json.success) { showToast('用户已删除', 'error'); loadUsers(); }
   else showToast(json.error, 'error');
 }
+

@@ -237,7 +237,7 @@ function switchTab(tabId) {
     'tab-ftp': 'FTP 通道配置',
     'tab-audits': '系统审计日志',
     'tab-users': '用户与权限管理',
-    'tab-system': '系统安全与升级维护'
+    'tab-system': '系统配置与维护'
   };
   const titleEl = document.getElementById('currentPageTitle');
   if (titleEl && pageTitles[tabId]) {

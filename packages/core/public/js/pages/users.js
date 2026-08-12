@@ -2,6 +2,7 @@ let usersCurrentPage = 1, usersPageSize = 10;
 let cachedUsersData = [];
 
 async function loadUsers() {
+  if (typeof loadSystemHealth === 'function') loadSystemHealth();
   try {
     const res = await fetch('/api/users');
     const json = await res.json();

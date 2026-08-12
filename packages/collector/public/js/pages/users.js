@@ -2,6 +2,7 @@ let usersCurrentPage = 1, usersPageSize = 10;
 let cachedUsersData = [];
 
 async function loadUsers() {
+  if (typeof loadCollectorSystemConfig === 'function') loadCollectorSystemConfig();
   try {
     const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
     const res = await fetchFn('/api/users');

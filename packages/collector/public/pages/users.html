@@ -47,3 +47,54 @@
     </div>
   </div>
 </div>
+
+<!-- 底部扩展卡片：系统防篡改安全与无损热升级 -->
+<div class="card" style="margin-top:0.75rem; padding:0.75rem 1rem;">
+  <div class="card-header" style="margin-bottom:0.4rem; padding-bottom:0.35rem;">
+    <div>
+      <h2 style="font-size:0.9rem;">
+        <svg class="icon-svg" viewBox="0 0 24 24" style="color:var(--primary);"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        视频网端系统防篡改安全与无损热升级维护
+      </h2>
+      <p style="font-size:0.725rem; margin-top:1px;">在线管理防篡改 HMAC 数字签名校验秘钥，以及通过 Web 控制台上传增量补丁平滑重载系统</p>
+    </div>
+  </div>
+
+  <div style="display:grid; grid-template-columns: 1fr 1.2fr; gap:0.75rem;">
+    <!-- HMAC 签名秘钥在线轮换 -->
+    <div style="background:#ffffff; border:1px solid var(--border-color); border-radius:8px; padding:0.65rem 0.85rem;">
+      <h4 style="font-size:0.825rem; font-weight:700; color:var(--text-main); margin-bottom:0.35rem; display:flex; align-items:center; gap:0.4rem;">
+        <svg class="icon-svg" viewBox="0 0 24 24" style="color:var(--primary); width:15px; height:15px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        HMAC 签名秘钥在线轮换
+      </h4>
+      <div style="font-size:0.75rem; color:var(--text-sub); margin-bottom:0.45rem;">
+        当前生效秘钥: <strong id="collectorCurrentHmacKeyStr" style="font-family:monospace; color:var(--primary);">加载中...</strong>
+      </div>
+      <div class="form-group" style="gap:0.2rem; margin-bottom:0.45rem;">
+        <input type="text" id="collectorHmacSecretInput" placeholder="输入新 HMAC 签名秘钥" style="padding:0.35rem 0.55rem; border:1px solid var(--border-color); border-radius:6px; font-size:0.775rem; font-family:monospace;">
+      </div>
+      <button class="btn btn-primary" style="width:100%; justify-content:center; padding:0.35rem; font-size:0.775rem;" onclick="saveCollectorHmacSecret()">立即在线轮换秘钥</button>
+    </div>
+
+    <!-- Web 一键在线无损热升级卡片 (含优化选文件拖拽区域) -->
+    <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:0.65rem 0.85rem;">
+      <h4 style="font-size:0.825rem; font-weight:700; color:#0369a1; margin-bottom:0.35rem; display:flex; align-items:center; gap:0.4rem;">
+        <svg class="icon-svg" viewBox="0 0 24 24" style="color:#0284c7; width:15px; height:15px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Web 控制台一键无损热升级 (系统热补丁)
+      </h4>
+      <!-- 高质感拖拽与选择文件按钮 -->
+      <div class="patch-upload-dropzone" id="collPatchDropzone" onclick="document.getElementById('collWebUpgradeFileInput').click()" style="background:#ffffff; border:2px dashed #7dd3fc; border-radius:8px; padding:0.45rem 0.6rem; text-align:center; cursor:pointer; margin-bottom:0.45rem; transition:all 0.2s ease;">
+        <input type="file" id="collWebUpgradeFileInput" accept=".zip" style="display:none;" onchange="onUpgradeFileSelected(this)">
+        <div style="display:flex; align-items:center; justify-content:center; gap:0.4rem;">
+          <svg class="icon-svg" viewBox="0 0 24 24" style="width:18px; height:18px; color:#0284c7;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span style="font-size:0.775rem; font-weight:600; color:#0369a1;" id="collPatchFileSelectTitle">📁 点击或拖拽上传补丁包 (.zip)</span>
+        </div>
+        <div style="font-size:0.7rem; color:#64748b; margin-top:2px;" id="collPatchFileSelectSub">支持选择 vfusion-patch-v*.zip 增量升级文件</div>
+      </div>
+      <button class="btn btn-primary" style="width:100%; justify-content:center; padding:0.35rem; font-size:0.775rem; background:#0284c7; border-color:#0284c7;" onclick="uploadCollectorWebPatchUpgrade()">
+        上传补丁包并一键无损更新
+      </button>
+      <div id="collWebUpgradeStatusBox" style="display:none; margin-top:0.4rem; font-size:0.75rem; padding:0.4rem 0.55rem; border-radius:6px; font-family:monospace;"></div>
+    </div>
+  </div>
+</div>

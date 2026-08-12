@@ -265,3 +265,30 @@ async function uploadWebPatchUpgrade() {
     showToast('上传补丁包发生网络错误', 'error');
   }
 }
+
+function onUpgradeFileSelected(input) {
+  const titleEl = document.getElementById('patchFileSelectTitle') || document.getElementById('collPatchFileSelectTitle');
+  const subEl = document.getElementById('patchFileSelectSub') || document.getElementById('collPatchFileSelectSub');
+  const dropzone = document.getElementById('patchDropzone') || document.getElementById('collPatchDropzone');
+
+  if (input.files && input.files.length > 0) {
+    const file = input.files[0];
+    const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+    const sizeKB = (file.size / 1024).toFixed(1);
+    const sizeStr = file.size > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
+
+    if (titleEl) titleEl.innerText = `✓ 已选择: ${file.name}`;
+    if (subEl) subEl.innerText = `文件体积: ${sizeStr} (点击更换文件)`;
+    if (dropzone) {
+      dropzone.style.background = '#f0fdf4';
+      dropzone.style.borderColor = '#4ade80';
+    }
+  } else {
+    if (titleEl) titleEl.innerText = '📁 点击或拖拽上传补丁包 (.zip)';
+    if (subEl) subEl.innerText = '支持选择 vfusion-patch-v*.zip 增量升级文件';
+    if (dropzone) {
+      dropzone.style.background = '#ffffff';
+      dropzone.style.borderColor = '#7dd3fc';
+    }
+  }
+}

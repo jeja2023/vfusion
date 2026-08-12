@@ -1204,6 +1204,8 @@ app.post('/api/webhooks/:id/test', async (req, res) => {
     }
   } catch (e) {}
 
+  const host = req.headers.host || 'localhost:5002';
+  const photoUrl = `http://${host}/assets/test_photo.jpg`;
   const testEvent = {
     id: Date.now(),
     event_id: 'EVT_TEST_' + Date.now(),
@@ -1221,8 +1223,13 @@ app.post('/api/webhooks/:id/test', async (req, res) => {
       person_id_card: '110101199001011234',
       description: '视汇中台 Webhook 联调连通性测试消息'
     },
-    files: ['test_photo.jpg'],
-    photos: [`http://${req.headers.host || 'localhost:5002'}/assets/test_photo.jpg`],
+    files: [
+      {
+        filename: 'test_photo.jpg',
+        url: photoUrl
+      }
+    ],
+    photos: [photoUrl],
     created_at: new Date().toISOString()
   };
 

@@ -166,7 +166,7 @@ function renderDynamicForm(fields) {
 function handleFileSelect(e) {
   const newFiles = Array.from(e.target.files);
   if (newFiles.length > 0) {
-    selectedFiles = selectedFiles.concat(newFiles);
+    selectedFiles = [newFiles[0]];
   }
   renderFilePreviews();
 }
@@ -191,48 +191,43 @@ function renderFilePreviews() {
     return;
   }
 
+  const file = selectedFiles[0];
+  const imgUrl = URL.createObjectURL(file);
+
   promptEl.style.display = 'none';
   previewEl.style.display = 'flex';
   previewEl.style.flexDirection = 'column';
   previewEl.style.width = '100%';
   previewEl.style.height = '100%';
+  previewEl.style.minHeight = '280px';
+
   if (uploadZone) {
-    uploadZone.style.padding = '0.5rem';
+    uploadZone.style.padding = '0';
     uploadZone.style.background = '#0f172a';
     uploadZone.style.borderColor = '#3b82f6';
   }
 
-  const fileThumbnails = selectedFiles.map((file, idx) => {
-    const imgUrl = URL.createObjectURL(file);
-    return `
-      <div style="position:relative; width:90px; height:90px; border-radius:8px; overflow:hidden; border:1px solid rgba(255,255,255,0.2); background:#1e293b; flex-shrink:0;">
-        <img src="${imgUrl}" style="width:100%; height:100%; object-fit:cover; cursor:pointer;" onclick="event.stopPropagation(); if(typeof openImageLightbox === 'function') openImageLightbox('${imgUrl}', '图片预览: ${escapeHtml(file.name)}')" title="${escapeHtml(file.name)}">
-        <button type="button" style="position:absolute; top:2px; right:2px; width:20px; height:20px; border-radius:50%; background:#ef4444; color:#fff; border:none; font-size:0.75rem; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center;" onclick="event.stopPropagation(); removeSelectedFile(${idx})">✕</button>
-        <div style="position:absolute; bottom:0; inset-x:0; background:rgba(0,0,0,0.6); color:#fff; font-size:0.65rem; padding:1px 3px; text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${(file.size / 1024).toFixed(0)}KB</div>
-      </div>
-    `;
-  }).join('');
-
   previewEl.innerHTML = `
-    <div style="display:flex; flex-direction:column; width:100%; height:100%; justify-content:space-between;">
-      <div style="display:flex; flex-wrap:wrap; gap:0.6rem; padding:0.5rem; max-height:220px; overflow-y:auto;">
-        ${fileThumbnails}
-        <div style="width:90px; height:90px; border-radius:8px; border:2px dashed rgba(255,255,255,0.4); display:flex; flex-direction:column; align-items:center; justify-content:center; color:#bfdbfe; cursor:pointer; background:rgba(255,255,255,0.05);" onclick="document.getElementById('photoInput').click()">
-          <span style="font-size:1.4rem; font-weight:bold;">+</span>
-          <span style="font-size:0.7rem;">加图</span>
+    <div style="display:flex; flex-direction:column; width:100%; height:100%; min-height:280px; position:relative; background:#0f172a; border-radius:10px; overflow:hidden;">
+      <div style="flex:1; display:flex; align-items:center; justify-content:center; padding:0.75rem; position:relative; min-height:220px; overflow:hidden;" onclick="event.stopPropagation(); if(typeof openImageLightbox === 'function') openImageLightbox('${imgUrl}', '抓拍照片预览: ${escapeHtml(file.name)}')">
+        <img src="${imgUrl}" style="max-width:100%; max-height:250px; width:auto; height:auto; object-fit:contain; border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.5); cursor:pointer;" title="点击放大预览: ${escapeHtml(file.name)}">
+        <div style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); color:#fff; font-size:0.725rem; padding:3px 8px; border-radius:12px; border:1px solid rgba(255,255,255,0.2); pointer-events:none;">
+          🔍 点击放大预览
         </div>
       </div>
-      <div style="background:rgba(15,23,42,0.9); padding:0.5rem 0.8rem; border-radius:6px; display:flex; justify-content:space-between; align-items:center; color:#fff; font-size:0.8rem;">
-        <span>已选择 <strong style="color:#60a5fa;">${selectedFiles.length}</strong> 张现场照片</span>
-        <button type="button" class="btn btn-danger" style="padding:0.2rem 0.5rem; font-size:0.75rem;" onclick="clearAllSelectedFiles()">清空图片</button>
+      <div style="background:rgba(15,23,42,0.92); backdrop-filter:blur(4px); padding:0.6rem 0.85rem; border-top:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; color:#fff; font-size:0.8rem; z-index:10;" onclick="event.stopPropagation()">
+        <div style="display:flex; align-items:center; gap:0.5rem; overflow:hidden;">
+          <span style="color:#94a3b8;">已选抓拍照片:</span>
+          <strong style="color:#60a5fa; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:180px;" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</strong>
+          <span style="color:#cbd5e1; font-size:0.75rem; font-family:monospace; background:rgba(255,255,255,0.1); padding:1px 6px; border-radius:4px;">${(file.size / 1024).toFixed(0)}KB</span>
+        </div>
+        <div style="display:flex; gap:0.4rem; flex-shrink:0;">
+          <button type="button" class="btn" style="padding:0.25rem 0.65rem; font-size:0.75rem; background:#2563eb; color:#fff; border:none; border-radius:4px; cursor:pointer;" onclick="document.getElementById('photoInput').click()">重新选择</button>
+          <button type="button" class="btn btn-danger" style="padding:0.25rem 0.65rem; font-size:0.75rem;" onclick="clearAllSelectedFiles()">清空图片</button>
+        </div>
       </div>
     </div>
   `;
-}
-
-function removeSelectedFile(idx) {
-  selectedFiles.splice(idx, 1);
-  renderFilePreviews();
 }
 
 function clearAllSelectedFiles() {
@@ -240,6 +235,10 @@ function clearAllSelectedFiles() {
   const photoInput = document.getElementById('photoInput');
   if (photoInput) photoInput.value = '';
   renderFilePreviews();
+}
+
+function removeSelectedFile() {
+  clearAllSelectedFiles();
 }
 
 function initUploadZoneDragAndDrop() {
@@ -279,13 +278,6 @@ function initUploadZoneDragAndDrop() {
       }
     }
   }, false);
-}
-
-function removeSelectedFile(idx) {
-  selectedFiles = [];
-  const photoInput = document.getElementById('photoInput');
-  if (photoInput) photoInput.value = '';
-  renderFilePreviews();
 }
 
 function bindPublishFormSubmit() {

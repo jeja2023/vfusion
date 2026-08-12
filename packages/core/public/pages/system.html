@@ -37,6 +37,22 @@
           <button class="btn btn-primary" style="padding:0.45rem; justify-content:center; margin-top:0.2rem;" onclick="rotateHmacSecret()">立即在线轮换秘钥</button>
         </div>
       </div>
+
+      <!-- Web 一键在线无损热升级 -->
+      <div style="background:#f0f9ff; padding:0.9rem; border-radius:10px; border:1px solid #bae6fd; margin-bottom:0.75rem;">
+        <h4 style="font-size:0.875rem; font-weight:700; color:#0369a1; margin-bottom:0.35rem; display:flex; align-items:center; gap:0.4rem;">
+          <svg class="icon-svg" viewBox="0 0 24 24" style="color:#0284c7; width:16px; height:16px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Web 控制台一键无损热升级 (系统热补丁)
+        </h4>
+        <div style="font-size:0.775rem; color:#0369a1; margin-bottom:0.5rem; line-height:1.4;">
+          上传代码补丁包 (<code>vfusion-patch-v*.zip</code>)，系统自动备份数据库并在 3 秒内平滑重载生效，运维无需登录服务器命令窗口。
+        </div>
+        <div style="display:flex; gap:0.4rem; align-items:center;">
+          <input type="file" id="webUpgradeFileInput" accept=".zip" style="font-size:0.75rem; flex:1; min-width:0; background:#ffffff; padding:0.25rem 0.4rem; border:1px solid #7dd3fc; border-radius:6px;">
+          <button class="btn btn-primary" style="padding:0.35rem 0.75rem; white-space:nowrap; font-size:0.775rem;" onclick="uploadWebPatchUpgrade()">上传并无损更新</button>
+        </div>
+        <div id="webUpgradeStatusBox" style="display:none; margin-top:0.45rem; font-size:0.75rem; padding:0.45rem 0.6rem; border-radius:6px; font-family:monospace;"></div>
+      </div>
     </div>
 
     <!-- 右栏：诊断与系统健康状态 -->

@@ -109,3 +109,65 @@ async function testCollectorFtpConnection() {
     showToast('无法连接到服务端测试接口', 'error');
   }
 }
+
+async function uploadCollectorWebPatchUpgrade() {
+  const fileInput = document.getElementById('collWebUpgradeFileInput');
+  const statusBox = document.getElementById('collWebUpgradeStatusBox');
+  if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+    showToast('请选择 .zip 升级补丁包文件！', 'error');
+    return;
+  }
+
+  const patchFile = fileInput.files[0];
+  if (!patchFile.name.endsWith('.zip')) {
+    showToast('升级文件格式必须为 .zip 压缩包！', 'error');
+    return;
+  }
+
+  if (statusBox) {
+    statusBox.style.display = 'block';
+    statusBox.style.background = '#eff6ff';
+    statusBox.style.border = '1px solid #bfdbfe';
+    statusBox.style.color = '#1d4ed8';
+    statusBox.innerText = `正在上传升级补丁包 [${patchFile.name}] 并校验解压，请稍候...`;
+  }
+
+  const formData = new FormData();
+  formData.append('patchFile', patchFile);
+
+  try {
+    const res = await fetch('/api/system/upgrade', {
+      method: 'POST',
+      body: formData
+    });
+    const json = await res.json();
+    if (json.success) {
+      if (statusBox) {
+        statusBox.style.background = '#f0fdf4';
+        statusBox.style.border = '1px solid #bbf7d0';
+        statusBox.style.color = '#15803d';
+        statusBox.innerText = `✓ ${json.message}`;
+      }
+      showToast('补丁更新成功！服务将在 3 秒内自动平滑重载。');
+      setTimeout(() => {
+        location.reload();
+      }, 4000);
+    } else {
+      if (statusBox) {
+        statusBox.style.background = '#fef2f2';
+        statusBox.style.border = '1px solid #fecaca';
+        statusBox.style.color = '#b91c1c';
+        statusBox.innerText = `✕ 升级失败: ${json.error}`;
+      }
+      showToast(json.error || '视频网端在线平滑升级失败', 'error');
+    }
+  } catch (e) {
+    if (statusBox) {
+      statusBox.style.background = '#fef2f2';
+      statusBox.style.border = '1px solid #fecaca';
+      statusBox.style.color = '#b91c1c';
+      statusBox.innerText = `✕ 传输网络异常: ${e.message}`;
+    }
+    showToast('上传补丁包发生网络错误', 'error');
+  }
+}

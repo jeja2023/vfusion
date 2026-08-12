@@ -11,6 +11,7 @@
     "start:core": "node packages/core/server.js",
     "test:pack": "node packages/common/test.js",
     "pack:release": "node scripts/build_portable_release.js",
+    "pack:patch": "node scripts/build_patch_release.js",
     "pack:exe": "node scripts/build_exe_binaries.js"
   },
   "keywords": [],

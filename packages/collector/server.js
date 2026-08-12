@@ -10,6 +10,7 @@ const { DEFAULT_FORM_SCHEMA, setHmacSecret } = require('../common/protocol');
 const { hashPassword, verifyPassword, generateToken, setTokenSecret } = require('../common/auth');
 const { authMiddleware, requireRole } = require('../common/auth_middleware');
 const { testFtpConnection, uploadToRemoteFtp } = require('../common/ftp_client');
+const { performOnlineUpgrade } = require('../common/system_upgrader');
 
 const app = express();
 const PORT = process.env.COLLECTOR_PORT || process.env.PORT || 5001;
@@ -1051,6 +1052,34 @@ app.post('/api/config/ftp/test', requireRole('admin'), async (req, res) => {
     addCollectorAuditLog('FTP_TEST', `视频网端测试 FTP 连接失败: ${err.message}`, 'WARN');
     res.status(400).json({ success: false, error: err.message });
   }
+});
+
+// 视频网采集端：Web 控制台一键无损热升级 API
+app.post('/api/system/upgrade', requireRole('admin'), (req, res) => {
+  const form = formidable({
+    uploadDir: STORAGE_ROOT,
+    keepExtensions: true,
+    maxFileSize: 200 * 1024 * 1024
+  });
+
+  form.parse(req, async (err, fields, files) => {
+    if (err) return res.status(400).json({ success: false, error: '上传补丁包解析失败: ' + err.message });
+    const patchFile = files.patchFile || files.file;
+    const uploadedFile = Array.isArray(patchFile) ? patchFile[0] : patchFile;
+    if (!uploadedFile || !uploadedFile.filepath) {
+      return res.status(400).json({ success: false, error: '未接收到升级补丁 zip 文件' });
+    }
+
+    try {
+      const appRootDir = path.resolve(__dirname, '../..');
+      const result = await performOnlineUpgrade(uploadedFile.filepath, STORAGE_ROOT, appRootDir);
+      addCollectorAuditLog('SYSTEM_UPGRADE', `管理员在 Web 控制台上传热升级补丁包成功`, 'SUCCESS');
+      res.json(result);
+    } catch (e) {
+      addCollectorAuditLog('SYSTEM_UPGRADE', `热升级补丁包更新失败: ${e.message}`, 'WARN');
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
 });
 
 // 视频网端：获取本人/本终端历史已发布提交记录 API

@@ -12,8 +12,8 @@ echo 2. 正在启动 [内网数据汇聚与管理中台] (Port 5002)...
 start "视汇-内网数据中台" "%~dp0启动内网数据中台.bat"
 
 echo.
-echo 双端服务已成功在两个独立的命令行窗口中启动！
-echo - 本机视频网终端: http://localhost:5001
-echo - 本机内网中台: http://localhost:5002
+echo 双端服务已成功启动！
+echo - 视频网终端: http://localhost:5001
+echo - 内网中台: http://localhost:5002
 echo.
 pause

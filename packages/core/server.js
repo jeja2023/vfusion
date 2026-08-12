@@ -1156,9 +1156,8 @@ app.delete('/api/webhooks/:id', (req, res) => {
 });
 
 app.post('/api/webhooks/:id/test', async (req, res) => {
-  const id = parseInt(req.params.id);
   const list = readWebhooks();
-  const hook = list.find(h => h.id === id);
+  const hook = list.find(h => String(h.id) === String(req.params.id));
   if (!hook) return res.status(404).json({ success: false, error: '未找到指定的 Webhook 订阅节点' });
 
   const sec = loadSecurityConfig();

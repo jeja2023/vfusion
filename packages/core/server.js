@@ -1204,8 +1204,7 @@ app.post('/api/webhooks/:id/test', async (req, res) => {
     }
   } catch (e) {}
 
-  const host = req.headers.host || 'localhost:5002';
-  const photoUrl = `http://${host}/assets/test_photo.jpg`;
+  const photoUrl = '/assets/test_photo.jpg';
   const testEvent = {
     id: Date.now(),
     event_id: 'EVT_TEST_' + Date.now(),

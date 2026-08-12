@@ -19,8 +19,8 @@ const testEvent = {
     person_id_card: '110101199001011234',
     description: '视汇中台 Webhook 联调连通性测试消息'
   },
-  files: [{ filename: 'test_photo.jpg', url: 'http://172.26.64.1:5002/assets/test_photo.jpg' }],
-  photos: ['http://172.26.64.1:5002/assets/test_photo.jpg'],
+  files: [{ filename: 'test_photo.jpg', url: '/assets/test_photo.jpg' }],
+  photos: ['/assets/test_photo.jpg'],
   created_at: new Date().toISOString()
 };
 

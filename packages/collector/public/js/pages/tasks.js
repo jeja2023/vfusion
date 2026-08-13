@@ -1,3 +1,5 @@
+let taskCurrentPage = 1, taskPageSize = 10;
+
 async function loadTaskList() {
   try {
     const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
@@ -43,12 +45,26 @@ function renderTaskCards() {
     return matchKw && matchStatus;
   });
 
-  if (filtered.length === 0) {
+  const totalCount = filtered.length;
+  const totalPages = Math.ceil(totalCount / taskPageSize) || 1;
+  if (taskCurrentPage > totalPages) taskCurrentPage = totalPages;
+  if (taskCurrentPage < 1) taskCurrentPage = 1;
+
+  if (document.getElementById('taskTotalCount')) document.getElementById('taskTotalCount').innerText = totalCount;
+  if (document.getElementById('taskCurrentPageText')) document.getElementById('taskCurrentPageText').innerText = taskCurrentPage;
+  if (document.getElementById('taskTotalPagesText')) document.getElementById('taskTotalPagesText').innerText = totalPages;
+  if (document.getElementById('taskPrevBtn')) document.getElementById('taskPrevBtn').disabled = taskCurrentPage <= 1;
+  if (document.getElementById('taskNextBtn')) document.getElementById('taskNextBtn').disabled = taskCurrentPage >= totalPages;
+
+  if (totalCount === 0) {
     tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:2.5rem; color:var(--text-muted);">暂无匹配的发布任务记录</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = filtered.map((t, idx) => {
+  const paged = filtered.slice((taskCurrentPage - 1) * taskPageSize, taskCurrentPage * taskPageSize);
+
+  tbody.innerHTML = paged.map((t, idx) => {
+    const globalIdx = (taskCurrentPage - 1) * taskPageSize + idx + 1;
     const isActive = t.status === 'ACTIVE';
     const curUser = typeof currentUser !== 'undefined' ? currentUser : null;
     const isCreator = curUser && t.creator_username === curUser.username;
@@ -82,27 +98,31 @@ function renderTaskCards() {
 
     return `
       <tr>
-        <td class="col-idx" style="text-align:center;">${idx + 1}</td>
+        <td class="col-idx" style="text-align:center;">${globalIdx}</td>
         <td><strong style="color:#0f172a;">${escapeHtml(t.task_name)}</strong></td>
         <td><code style="color:#2563eb; font-weight:600;">${escapeHtml(t.task_code)}</code></td>
         <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(t.description || '')}">${escapeHtml(t.description || '暂无描述')}</td>
-        <td style="text-align:center;"><span style="background:#eff6ff; color:#1d4ed8; font-weight:700; padding:0.15rem 0.45rem; border-radius:4px; font-size:0.75rem;">${t.photo_count || 0} 张</span></td>
-        <td style="text-align:center;"><span style="background:#f0fdf4; color:#15803d; font-weight:600; padding:0.15rem 0.45rem; border-radius:4px; font-size:0.75rem;">${t.contributor_count || 1} 人</span></td>
-        <td style="text-align:center;">${shareBadge}</td>
-        <td style="text-align:center;">${statusBadge}</td>
-        <td>${escapeHtml(t.creator_name || t.creator_username || '操作员')}</td>
-        <td style="font-size:0.775rem; color:#64748b;">${escapeHtml(latestTime)}</td>
-        <td style="text-align:center;">
-          <div style="display:flex; gap:0.4rem; justify-content:center; flex-wrap:wrap;">
-            <button class="btn btn-primary" style="padding:0.25rem 0.6rem; font-size:0.775rem; font-weight:600;" onclick="publishToTask('${escapeJsString(t.task_code)}')">上传图片</button>
-            <button class="btn" style="background:#f0f9ff; border:1px solid #bae6fd; color:#0284c7; font-weight:600; padding:0.25rem 0.6rem; font-size:0.775rem;" onclick="selectTaskForGallery('${escapeJsString(t.task_code)}')">图片库</button>
-            <button class="btn" style="background:#f8fafc; border:1px solid #cbd5e1; color:#334155; font-weight:600; padding:0.25rem 0.6rem; font-size:0.775rem;" onclick="openTaskDetailModal('${escapeJsString(t.task_code)}')">任务详情</button>
+        <td style="text-align:center; white-space:nowrap;"><span style="background:#eff6ff; color:#1d4ed8; font-weight:700; padding:0.15rem 0.45rem; border-radius:4px; font-size:0.75rem;">${t.photo_count || 0} 张</span></td>
+        <td style="text-align:center; white-space:nowrap;"><span style="background:#f0fdf4; color:#15803d; font-weight:600; padding:0.15rem 0.45rem; border-radius:4px; font-size:0.75rem;">${t.contributor_count || 1} 人</span></td>
+        <td style="text-align:center; white-space:nowrap;">${shareBadge}</td>
+        <td style="text-align:center; white-space:nowrap;">${statusBadge}</td>
+        <td style="white-space:nowrap;">${escapeHtml(formatUserForTable(t.creator_name || t.creator_username, t.creator_name))}</td>
+        <td style="font-size:0.775rem; color:#64748b; white-space:nowrap;">${escapeHtml(latestTime)}</td>
+        <td style="text-align:center; white-space:nowrap;">
+          <div style="display:flex; gap:0.25rem; justify-content:center; align-items:center; flex-wrap:nowrap; white-space:nowrap;">
+            <button class="btn btn-primary" style="padding:0.15rem 0.35rem; font-size:0.7rem; font-weight:600; white-space:nowrap; flex-shrink:0;" onclick="publishToTask('${escapeJsString(t.task_code)}')">上传图片</button>
+            <button class="btn" style="background:#f0f9ff; border:1px solid #bae6fd; color:#0284c7; font-weight:600; padding:0.15rem 0.35rem; font-size:0.7rem; white-space:nowrap; flex-shrink:0;" onclick="selectTaskForGallery('${escapeJsString(t.task_code)}')">图片库</button>
+            <button class="btn" style="background:#f8fafc; border:1px solid #cbd5e1; color:#334155; font-weight:600; padding:0.15rem 0.35rem; font-size:0.7rem; white-space:nowrap; flex-shrink:0;" onclick="openTaskDetailModal('${escapeJsString(t.task_code)}')">任务详情</button>
           </div>
         </td>
       </tr>
     `;
   }).join('');
 }
+
+function changeTaskPageSize(val) { taskPageSize = parseInt(val); taskCurrentPage = 1; renderTaskCards(); }
+function prevTaskPage() { if (taskCurrentPage > 1) { taskCurrentPage--; renderTaskCards(); } }
+function nextTaskPage() { taskCurrentPage++; renderTaskCards(); }
 
 function escapeJsString(str) {
   if (!str) return '';
@@ -344,9 +364,12 @@ async function handleDeleteTask(taskCode) {
 }
 
 let currentPersonnelTaskCode = '';
+let tpCurrentPage = 1, tpPageSize = 5;
+let cachedTpData = [];
 
 async function openTaskPersonnelModal(taskCode) {
   currentPersonnelTaskCode = taskCode;
+  tpCurrentPage = 1;
   const task = cachedTasksData.find(t => t.task_code === taskCode);
   document.getElementById('tpTaskCode').value = taskCode;
   document.getElementById('tpName').value = '';
@@ -368,25 +391,49 @@ async function loadTaskPersonnelTable(taskCode) {
     const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
     const res = await fetchFn(`/api/personnel?task_code=${encodeURIComponent(taskCode)}`);
     const json = await res.json();
-    const list = json.success ? (json.data || []) : [];
-    if (list.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:1.5rem; color:#94a3b8;">本任务暂无关联涉事人员记录</td></tr>`;
-      return;
-    }
-    tbody.innerHTML = list.map(p => `
-      <tr style="border-bottom:1px solid #f1f5f9;">
-        <td style="padding:0.45rem 0.6rem; font-weight:600; color:#1e293b;">${escapeHtml(p.name)}</td>
-        <td style="padding:0.45rem 0.6rem; font-family:monospace; color:#2563eb;">${escapeHtml(p.id_card)}</td>
-        <td style="padding:0.45rem 0.6rem; color:#475569;">${escapeHtml(p.domicile || '-')}</td>
-        <td style="padding:0.45rem 0.6rem; text-align:center;">
-          <button class="btn" style="background:#fef2f2; border:1px solid #fecaca; color:#dc2626; font-size:0.75rem; padding:0.2rem 0.45rem;" onclick="handleDeleteTaskPersonnel('${escapeJsString(p.id)}')">删除</button>
-        </td>
-      </tr>
-    `).join('');
+    cachedTpData = json.success ? (json.data || []) : [];
+    renderTaskPersonnelTable();
   } catch (e) {
     tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:red;">加载失败: ${escapeHtml(e.message)}</td></tr>`;
   }
 }
+
+function renderTaskPersonnelTable() {
+  const tbody = document.getElementById('tpTableBody');
+  if (!tbody) return;
+
+  const totalCount = cachedTpData.length;
+  const totalPages = Math.ceil(totalCount / tpPageSize) || 1;
+  if (tpCurrentPage > totalPages) tpCurrentPage = totalPages;
+  if (tpCurrentPage < 1) tpCurrentPage = 1;
+
+  if (document.getElementById('tpTotalCount')) document.getElementById('tpTotalCount').innerText = totalCount;
+  if (document.getElementById('tpCurrentPageText')) document.getElementById('tpCurrentPageText').innerText = tpCurrentPage;
+  if (document.getElementById('tpTotalPagesText')) document.getElementById('tpTotalPagesText').innerText = totalPages;
+  if (document.getElementById('tpPrevBtn')) document.getElementById('tpPrevBtn').disabled = tpCurrentPage <= 1;
+  if (document.getElementById('tpNextBtn')) document.getElementById('tpNextBtn').disabled = tpCurrentPage >= totalPages;
+
+  if (totalCount === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:1.5rem; color:#94a3b8;">本任务暂无关联涉事人员记录</td></tr>`;
+    return;
+  }
+
+  const paged = cachedTpData.slice((tpCurrentPage - 1) * tpPageSize, tpCurrentPage * tpPageSize);
+  tbody.innerHTML = paged.map(p => `
+    <tr style="border-bottom:1px solid #f1f5f9;">
+      <td style="padding:0.45rem 0.6rem; font-weight:600; color:#1e293b;">${escapeHtml(p.name)}</td>
+      <td style="padding:0.45rem 0.6rem; font-family:monospace; color:#2563eb;">${escapeHtml(p.id_card)}</td>
+      <td style="padding:0.45rem 0.6rem; color:#475569;">${escapeHtml(p.domicile || '-')}</td>
+      <td style="padding:0.45rem 0.6rem; text-align:center;">
+        <button class="btn" style="background:#fef2f2; border:1px solid #fecaca; color:#dc2626; font-size:0.75rem; padding:0.2rem 0.45rem;" onclick="handleDeleteTaskPersonnel('${escapeJsString(p.id)}')">删除</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function changeTpPageSize(val) { tpPageSize = parseInt(val); tpCurrentPage = 1; renderTaskPersonnelTable(); }
+function prevTpPage() { if (tpCurrentPage > 1) { tpCurrentPage--; renderTaskPersonnelTable(); } }
+function nextTpPage() { tpCurrentPage++; renderTaskPersonnelTable(); }
 
 async function handleAddTaskPersonnel(e) {
   e.preventDefault();
@@ -468,7 +515,7 @@ async function openShareTaskModal(taskCode) {
       return `
         <label style="display:flex; align-items:center; justify-content:space-between; padding:0.45rem 0.75rem; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; cursor:pointer;">
           <span style="font-size:0.85rem; font-weight:600; color:#1e293b;">
-            ${escapeHtml(u.name || u.username)} <code style="font-size:0.775rem; color:#2563eb;">(${escapeHtml(u.username)})</code> ${labelTag}
+            ${escapeHtml(formatUserWithRealName(u.username, u.name))} ${labelTag}
           </span>
           <input type="checkbox" name="shareUserCheck" value="${escapeHtml(u.username)}" ${isChecked} ${isCreator ? 'disabled checked' : ''} style="width:16px; height:16px; cursor:pointer;">
         </label>
@@ -552,7 +599,7 @@ async function openTaskDetailModal(taskCode) {
       <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:0.75rem; margin-bottom:0.75rem;">
         <div><span style="font-size:0.75rem; color:#64748b;">任务状态：</span><strong style="color:${statusColor}; font-size:0.85rem;">${escapeHtml(statusText)}</strong></div>
         <div><span style="font-size:0.75rem; color:#64748b;">共享模式：</span><strong style="color:#7e22ce; font-size:0.85rem;">${escapeHtml(shareModeText)}</strong></div>
-        <div><span style="font-size:0.75rem; color:#64748b;">创建人：</span><span style="font-size:0.85rem; font-weight:600; color:#1e293b;">${escapeHtml(task.creator_name || task.creator_username || '操作员')}</span></div>
+        <div><span style="font-size:0.75rem; color:#64748b;">创建人：</span><span style="font-size:0.85rem; font-weight:600; color:#1e293b;">${escapeHtml(formatUserWithRealName(task.creator_username, task.creator_name))}</span></div>
         <div><span style="font-size:0.75rem; color:#64748b;">创建时间：</span><span style="font-size:0.8rem; color:#475569;">${escapeHtml(new Date(task.created_at).toLocaleString())}</span></div>
         <div><span style="font-size:0.75rem; color:#64748b;">已存抓拍照片：</span><span style="font-size:0.85rem; font-weight:700; color:#2563eb;">${task.photo_count || 0} 张</span></div>
         <div><span style="font-size:0.75rem; color:#64748b;">参与协作人数：</span><span style="font-size:0.85rem; font-weight:700; color:#16a34a;">${task.contributor_count || 1} 人</span></div>

@@ -25,7 +25,7 @@
       </div>
       <div class="form-group" style="gap:0.3rem; margin-bottom:0.75rem;">
         <label style="font-size:0.75rem; font-weight:600;">更新 / 轮换新秘钥：</label>
-        <input type="text" id="collectorHmacSecretInput" placeholder="输入新的 64 位 HMAC 秘钥" style="padding:0.4rem 0.6rem; font-size:0.775rem; font-family:monospace;">
+        <input type="text" id="collectorHmacSecretInput" placeholder="输入新的 64 位 HMAC 秘钥" style="padding:0.4rem 0.6rem; font-size:0.775rem; font-family:monospace;" autocomplete="off">
       </div>
       <button class="btn btn-primary" style="width:100%; justify-content:center; padding:0.45rem; font-size:0.775rem;" onclick="saveCollectorHmacSecret()">
         保存并更新 HMAC 签名秘钥
@@ -47,7 +47,7 @@
         <input type="file" id="collWebUpgradeFileInput" accept=".zip" style="display:none;" onchange="onUpgradeFileSelected(this)">
         <div style="display:flex; align-items:center; justify-content:center; gap:0.45rem;">
           <svg class="icon-svg" viewBox="0 0 24 24" style="width:20px; height:20px; color:#0284c7;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          <span style="font-size:0.8rem; font-weight:700; color:#0369a1;" id="collPatchFileSelectTitle">📁 点击或拖拽上传补丁包 (.zip)</span>
+          <span style="font-size:0.8rem; font-weight:700; color:#0369a1;" id="collPatchFileSelectTitle">点击或拖拽上传补丁包 (.zip)</span>
         </div>
         <div style="font-size:0.725rem; color:#64748b; margin-top:3px;" id="collPatchFileSelectSub">支持选择 vfusion-patch-v*.zip 增量升级文件</div>
       </div>

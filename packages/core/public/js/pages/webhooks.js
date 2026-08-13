@@ -1,51 +1,146 @@
+let webhookCurrentPage = 1, webhookPageSize = 10;
 let cachedWebhooksData = [];
 
 async function loadWebhooks() {
   try {
     const res = await fetch('/api/webhooks');
     const json = await res.json();
-    const tbody = document.getElementById('webhookTableBody');
-    if (!tbody) return;
-    if (!json.success || json.data.length === 0) {
-      cachedWebhooksData = [];
-      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">暂无注册的订阅节点</td></tr>`;
-      return;
+    if (json.success) {
+      cachedWebhooksData = json.data || [];
+      renderWebhooks();
     }
-    cachedWebhooksData = json.data;
-    tbody.innerHTML = json.data.map((item, idx) => `
-      <tr>
-        <td class="col-idx">${idx + 1}</td>
-        <td><strong>${escapeHtml(item.name)}</strong></td>
-        <td><code>${escapeHtml(item.url)}</code></td>
-        <td style="display:flex; gap:0.4rem;">
-          <button class="btn btn-secondary" style="padding:0.25rem 0.5rem; font-size:0.75rem; white-space:nowrap;" onclick="openEditWebhookModal(${item.id})">编辑</button>
-          <button class="btn btn-primary" style="padding:0.25rem 0.5rem; font-size:0.75rem; white-space:nowrap;" onclick="testWebhook(${item.id})">测试推送</button>
-          <button class="btn btn-danger" style="padding:0.25rem 0.5rem; font-size:0.75rem; white-space:nowrap;" onclick="deleteWebhook(${item.id})">移除</button>
-        </td>
-      </tr>
-    `).join('');
   } catch (e) {
     console.error('加载 Webhooks 失败:', e);
   }
 }
 
-async function addWebhookNode() {
+function renderWebhooks() {
+  const tbody = document.getElementById('webhookTableBody');
+  if (!tbody) return;
+
+  const totalCount = cachedWebhooksData.length;
+  const totalPages = Math.ceil(totalCount / webhookPageSize) || 1;
+  if (webhookCurrentPage > totalPages) webhookCurrentPage = totalPages;
+  if (webhookCurrentPage < 1) webhookCurrentPage = 1;
+
+  if (document.getElementById('webhookTotalCount')) document.getElementById('webhookTotalCount').innerText = totalCount;
+  if (document.getElementById('webhookCurrentPageText')) document.getElementById('webhookCurrentPageText').innerText = webhookCurrentPage;
+  if (document.getElementById('webhookTotalPagesText')) document.getElementById('webhookTotalPagesText').innerText = totalPages;
+  if (document.getElementById('webhookPrevBtn')) document.getElementById('webhookPrevBtn').disabled = webhookCurrentPage <= 1;
+  if (document.getElementById('webhookNextBtn')) document.getElementById('webhookNextBtn').disabled = webhookCurrentPage >= totalPages;
+
+  if (totalCount === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">暂无注册的订阅节点</td></tr>`;
+    return;
+  }
+
+  const paged = cachedWebhooksData.slice((webhookCurrentPage - 1) * webhookPageSize, webhookCurrentPage * webhookPageSize);
+  tbody.innerHTML = paged.map((item, idx) => {
+    const globalIdx = (webhookCurrentPage - 1) * webhookPageSize + idx + 1;
+    const isEnabled = item.enabled !== false;
+    
+    let statusBadge = `<span class="badge" style="background:#f1f5f9; color:#94a3b8; padding:2px 8px; border-radius:4px; font-size:0.75rem;">已停用</span>`;
+    if (isEnabled) {
+      if (item.last_status === 'SUCCESS') {
+        statusBadge = `<span class="badge" style="background:#dcfce7; color:#15803d; padding:2px 8px; border-radius:4px; font-size:0.75rem;">推送成功</span>`;
+      } else if (item.last_status === 'FAILED') {
+        statusBadge = `<span class="badge" style="background:#fee2e2; color:#b91c1c; padding:2px 8px; border-radius:4px; font-size:0.75rem;">推送异常 ${item.fail_count ? `(${item.fail_count}次)` : ''}</span>`;
+      } else {
+        statusBadge = `<span class="badge" style="background:#e0f2fe; color:#0369a1; padding:2px 8px; border-radius:4px; font-size:0.75rem;">待推送</span>`;
+      }
+    }
+
+    return `
+      <tr>
+        <td class="col-idx">${globalIdx}</td>
+        <td><strong>${escapeHtml(item.name)}</strong></td>
+        <td><code>${escapeHtml(item.url)}</code></td>
+        <td>
+          <div style="display:flex; align-items:center; gap:0.4rem;">
+            <label class="toggle-switch" style="width:32px; height:16px; margin:0;" title="${isEnabled ? '点击停用' : '点击启用'}">
+              <input type="checkbox" ${isEnabled ? 'checked' : ''} onchange="toggleWebhookNode(${item.id}, this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+            <span style="font-size:0.75rem; color:${isEnabled ? '#15803d' : '#94a3b8'}; font-weight:600;">
+              ${isEnabled ? '已开启' : '已关闭'}
+            </span>
+          </div>
+        </td>
+        <td>${statusBadge}</td>
+        <td style="display:flex; gap:0.35rem;">
+          <button class="btn btn-secondary" style="padding:0.2rem 0.45rem; font-size:0.75rem; white-space:nowrap;" onclick="openEditWebhookModal(${item.id})">编辑</button>
+          <button class="btn btn-primary" style="padding:0.2rem 0.45rem; font-size:0.75rem; white-space:nowrap;" onclick="testWebhook(${item.id})">测试推送</button>
+          <button class="btn btn-danger" style="padding:0.2rem 0.45rem; font-size:0.75rem; white-space:nowrap;" onclick="deleteWebhook(${item.id})">移除</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function changeWebhookPageSize(val) { webhookPageSize = parseInt(val); webhookCurrentPage = 1; renderWebhooks(); }
+function prevWebhookPage() { if (webhookCurrentPage > 1) { webhookCurrentPage--; renderWebhooks(); } }
+function nextWebhookPage() { webhookCurrentPage++; renderWebhooks(); }
+
+async function toggleWebhookNode(id, enabled) {
+  try {
+    const res = await fetch(`/api/webhooks/${id}/toggle`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled })
+    });
+    const json = await res.json();
+    if (json.success) {
+      showToast(json.message);
+      loadWebhooks();
+    } else {
+      showToast(json.error || '切换状态失败', 'error');
+      loadWebhooks();
+    }
+  } catch (e) {
+    showToast('网络交互错误', 'error');
+    loadWebhooks();
+  }
+}
+
+function openAddWebhookModal() {
+  document.getElementById('hookName').value = '';
+  document.getElementById('hookUrl').value = '';
+  const modal = document.getElementById('addWebhookModal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeAddWebhookModal() {
+  const modal = document.getElementById('addWebhookModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function handleAddWebhookSubmit(e) {
+  if (e) e.preventDefault();
   const name = document.getElementById('hookName').value.trim();
   const url = document.getElementById('hookUrl').value.trim();
   if (!name || !url) { showToast('请输入系统名称和回调地址！', 'error'); return; }
 
-  const res = await fetch('/api/webhooks', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, url })
-  });
-  const json = await res.json();
-  if (json.success) {
-    showToast('第三方订阅节点注册成功！');
-    document.getElementById('hookName').value = '';
-    document.getElementById('hookUrl').value = '';
-    loadWebhooks();
+  try {
+    const res = await fetch('/api/webhooks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, url, enabled: true })
+    });
+    const json = await res.json();
+    if (json.success) {
+      showToast('第三方订阅节点注册成功！');
+      closeAddWebhookModal();
+      loadWebhooks();
+    } else {
+      showToast(json.error || '注册失败', 'error');
+    }
+  } catch (err) {
+    showToast('网络交互错误', 'error');
   }
+}
+
+async function addWebhookNode() {
+  await handleAddWebhookSubmit();
 }
 
 function openEditWebhookModal(id) {
@@ -54,6 +149,9 @@ function openEditWebhookModal(id) {
   document.getElementById('editWebhookId').value = item.id;
   document.getElementById('editWebhookName').value = item.name || '';
   document.getElementById('editWebhookUrl').value = item.url || '';
+  if (document.getElementById('editWebhookEnabled')) {
+    document.getElementById('editWebhookEnabled').checked = item.enabled !== false;
+  }
   const modal = document.getElementById('editWebhookModal');
   if (modal) modal.style.display = 'flex';
 }
@@ -68,6 +166,7 @@ async function handleSaveWebhook(e) {
   const id = document.getElementById('editWebhookId').value;
   const name = document.getElementById('editWebhookName').value.trim();
   const url = document.getElementById('editWebhookUrl').value.trim();
+  const enabled = document.getElementById('editWebhookEnabled') ? document.getElementById('editWebhookEnabled').checked : true;
 
   if (!name || !url) { showToast('请输入系统名称和回调地址！', 'error'); return; }
 
@@ -75,7 +174,7 @@ async function handleSaveWebhook(e) {
     const res = await fetch(`/api/webhooks/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, url })
+      body: JSON.stringify({ name, url, enabled })
     });
     const json = await res.json();
     if (json.success) {

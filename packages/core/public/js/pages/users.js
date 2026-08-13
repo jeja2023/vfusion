@@ -60,7 +60,22 @@ function changeUsersPageSize(val) { usersPageSize = parseInt(val); usersCurrentP
 function prevUsersPage() { if (usersCurrentPage > 1) { usersCurrentPage--; renderUsers(); } }
 function nextUsersPage() { usersCurrentPage++; renderUsers(); }
 
-async function createNewUser() {
+function openAddUserModal() {
+  document.getElementById('newUsername').value = '';
+  document.getElementById('newFullname').value = '';
+  document.getElementById('newUserPwd').value = '';
+  document.getElementById('newUserRole').value = 'user';
+  const modal = document.getElementById('addUserModal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeAddUserModal() {
+  const modal = document.getElementById('addUserModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function handleCreateUserSubmit(e) {
+  if (e) e.preventDefault();
   const username = document.getElementById('newUsername').value.trim();
   const name = document.getElementById('newFullname').value.trim();
   const password = document.getElementById('newUserPwd').value.trim();
@@ -68,19 +83,27 @@ async function createNewUser() {
 
   if (!username || !name || !password) { showToast('请填写完整用户信息！', 'error'); return; }
 
-  const res = await fetch('/api/users', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, name, password, role })
-  });
-  const json = await res.json();
-  if (json.success) {
-    showToast('新用户添加成功！');
-    document.getElementById('newUsername').value = '';
-    document.getElementById('newFullname').value = '';
-    document.getElementById('newUserPwd').value = '';
-    loadUsers();
-  } else { showToast(json.error, 'error'); }
+  try {
+    const res = await fetch('/api/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, name, password, role })
+    });
+    const json = await res.json();
+    if (json.success) {
+      showToast('新用户账号创建成功！');
+      closeAddUserModal();
+      loadUsers();
+    } else {
+      showToast(json.error || '创建用户失败', 'error');
+    }
+  } catch (err) {
+    showToast('网络交互错误', 'error');
+  }
+}
+
+async function createNewUser() {
+  await handleCreateUserSubmit();
 }
 
 function openEditUserModal(id) {

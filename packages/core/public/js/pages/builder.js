@@ -1,3 +1,5 @@
+let schemaCurrentPage = 1, schemaPageSize = 10;
+
 async function loadSchema() {
   const appId = 'sys_gate_security';
   try {
@@ -12,22 +14,63 @@ async function loadSchema() {
 function renderSchemaFields() {
   const tbody = document.getElementById('schemaFieldsBody');
   if (!tbody) return;
-  tbody.innerHTML = (currentSchema.fields || []).map((f, idx) => `
-    <tr>
-      <td class="col-idx">${idx + 1}</td>
-      <td><code>${escapeHtml(f.key)}</code></td>
-      <td><strong>${escapeHtml(f.label)}</strong></td>
-      <td>${escapeHtml(f.type)}</td>
-      <td>${escapeHtml((f.options || []).join(', ')) || '-'}</td>
-      <td style="display:flex; gap:0.4rem;">
-        <button class="btn btn-secondary" style="padding:0.25rem 0.5rem; font-size:0.75rem; white-space:nowrap;" onclick="openEditFieldModal(${idx})">编辑</button>
-        <button class="btn btn-danger" style="padding:0.25rem 0.5rem; font-size:0.75rem; white-space:nowrap;" onclick="removeSchemaField(${idx})">删除</button>
-      </td>
-    </tr>
-  `).join('');
+
+  const fields = currentSchema.fields || [];
+  const totalCount = fields.length;
+  const totalPages = Math.ceil(totalCount / schemaPageSize) || 1;
+  if (schemaCurrentPage > totalPages) schemaCurrentPage = totalPages;
+  if (schemaCurrentPage < 1) schemaCurrentPage = 1;
+
+  if (document.getElementById('schemaTotalCount')) document.getElementById('schemaTotalCount').innerText = totalCount;
+  if (document.getElementById('schemaCurrentPageText')) document.getElementById('schemaCurrentPageText').innerText = schemaCurrentPage;
+  if (document.getElementById('schemaTotalPagesText')) document.getElementById('schemaTotalPagesText').innerText = totalPages;
+  if (document.getElementById('schemaPrevBtn')) document.getElementById('schemaPrevBtn').disabled = schemaCurrentPage <= 1;
+  if (document.getElementById('schemaNextBtn')) document.getElementById('schemaNextBtn').disabled = schemaCurrentPage >= totalPages;
+
+  if (totalCount === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">暂无配置字段规范</td></tr>`;
+    return;
+  }
+
+  const paged = fields.slice((schemaCurrentPage - 1) * schemaPageSize, schemaCurrentPage * schemaPageSize);
+  tbody.innerHTML = paged.map((f, idx) => {
+    const realIdx = (schemaCurrentPage - 1) * schemaPageSize + idx;
+    return `
+      <tr>
+        <td class="col-idx">${realIdx + 1}</td>
+        <td><code>${escapeHtml(f.key)}</code></td>
+        <td><strong>${escapeHtml(f.label)}</strong></td>
+        <td>${escapeHtml(f.type)}</td>
+        <td>${escapeHtml((f.options || []).join(', ')) || '-'}</td>
+        <td style="display:flex; gap:0.4rem;">
+          <button class="btn btn-secondary" style="padding:0.25rem 0.5rem; font-size:0.75rem; white-space:nowrap;" onclick="openEditFieldModal(${realIdx})">编辑</button>
+          <button class="btn btn-danger" style="padding:0.25rem 0.5rem; font-size:0.75rem; white-space:nowrap;" onclick="removeSchemaField(${realIdx})">删除</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
 }
 
-function addFieldToSchema() {
+function changeSchemaPageSize(val) { schemaPageSize = parseInt(val); schemaCurrentPage = 1; renderSchemaFields(); }
+function prevSchemaPage() { if (schemaCurrentPage > 1) { schemaCurrentPage--; renderSchemaFields(); } }
+function nextSchemaPage() { schemaCurrentPage++; renderSchemaFields(); }
+
+function openAddFieldModal() {
+  document.getElementById('newFieldKey').value = '';
+  document.getElementById('newFieldLabel').value = '';
+  document.getElementById('newFieldType').value = 'text';
+  document.getElementById('newFieldOptions').value = '';
+  const modal = document.getElementById('addFieldModal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeAddFieldModal() {
+  const modal = document.getElementById('addFieldModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function handleAddFieldSubmit(e) {
+  if (e) e.preventDefault();
   const key = document.getElementById('newFieldKey').value.trim();
   const label = document.getElementById('newFieldLabel').value.trim();
   const type = document.getElementById('newFieldType').value;
@@ -35,16 +78,24 @@ function addFieldToSchema() {
 
   if (!key || !label) { showToast('请填写字段键名和中文标签！', 'error'); return; }
 
+  if ((currentSchema.fields || []).some(f => f.key === key)) {
+    showToast(`字段键名 [${key}] 已存在！`, 'error');
+    return;
+  }
+
+  if (!currentSchema.fields) currentSchema.fields = [];
   currentSchema.fields.push({
     key, label, type,
     options: optionsStr ? optionsStr.split(',').map(s=>s.trim()) : [],
     required: true, searchable: true, show_in_table: true
   });
   renderSchemaFields();
-  showToast('已添加新字段');
-  document.getElementById('newFieldKey').value = '';
-  document.getElementById('newFieldLabel').value = '';
-  document.getElementById('newFieldOptions').value = '';
+  showToast('已添加到表单字段列表');
+  closeAddFieldModal();
+}
+
+function addFieldToSchema() {
+  handleAddFieldSubmit();
 }
 
 function openEditFieldModal(idx) {

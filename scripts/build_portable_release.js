@@ -5,7 +5,7 @@ const iconv = require('iconv-lite');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
 const pkg = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, 'package.json'), 'utf8'));
-const VERSION = pkg.version || '0.17.0';
+const VERSION = pkg.version || '0.18.0';
 
 const RELEASE_DIR = path.join(ROOT_DIR, 'release');
 
@@ -44,12 +44,11 @@ function copyNodeModulesSync(destDir) {
   const destModules = path.join(destDir, 'node_modules');
   try {
     if (process.platform === 'win32') {
-      execSync(`robocopy "${path.join(ROOT_DIR, 'node_modules')}" "${destModules}" /E /MT:8 /NFL /NDL /NJH /NJS /nc /ns /np`, { stdio: 'ignore' });
+      execSync(`robocopy "${path.join(ROOT_DIR, 'node_modules')}" "${destModules}" /E /MT:16 /NFL /NDL /NJH /NJS /nc /ns /np`);
     } else {
-      execSync(`cp -R "${path.join(ROOT_DIR, 'node_modules')}" "${destModules}"`, { stdio: 'ignore' });
+      execSync(`cp -R "${path.join(ROOT_DIR, 'node_modules')}" "${destModules}"`);
     }
   } catch (e) {
-    // robocopy 退出码 0-7 均为成功/复制完成状态
     if (e.status > 7) {
       copyDirSync(path.join(ROOT_DIR, 'node_modules'), destModules);
     }
@@ -67,7 +66,7 @@ function copyStorageTemplatesSync(srcStorage, destStorage) {
     const entries = fs.readdirSync(srcStorage, { withFileTypes: true });
     for (const entry of entries) {
       if (entry.isFile() && entry.name.startsWith('schema')) {
-        fs.copyFileSync(path.join(srcStorage, entry.name), path.join(destStorage, entry.name));
+        try { fs.copyFileSync(path.join(srcStorage, entry.name), path.join(destStorage, entry.name)); } catch (e) {}
       }
     }
   }

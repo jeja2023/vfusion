@@ -37,9 +37,16 @@
   </div>
 </div>
 
+<style>
+.compact-dashboard-table th, .compact-dashboard-table td {
+  padding: 0.35rem 0.5rem !important;
+  font-size: 0.8rem !important;
+}
+</style>
+
 <div class="main-grid">
-  <div class="card">
-    <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+  <div class="card" style="padding:0.75rem 1rem; overflow:hidden; display:flex; flex-direction:column;">
+    <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.45rem;">
       <div style="display:flex; align-items:center; gap:0.75rem;">
         <span>跨网任务数据汇聚看板</span>
         <div style="display:inline-flex; background:#f1f5f9; padding:2px; border-radius:6px; border:1px solid #cbd5e1;">
@@ -50,8 +57,8 @@
       <span style="font-size:0.775rem; color:var(--text-muted); font-weight:normal;">点击任务或事件可侧滑查看关联现场照片与提交审计</span>
     </div>
 
-    <div class="filter-bar">
-      <input type="text" id="filterKeyword" placeholder="搜索任务名称/编号/事件ID/地点/涉事人员..." oninput="renderCoreDashboard()">
+    <div class="filter-bar" style="margin-bottom:0.45rem;">
+      <input type="text" id="filterKeyword" placeholder="搜索任务名称/编号/事件ID/地点/涉事人员..." oninput="renderCoreDashboard()" autocomplete="off">
       <select id="filterTask" onchange="renderCoreDashboard()">
         <option value="">所有任务名称 (全量)</option>
       </select>
@@ -67,9 +74,9 @@
     </div>
 
     <!-- 视图 1：按任务归集数据表格 (Task Matrix Table View) -->
-    <div id="taskMatrixView" style="display:none; margin-top:0.75rem;">
-      <div class="table-container" style="overflow:hidden; max-height:none; border:1px solid var(--border-color); border-radius:10px;">
-        <table style="width:100%; table-layout:auto;">
+    <div id="taskMatrixView" style="display:none; margin-top:0.25rem;">
+      <div class="table-container" style="overflow:hidden; max-height:none; border:1px solid var(--border-color); border-radius:8px;">
+        <table class="compact-dashboard-table" style="width:100%; table-layout:auto;">
           <thead>
             <tr>
               <th class="col-idx" style="width:45px;">序号</th>
@@ -84,16 +91,32 @@
             </tr>
           </thead>
           <tbody id="taskTableBody">
-            <tr><td colspan="9" style="text-align:center; padding:3rem; color:var(--text-muted);">正在汇聚任务数据...</td></tr>
+            <tr><td colspan="9" style="text-align:center; padding:2rem; color:var(--text-muted);">正在汇聚任务数据...</td></tr>
           </tbody>
         </table>
+      </div>
+
+      <div class="pagination-bar" id="taskPagination" style="margin-top:0.3rem; padding:0.35rem 0.5rem 0 0.5rem;">
+        <div class="pagination-info">
+          <span>共 <strong id="taskTotalCount">0</strong> 条记录</span>
+          <span>第 <strong id="taskCurrentPageText">1</strong> / <strong id="taskTotalPagesText">1</strong> 页</span>
+        </div>
+        <div class="pagination-controls">
+          <select id="taskPageSizeSelect" onchange="changeTaskPageSize(this.value)">
+            <option value="10">10 条/页</option>
+            <option value="20">20 条/页</option>
+            <option value="50">50 条/页</option>
+          </select>
+          <button class="btn-page" id="taskPrevBtn" onclick="prevTaskPage()">上一页</button>
+          <button class="btn-page" id="taskNextBtn" onclick="nextTaskPage()">下一页</button>
+        </div>
       </div>
     </div>
 
     <!-- 视图 2：事件列表 (Event Table View) -->
-    <div id="eventTableView" style="display:block; margin-top:0.75rem;">
-      <div class="table-container" style="overflow:hidden; max-height:none; border:1px solid var(--border-color); border-radius:10px;">
-        <table style="width:100%; table-layout:fixed;">
+    <div id="eventTableView" style="display:block; margin-top:0.25rem;">
+      <div class="table-container" style="overflow:hidden; max-height:none; border:1px solid var(--border-color); border-radius:8px;">
+        <table class="compact-dashboard-table" style="width:100%; table-layout:fixed;">
           <thead>
             <tr>
               <th class="col-idx" style="width:40px;">序号</th>
@@ -109,12 +132,12 @@
             </tr>
           </thead>
           <tbody id="eventTableBody">
-            <tr><td colspan="10" style="text-align:center; padding:3rem; color:var(--text-muted);">暂无已接收事件记录</td></tr>
+            <tr><td colspan="10" style="text-align:center; padding:2rem; color:var(--text-muted);">暂无已接收事件记录</td></tr>
           </tbody>
         </table>
       </div>
 
-      <div class="pagination-bar" id="evtPagination">
+      <div class="pagination-bar" id="evtPagination" style="margin-top:0.3rem; padding:0.35rem 0.5rem 0 0.5rem;">
         <div class="pagination-info">
           <span>共 <strong id="evtTotalCount">0</strong> 条记录</span>
           <span>第 <strong id="evtCurrentPageText">1</strong> / <strong id="evtTotalPagesText">1</strong> 页</span>

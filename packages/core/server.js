@@ -896,44 +896,126 @@ function getFtpConfig() {
   return null;
 }
 
+function getFtpServers() {
+  try {
+    if (fs.existsSync(SECURITY_CONFIG_FILE)) {
+      const sec = JSON.parse(fs.readFileSync(SECURITY_CONFIG_FILE, 'utf8'));
+      if (Array.isArray(sec.ftp_servers) && sec.ftp_servers.length > 0) {
+        return sec.ftp_servers;
+      }
+      if (sec.ftp_host) {
+        const legacyServer = {
+          id: 'ftp_legacy_1',
+          name: sec.ftp_name || '默认 FTP 服务器',
+          ftp_enabled: sec.ftp_enabled !== false,
+          ftp_host: sec.ftp_host || '',
+          ftp_port: sec.ftp_port || 21,
+          ftp_user: sec.ftp_user || '',
+          ftp_password: sec.ftp_password || '',
+          ftp_remote_dir: sec.ftp_remote_dir || '/vfusion_packages',
+          pkg_prefix: sec.pkg_prefix || 'vfusion_',
+          ftp_file_ext: sec.ftp_file_ext || '.jpg',
+          ftp_delete_after_download: sec.ftp_delete_after_download !== false,
+          downloaded_total: 0,
+          created_at: new Date().toISOString()
+        };
+        sec.ftp_servers = [legacyServer];
+        writeJsonAtomic(SECURITY_CONFIG_FILE, sec);
+        return sec.ftp_servers;
+      }
+      return sec.ftp_servers || [];
+    }
+  } catch (e) {
+    console.error('读取 FTP 服务器节点失败:', e);
+  }
+  return [];
+}
+
+function saveFtpServers(servers) {
+  try {
+    const sec = getFtpConfig() || {};
+    sec.ftp_servers = servers;
+    if (servers.length > 0) {
+      const s0 = servers[0];
+      sec.ftp_enabled = s0.ftp_enabled;
+      sec.ftp_host = s0.ftp_host;
+      sec.ftp_port = s0.ftp_port;
+      sec.ftp_user = s0.ftp_user;
+      sec.ftp_password = s0.ftp_password;
+      sec.ftp_remote_dir = s0.ftp_remote_dir;
+      sec.pkg_prefix = s0.pkg_prefix;
+      sec.ftp_file_ext = s0.ftp_file_ext;
+      sec.ftp_delete_after_download = s0.ftp_delete_after_download;
+    }
+    writeJsonAtomic(SECURITY_CONFIG_FILE, sec);
+  } catch (e) {
+    console.error('保存 FTP 服务器节点失败:', e);
+  }
+}
+
+function getFtpPollIntervalSec(sec) {
+  if (!sec || sec.ftp_poll_interval === undefined || sec.ftp_poll_interval === null) return 10;
+  const num = parseInt(sec.ftp_poll_interval, 10);
+  return isNaN(num) ? 10 : Math.max(0, num);
+}
+
 async function ftpPollLoop() {
-  if (ftpPollStatus.running) return; // 防止并发重入
-  const sec = getFtpConfig();
-  if (!sec || !sec.ftp_enabled || !sec.ftp_host) return;
+  if (ftpPollStatus.running) return;
+  const servers = getFtpServers();
+  const activeServers = servers.filter(s => s.ftp_enabled !== false && s.ftp_host);
+  if (activeServers.length === 0) return;
 
   ftpPollStatus.running = true;
   ftpPollStatus.lastPollTime = new Date().toISOString();
 
+  let totalDownloaded = 0;
+  const pollResults = [];
+
   try {
     const ftpInDir = getFtpInDir();
     if (!fs.existsSync(ftpInDir)) fs.mkdirSync(ftpInDir, { recursive: true });
-    const prefix = getPkgPrefix();
 
-    const downloadedFiles = await downloadFromRemoteFtp(ftpInDir, sec, prefix);
+    for (const server of activeServers) {
+      try {
+        const prefix = server.pkg_prefix || 'vfusion_';
+        const downloadedFiles = await downloadFromRemoteFtp(ftpInDir, server, prefix);
 
-    if (downloadedFiles.length > 0) {
-      ftpPollStatus.downloadedTotal += downloadedFiles.length;
-      ftpPollStatus.lastResult = `成功拉取 ${downloadedFiles.length} 个数据包: ${downloadedFiles.join(', ')}`;
-      addAuditLog('FTP_POLL', `从远程 FTP [${sec.ftp_host}:${sec.ftp_port || 21}] 自动拉取了 ${downloadedFiles.length} 个数据包`, 'SUCCESS');
-      console.log(`[VFusion Core FTP] 从远程 FTP 拉取了 ${downloadedFiles.length} 个包: ${downloadedFiles.join(', ')}`);
+        server.last_pull_at = new Date().toISOString();
+        if (downloadedFiles.length > 0) {
+          totalDownloaded += downloadedFiles.length;
+          server.downloaded_total = (server.downloaded_total || 0) + downloadedFiles.length;
+          server.last_pull_status = `成功拉取 ${downloadedFiles.length} 个包`;
+          pollResults.push(`[${server.name || server.ftp_host}]: ${downloadedFiles.length}个`);
 
-      // 立即逐个处理刚从 FTP 拉取的新包（只处理本次拉取的，不扫描旧文件）
-      for (const fileName of downloadedFiles) {
-        try {
-          await processPackageFile(fileName, false);
-          console.log(`[VFusion Core FTP] 已自动解包入库: ${fileName}`);
-        } catch (procErr) {
-          console.error(`[VFusion Core FTP] 处理 ${fileName} 失败:`, procErr.message);
+          addAuditLog('FTP_POLL', `从远程 FTP [${server.name || server.ftp_host}:${server.ftp_port || 21}] 自动拉取了 ${downloadedFiles.length} 个数据包`, 'SUCCESS');
+
+          for (const fileName of downloadedFiles) {
+            try {
+              await processPackageFile(fileName, false);
+            } catch (procErr) {
+              console.error(`[VFusion Core FTP] 处理 ${fileName} 失败:`, procErr.message);
+            }
+          }
+        } else {
+          server.last_pull_status = '无新数据包';
         }
+      } catch (err) {
+        server.last_pull_status = `异常: ${err.message}`;
+        pollResults.push(`[${server.name || server.ftp_host}]: ${err.message}`);
+        addAuditLog('FTP_POLL', `远程 FTP [${server.name || server.ftp_host}] 轮询拉取失败: ${err.message}`, 'WARN');
       }
+    }
+
+    saveFtpServers(servers);
+    ftpPollStatus.downloadedTotal += totalDownloaded;
+    if (totalDownloaded > 0) {
+      ftpPollStatus.lastResult = `多 FTP 共拉取 ${totalDownloaded} 个包: ${pollResults.join('; ')}`;
     } else {
-      ftpPollStatus.lastResult = '远程 FTP 目录暂无新数据包';
+      ftpPollStatus.lastResult = `所有开启的 FTP 目录暂无新数据包 (${activeServers.length} 个节点运行中)`;
     }
   } catch (err) {
     ftpPollStatus.errorCount++;
-    ftpPollStatus.lastResult = `轮询异常: ${err.message}`;
-    addAuditLog('FTP_POLL', `远程 FTP 轮询拉取失败: ${err.message}`, 'WARN');
-    console.error('[VFusion Core FTP] 远程轮询异常:', err.message);
+    ftpPollStatus.lastResult = `多 FTP 轮询异常: ${err.message}`;
   } finally {
     ftpPollStatus.running = false;
   }
@@ -953,45 +1035,70 @@ function setFtpPollInterval(seconds) {
 function bootFtpPoll() {
   try {
     const sec = getFtpConfig();
-    if (sec && sec.ftp_enabled && sec.ftp_host) {
-      const interval = sec.ftp_poll_interval || 10;
+    const servers = getFtpServers();
+    const activeCount = servers.filter(s => s.ftp_enabled !== false && s.ftp_host).length;
+    if (activeCount > 0) {
+      const interval = getFtpPollIntervalSec(sec);
       setFtpPollInterval(interval);
-      addAuditLog('FTP_POLL', `服务启动时自动启用 FTP 远程轮询 (每 ${interval} 秒)`, 'INFO');
+      addAuditLog('FTP_POLL', `服务启动时自动启用 FTP 远程轮询 (每 ${interval} 秒, ${activeCount} 个可用节点)`, 'INFO');
     }
   } catch (e) {}
 }
 
-// 手动触发一次 FTP 拉取
+// 手动触发 FTP 拉取 (支持单节点或全量节点)
 app.post('/api/ftp/pull', async (req, res) => {
   try {
-    const sec = getFtpConfig();
-    if (!sec || !sec.ftp_enabled || !sec.ftp_host) {
-      return res.status(400).json({ success: false, error: '未配置或未启用第三方 FTP 服务器，请先在 FTP 配置页面填写并启用' });
+    const { server_id } = req.body || {};
+    const servers = getFtpServers();
+    let targetServers = servers.filter(s => s.ftp_enabled !== false && s.ftp_host);
+    if (server_id) {
+      targetServers = targetServers.filter(s => String(s.id) === String(server_id));
     }
+
+    if (targetServers.length === 0) {
+      return res.status(400).json({ success: false, error: '未找到可用的【已开启】FTP 服务器节点，请先添加并开启 FTP 节点' });
+    }
+
     const ftpInDir = getFtpInDir();
     if (!fs.existsSync(ftpInDir)) fs.mkdirSync(ftpInDir, { recursive: true });
-    const prefix = getPkgPrefix();
 
-    const downloadedFiles = await downloadFromRemoteFtp(ftpInDir, sec, prefix);
+    let totalDownloaded = 0;
+    let totalProcessed = 0;
+    const downloadedDetails = [];
 
-    // 立即处理刚从 FTP 拉取的新包
-    let processedCount = 0;
-    for (const fileName of downloadedFiles) {
+    for (const server of targetServers) {
       try {
-        await processPackageFile(fileName, false);
-        processedCount++;
-      } catch (procErr) {
-        console.error(`[VFusion Core FTP] 手动拉取处理 ${fileName} 失败:`, procErr.message);
+        const prefix = server.pkg_prefix || 'vfusion_';
+        const downloadedFiles = await downloadFromRemoteFtp(ftpInDir, server, prefix);
+        server.last_pull_at = new Date().toISOString();
+        if (downloadedFiles.length > 0) {
+          totalDownloaded += downloadedFiles.length;
+          server.downloaded_total = (server.downloaded_total || 0) + downloadedFiles.length;
+          server.last_pull_status = `成功拉取 ${downloadedFiles.length} 个包`;
+          downloadedDetails.push(`[${server.name || server.ftp_host}]: ${downloadedFiles.join(', ')}`);
+
+          for (const fileName of downloadedFiles) {
+            try {
+              await processPackageFile(fileName, false);
+              totalProcessed++;
+            } catch (procErr) {}
+          }
+        } else {
+          server.last_pull_status = '无新数据包';
+        }
+      } catch (err) {
+        server.last_pull_status = `异常: ${err.message}`;
       }
     }
 
-    addAuditLog('FTP_PULL', `管理员手动触发 FTP 拉取，下载了 ${downloadedFiles.length} 个数据包，成功入库 ${processedCount} 个`, downloadedFiles.length > 0 ? 'SUCCESS' : 'INFO');
+    saveFtpServers(servers);
+    addAuditLog('FTP_PULL', `手动触发 FTP 拉取，累计下载 ${totalDownloaded} 个包，解包入库 ${totalProcessed} 个`, totalDownloaded > 0 ? 'SUCCESS' : 'INFO');
     res.json({
       success: true,
-      message: downloadedFiles.length > 0
-        ? `成功从远程 FTP 拉取 ${downloadedFiles.length} 个数据包并入库处理 ${processedCount} 个: ${downloadedFiles.join(', ')}`
-        : '远程 FTP 目录中暂无匹配的新数据包',
-      data: { files: downloadedFiles, count: downloadedFiles.length, processed: processedCount }
+      message: totalDownloaded > 0
+        ? `成功从 ${targetServers.length} 个 FTP 节点拉取 ${totalDownloaded} 个数据包并入库 ${totalProcessed} 个: ${downloadedDetails.join('; ')}`
+        : `已轮询检查 ${targetServers.length} 个开启的 FTP 节点，远程目录暂无新数据包`,
+      data: { totalDownloaded, totalProcessed, details: downloadedDetails }
     });
   } catch (err) {
     addAuditLog('FTP_PULL', `手动 FTP 拉取失败: ${err.message}`, 'ERROR');
@@ -1002,29 +1109,118 @@ app.post('/api/ftp/pull', async (req, res) => {
 // FTP 轮询状态查询
 app.get('/api/ftp/poll-status', (req, res) => {
   const sec = getFtpConfig();
+  const servers = getFtpServers();
+  const activeCount = servers.filter(s => s.ftp_enabled !== false && s.ftp_host).length;
+
   res.json({
     success: true,
     data: {
-      enabled: !!(sec && sec.ftp_enabled && sec.ftp_host),
-      poll_interval: sec ? (sec.ftp_poll_interval || 10) : 0,
+      enabled: activeCount > 0,
+      active_server_count: activeCount,
+      total_server_count: servers.length,
+      poll_interval: sec ? getFtpPollIntervalSec(sec) : 0,
       timer_active: !!ftpPollTimer,
       ...ftpPollStatus
     }
   });
 });
 
-// FTP 轮询间隔控制
-app.post('/api/ftp/poll-interval', requireRole('admin'), (req, res) => {
-  const { interval } = req.body;
-  const seconds = parseInt(interval) || 0;
+// FTP 服务器节点 CRUD 接口
+app.get('/api/ftp/servers', (req, res) => {
+  res.json({ success: true, data: getFtpServers() });
+});
+
+app.post('/api/ftp/servers', requireRole('admin'), (req, res) => {
+  const { name, ftp_host, ftp_port, ftp_user, ftp_password, ftp_remote_dir, pkg_prefix, ftp_file_ext, ftp_delete_after_download, ftp_enabled } = req.body;
+  if (!ftp_host) return res.status(400).json({ success: false, error: 'FTP IP 地址或域名不能为空' });
+
+  const servers = getFtpServers();
+  const newServer = {
+    id: 'ftp_' + Date.now(),
+    name: name ? name.trim() : `FTP_${ftp_host.trim()}`,
+    ftp_enabled: ftp_enabled !== false,
+    ftp_host: ftp_host.trim(),
+    ftp_port: parseInt(ftp_port, 10) || 21,
+    ftp_user: ftp_user ? ftp_user.trim() : '',
+    ftp_password: ftp_password || '',
+    ftp_remote_dir: ftp_remote_dir ? ftp_remote_dir.trim() : '/vfusion_packages',
+    pkg_prefix: pkg_prefix ? pkg_prefix.trim() : 'vfusion_',
+    ftp_file_ext: ftp_file_ext || '.jpg',
+    ftp_delete_after_download: ftp_delete_after_download !== false,
+    downloaded_total: 0,
+    created_at: new Date().toISOString()
+  };
+  servers.push(newServer);
+  saveFtpServers(servers);
+  addAuditLog('FTP_CONFIG', `新增第三方 FTP 通道节点 [${newServer.name}] (${newServer.ftp_host}:${newServer.ftp_port})`, 'SUCCESS');
+  res.json({ success: true, message: 'FTP 通道节点添加成功', data: newServer });
+});
+
+app.put('/api/ftp/servers/:id', requireRole('admin'), (req, res) => {
+  const id = req.params.id;
+  const { name, ftp_host, ftp_port, ftp_user, ftp_password, ftp_remote_dir, pkg_prefix, ftp_file_ext, ftp_delete_after_download, ftp_enabled } = req.body;
+  if (!ftp_host) return res.status(400).json({ success: false, error: 'FTP IP 地址或域名不能为空' });
+
+  const servers = getFtpServers();
+  const server = servers.find(s => String(s.id) === String(id));
+  if (!server) return res.status(404).json({ success: false, error: '未找到指定的 FTP 服务器节点' });
+
+  if (name) server.name = name.trim();
+  server.ftp_host = ftp_host.trim();
+  server.ftp_port = parseInt(ftp_port, 10) || 21;
+  server.ftp_user = ftp_user ? ftp_user.trim() : '';
+  if (ftp_password !== undefined) server.ftp_password = ftp_password;
+  server.ftp_remote_dir = ftp_remote_dir ? ftp_remote_dir.trim() : '/vfusion_packages';
+  server.pkg_prefix = pkg_prefix ? pkg_prefix.trim() : 'vfusion_';
+  server.ftp_file_ext = ftp_file_ext || '.jpg';
+  if (ftp_delete_after_download !== undefined) server.ftp_delete_after_download = !!ftp_delete_after_download;
+  if (ftp_enabled !== undefined) server.ftp_enabled = !!ftp_enabled;
+
+  saveFtpServers(servers);
+  addAuditLog('FTP_CONFIG', `更新第三方 FTP 通道节点 [${server.name}] (${server.ftp_host}:${server.ftp_port})`, 'SUCCESS');
+  res.json({ success: true, message: 'FTP 通道节点更新成功', data: server });
+});
+
+app.patch('/api/ftp/servers/:id/toggle', requireRole('admin'), (req, res) => {
+  const id = req.params.id;
+  const servers = getFtpServers();
+  const server = servers.find(s => String(s.id) === String(id));
+  if (!server) return res.status(404).json({ success: false, error: '未找到指定的 FTP 服务器节点' });
+
+  server.ftp_enabled = req.body.enabled !== undefined ? !!req.body.enabled : !server.ftp_enabled;
+  saveFtpServers(servers);
+  addAuditLog('FTP_CONFIG', `${server.ftp_enabled ? '开启' : '关闭'}第三方 FTP 通道节点: [${server.name}]`, 'SUCCESS');
+  res.json({ success: true, message: `已${server.ftp_enabled ? '开启' : '关闭'} [${server.name}] 通道`, data: server });
+});
+
+app.delete('/api/ftp/servers/:id', requireRole('admin'), (req, res) => {
+  const id = req.params.id;
+  let servers = getFtpServers();
+  servers = servers.filter(s => String(s.id) !== String(id));
+  saveFtpServers(servers);
+  addAuditLog('FTP_CONFIG', `移除第三方 FTP 通道节点`, 'WARN');
+  res.json({ success: true, message: 'FTP 通道节点已移除' });
+});
+
+app.post('/api/ftp/servers/:id/test', requireRole('admin'), async (req, res) => {
+  const id = req.params.id;
+  const servers = getFtpServers();
+  const server = servers.find(s => String(s.id) === String(id)) || req.body;
+  if (!server || !server.ftp_host) return res.status(400).json({ success: false, error: '未找到 FTP 节点或 Host 缺失' });
+
   try {
-    const sec = getFtpConfig() || {};
-    sec.ftp_poll_interval = seconds;
-    writeJsonAtomic(SECURITY_CONFIG_FILE, sec);
-    setFtpPollInterval(seconds);
-    addAuditLog('FTP_POLL', `FTP 远程自动轮询间隔已更新为 ${seconds} 秒 (${seconds > 0 ? '启用' : '停止'})`, 'SUCCESS');
-    res.json({ success: true, message: seconds > 0 ? `FTP 自动轮询已启动 (每 ${seconds} 秒)` : 'FTP 自动轮询已停止' });
-  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+    const ok = await testFtpConnection(server);
+    if (ok) {
+      addAuditLog('FTP_TEST', `连通性测试 [${server.name || server.ftp_host}]: 成功`, 'SUCCESS');
+      res.json({ success: true, message: `成功连接 FTP [${server.name || server.ftp_host}:${server.ftp_port || 21}] 并具备读写及列表权限` });
+    } else {
+      addAuditLog('FTP_TEST', `连通性测试 [${server.name || server.ftp_host}]: 失败`, 'WARN');
+      res.status(400).json({ success: false, error: `无法连接远程 FTP [${server.ftp_host}:${server.ftp_port}]` });
+    }
+  } catch (err) {
+    addAuditLog('FTP_TEST', `连通性测试 [${server.name || server.ftp_host}] 异常: ${err.message}`, 'WARN');
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 

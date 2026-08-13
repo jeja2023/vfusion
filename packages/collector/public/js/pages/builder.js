@@ -63,7 +63,22 @@ function changeSchemaPageSize(val) { schemaPageSize = parseInt(val); schemaCurre
 function prevSchemaPage() { if (schemaCurrentPage > 1) { schemaCurrentPage--; renderSchemaFields(); } }
 function nextSchemaPage() { schemaCurrentPage++; renderSchemaFields(); }
 
-function addFieldToSchema() {
+function openAddFieldModal() {
+  document.getElementById('newFieldKey').value = '';
+  document.getElementById('newFieldLabel').value = '';
+  document.getElementById('newFieldType').value = 'text';
+  document.getElementById('newFieldOptions').value = '';
+  const modal = document.getElementById('addFieldModal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeAddFieldModal() {
+  const modal = document.getElementById('addFieldModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function handleAddFieldSubmit(e) {
+  if (e) e.preventDefault();
   const key = document.getElementById('newFieldKey').value.trim();
   const label = document.getElementById('newFieldLabel').value.trim();
   const type = document.getElementById('newFieldType').value;
@@ -71,16 +86,23 @@ function addFieldToSchema() {
 
   if (!key || !label) { showToast('请填写字段键名和中文标签！', 'error'); return; }
 
+  if (currentSchema.fields.some(f => f.key === key)) {
+    showToast(`字段键名 [${key}] 已存在！`, 'error');
+    return;
+  }
+
   currentSchema.fields.push({
     key, label, type,
     options: optionsStr ? optionsStr.split(',').map(s=>s.trim()) : [],
     required: true, searchable: true, show_in_table: true
   });
   renderSchemaFields();
-  showToast('已添加新字段');
-  document.getElementById('newFieldKey').value = '';
-  document.getElementById('newFieldLabel').value = '';
-  document.getElementById('newFieldOptions').value = '';
+  showToast('已添加到表单字段列表');
+  closeAddFieldModal();
+}
+
+function addFieldToSchema() {
+  handleAddFieldSubmit();
 }
 
 function openEditFieldModal(idx) {

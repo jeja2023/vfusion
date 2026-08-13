@@ -40,10 +40,10 @@
   </div>
 </div>
 
-<div class="card" style="background:#ffffff; border:1px solid var(--border-color); border-radius:10px; padding:1.25rem; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
-  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.75rem;">
+<div class="card" style="background:#ffffff; border:1px solid var(--border-color); border-radius:10px; padding:0.75rem 1rem; box-shadow:0 1px 3px rgba(0,0,0,0.05); overflow:hidden;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.45rem; flex-wrap:wrap; gap:0.5rem;">
     <div style="display:flex; align-items:center; gap:0.75rem; flex:1; min-width:280px;">
-      <input type="text" id="taskSearchKeyword" placeholder="搜索任务名称/编号/描述/创建人..." oninput="renderTaskCards()" style="padding:0.45rem 0.75rem; border:1px solid var(--border-color); border-radius:6px; font-size:0.85rem; width:260px;">
+      <input type="text" id="taskSearchKeyword" placeholder="搜索任务名称/编号/描述/创建人..." oninput="renderTaskCards()" style="padding:0.45rem 0.75rem; border:1px solid var(--border-color); border-radius:6px; font-size:0.85rem; width:260px;" autocomplete="off">
       <select id="taskStatusFilter" onchange="renderTaskCards()" style="padding:0.45rem 0.75rem; border:1px solid var(--border-color); border-radius:6px; font-size:0.85rem; background:#fff; cursor:pointer;">
         <option value="">全部任务状态</option>
         <option value="ACTIVE" selected>进行中</option>
@@ -62,23 +62,38 @@
     <table style="width:100%; border-collapse:collapse;">
       <thead>
         <tr>
-          <th class="col-idx" style="width:48px; text-align:center;">序号</th>
+          <th class="col-idx" style="width:45px; text-align:center; white-space:nowrap;">序号</th>
           <th>任务名称</th>
-          <th>任务编号</th>
+          <th style="white-space:nowrap;">任务编号</th>
           <th>描述说明</th>
-          <th style="text-align:center;">照片数</th>
-          <th style="text-align:center;">协作人数</th>
-          <th style="text-align:center;">共享模式</th>
-          <th style="text-align:center;">状态</th>
-          <th>创建人</th>
-          <th>最新时间</th>
-          <th style="text-align:center; min-width:280px;">操作</th>
+          <th style="width:70px; text-align:center; white-space:nowrap;">照片数</th>
+          <th style="width:80px; text-align:center; white-space:nowrap;">协作人数</th>
+          <th style="width:90px; text-align:center; white-space:nowrap;">共享模式</th>
+          <th style="width:75px; text-align:center; white-space:nowrap;">状态</th>
+          <th style="width:85px; white-space:nowrap;">创建人</th>
+          <th style="width:145px; white-space:nowrap;">最新时间</th>
+          <th style="width:200px; text-align:center; white-space:nowrap;">操作</th>
         </tr>
       </thead>
       <tbody id="taskTableBody">
         <tr><td colspan="11" style="text-align:center; padding:2.5rem; color:var(--text-muted);">正在加载任务列表中...</td></tr>
       </tbody>
     </table>
+  </div>
+  <div class="pagination-bar" id="taskPagination">
+    <div class="pagination-info">
+      <span>共 <strong id="taskTotalCount">0</strong> 条记录</span>
+      <span>第 <strong id="taskCurrentPageText">1</strong> / <strong id="taskTotalPagesText">1</strong> 页</span>
+    </div>
+    <div class="pagination-controls">
+      <select id="taskPageSizeSelect" onchange="changeTaskPageSize(this.value)">
+        <option value="10">10 条/页</option>
+        <option value="20">20 条/页</option>
+        <option value="50">50 条/页</option>
+      </select>
+      <button class="btn-page" id="taskPrevBtn" onclick="prevTaskPage()">上一页</button>
+      <button class="btn-page" id="taskNextBtn" onclick="nextTaskPage()">下一页</button>
+    </div>
   </div>
 </div>
 
@@ -93,16 +108,16 @@
       <button onclick="closeCreateTaskModal()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#64748b; font-weight:bold;">✕</button>
     </div>
 
-    <form onsubmit="handleCreateTask(event)">
+    <form onsubmit="handleCreateTask(event)" autocomplete="off">
       <div style="display:flex; flex-direction:column; gap:1rem;">
         <div>
           <label style="display:block; font-size:0.85rem; font-weight:600; color:var(--text-main); margin-bottom:0.35rem;">任务名称 <span style="color:red;">*</span></label>
-          <input type="text" id="newTaskName" required placeholder="如: 厂区周界巡检 / 1号门机房安全防范" style="width:100%; padding:0.5rem 0.75rem; border:1px solid var(--border-color); border-radius:6px; font-size:0.875rem;">
+          <input type="text" id="newTaskName" required placeholder="如: 厂区周界巡检 / 1号门机房安全防范" style="width:100%; padding:0.5rem 0.75rem; border:1px solid var(--border-color); border-radius:6px; font-size:0.875rem;" autocomplete="off">
         </div>
 
         <div>
           <label style="display:block; font-size:0.85rem; font-weight:600; color:var(--text-main); margin-bottom:0.35rem;">关联任务编号 (选填，自动生成唯一编号)</label>
-          <input type="text" id="newTaskCode" placeholder="如: TASK_20260812_01" style="width:100%; padding:0.5rem 0.75rem; border:1px solid var(--border-color); border-radius:6px; font-size:0.875rem; font-family:monospace; color:var(--primary); font-weight:600;">
+          <input type="text" id="newTaskCode" placeholder="如: TASK_20260812_01" style="width:100%; padding:0.5rem 0.75rem; border:1px solid var(--border-color); border-radius:6px; font-size:0.875rem; font-family:monospace; color:var(--primary); font-weight:600;" autocomplete="off">
         </div>
 
         <div>
@@ -190,12 +205,12 @@
       <button onclick="closeEditTaskModal()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#64748b; font-weight:bold;">✕</button>
     </div>
 
-    <form onsubmit="handleSaveTaskEdit(event)">
+    <form onsubmit="handleSaveTaskEdit(event)" autocomplete="off">
       <input type="hidden" id="editTaskCode">
       <div style="display:flex; flex-direction:column; gap:1rem;">
         <div>
           <label style="display:block; font-size:0.85rem; font-weight:600; color:var(--text-main); margin-bottom:0.35rem;">任务名称 <span style="color:var(--danger)">*</span></label>
-          <input type="text" id="editTaskName" required style="width:100%; padding:0.55rem 0.75rem; border:1px solid var(--border-color); border-radius:6px; font-size:0.9rem;">
+          <input type="text" id="editTaskName" required style="width:100%; padding:0.55rem 0.75rem; border:1px solid var(--border-color); border-radius:6px; font-size:0.9rem;" autocomplete="off">
         </div>
 
         <div>
@@ -241,22 +256,22 @@
 
     <div style="flex:1; overflow-y:auto; padding-top:1rem; display:flex; flex-direction:column; gap:1.25rem;">
       <!-- 新增人员录入表单 -->
-      <form onsubmit="handleAddTaskPersonnel(event)" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:1rem;">
+      <form onsubmit="handleAddTaskPersonnel(event)" autocomplete="off" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:1rem;">
         <h4 style="font-size:0.875rem; font-weight:700; color:#1e293b; margin-bottom:0.75rem;">登记新涉事人员信息</h4>
         <input type="hidden" id="tpTaskCode">
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem; margin-bottom:0.75rem;">
           <div>
             <label style="display:block; font-size:0.775rem; font-weight:600; color:#475569; margin-bottom:0.3rem;">涉事人员姓名 <span style="color:red;">*</span></label>
-            <input type="text" id="tpName" required placeholder="请输入涉事人员姓名" style="width:100%; padding:0.45rem 0.65rem; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
+            <input type="text" id="tpName" required placeholder="请输入涉事人员姓名" style="width:100%; padding:0.45rem 0.65rem; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;" autocomplete="off">
           </div>
           <div>
             <label style="display:block; font-size:0.775rem; font-weight:600; color:#475569; margin-bottom:0.3rem;">身份证号码 <span style="color:red;">*</span></label>
-            <input type="text" id="tpIdCard" required placeholder="请输入身份证号码" style="width:100%; padding:0.45rem 0.65rem; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem; font-family:monospace;">
+            <input type="text" id="tpIdCard" required placeholder="请输入身份证号码" style="width:100%; padding:0.45rem 0.65rem; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem; font-family:monospace;" autocomplete="off">
           </div>
         </div>
         <div style="margin-bottom:0.85rem;">
           <label style="display:block; font-size:0.775rem; font-weight:600; color:#475569; margin-bottom:0.3rem;">户籍地址</label>
-          <input type="text" id="tpDomicile" placeholder="请输入户籍详细地址..." style="width:100%; padding:0.45rem 0.65rem; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
+          <input type="text" id="tpDomicile" placeholder="请输入户籍详细地址..." style="width:100%; padding:0.45rem 0.65rem; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;" autocomplete="off">
         </div>
         <div style="text-align:right;">
           <button type="submit" class="btn btn-primary" style="padding:0.4rem 1rem; font-size:0.8rem; font-weight:600;">保存并归入本任务</button>
@@ -280,6 +295,21 @@
               <tr><td colspan="4" style="text-align:center; padding:1.5rem; color:#94a3b8;">暂无关联涉事人员数据</td></tr>
             </tbody>
           </table>
+        </div>
+        <div class="pagination-bar" id="tpPagination" style="margin-top:0.5rem; padding:0.35rem 0;">
+          <div class="pagination-info">
+            <span>共 <strong id="tpTotalCount">0</strong> 条记录</span>
+            <span>第 <strong id="tpCurrentPageText">1</strong> / <strong id="tpTotalPagesText">1</strong> 页</span>
+          </div>
+          <div class="pagination-controls">
+            <select id="tpPageSizeSelect" onchange="changeTpPageSize(this.value)">
+              <option value="5">5 条/页</option>
+              <option value="10">10 条/页</option>
+              <option value="20">20 条/页</option>
+            </select>
+            <button class="btn-page" id="tpPrevBtn" onclick="prevTpPage()">上一页</button>
+            <button class="btn-page" id="tpNextBtn" onclick="nextTpPage()">下一页</button>
+          </div>
         </div>
       </div>
     </div>

@@ -25,6 +25,39 @@ function escapeJsString(value) {
     .replace(/\r?\n/g, '\\n');
 }
 
+function formatUserForTable(val, nameFallback) {
+  if (nameFallback && String(nameFallback).trim()) return String(nameFallback).trim();
+  if (!val) return '操作员';
+  let str = String(val).trim();
+  const match = str.match(/^([^(]+)\s*\(([^)]+)\)$/);
+  if (match) {
+    const p1 = match[1].trim();
+    const p2 = match[2].trim();
+    if (/[\u4e00-\u9fa5]/.test(p1)) return p1;
+    if (/[\u4e00-\u9fa5]/.test(p2)) return p2;
+    return p1;
+  }
+  const matchReverse = str.match(/^([a-zA-Z0-9_-]+)\s*\(([^)]+)\)$/);
+  if (matchReverse) {
+    const p2 = matchReverse[2].trim();
+    if (p2) return p2;
+  }
+  if (str === 'admin') return '管理员';
+  if (str === 'operator') return '视频网操作员';
+  return str;
+}
+
+function formatUserWithRealName(username, realName) {
+  const u = (username || '').trim();
+  const r = (realName || '').trim();
+  if (u && r && u !== r) {
+    return `${u} (${r})`;
+  }
+  if (u) return u;
+  if (r) return r;
+  return '操作员';
+}
+
 function getAuthToken() {
   return localStorage.getItem('vfusion_token') || '';
 }
@@ -192,10 +225,19 @@ async function checkAuth() {
   if (storedUser) {
     currentUser = JSON.parse(storedUser);
     document.getElementById('loginOverlay').style.display = 'none';
-    document.getElementById('userInfoTag').innerText = `${currentUser.name} (${currentUser.username})`;
+    document.getElementById('userInfoTag').innerText = formatUserWithRealName(currentUser.username, currentUser.name);
     applyRolePermissions();
     if (typeof fetchData === 'function') fetchData();
     loadAlerts();
+
+    // 刷新恢复上次访问的页面 Tab
+    const hashTab = location.hash ? location.hash.replace('#', '') : '';
+    const savedTab = hashTab || localStorage.getItem('vfusion_core_active_tab') || 'tab-events';
+    if (savedTab && document.getElementById(savedTab)) {
+      switchTab(savedTab);
+    } else {
+      switchTab('tab-events');
+    }
   } else {
     document.getElementById('loginOverlay').style.display = 'flex';
   }
@@ -294,11 +336,28 @@ async function markAlertsRead() {
 }
 
 function switchTab(tabId) {
+  if (!tabId || !document.getElementById(tabId)) tabId = 'tab-events';
+
   document.querySelectorAll('.nav-item, .tab-btn').forEach(btn => btn.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-  if (event && event.currentTarget) event.currentTarget.classList.add('active');
+
+  if (typeof event !== 'undefined' && event && event.currentTarget && event.currentTarget.classList) {
+    event.currentTarget.classList.add('active');
+  }
+  const navBtnId = tabId.replace('tab-', 'tabBtn-');
+  const navBtn = document.getElementById(navBtnId);
+  if (navBtn) navBtn.classList.add('active');
+
   const targetTab = document.getElementById(tabId);
   if (targetTab) targetTab.classList.add('active');
+
+  // 保存当前 Active Tab 到 Hash 与 LocalStorage，实现刷新页面后保留在当前 Tab
+  try {
+    if (location.hash !== '#' + tabId) {
+      history.replaceState(null, '', '#' + tabId);
+    }
+    localStorage.setItem('vfusion_core_active_tab', tabId);
+  } catch (e) {}
 
   const pageTitles = {
     'tab-events': '跨网数据汇聚',
@@ -325,6 +384,13 @@ function switchTab(tabId) {
   if (tabId === 'tab-errors' && typeof loadErrors === 'function') loadErrors();
   if (tabId === 'tab-system' && typeof loadSystemHealth === 'function') loadSystemHealth();
 }
+
+window.addEventListener('hashchange', () => {
+  const hashTab = location.hash ? location.hash.replace('#', '') : '';
+  if (hashTab && document.getElementById(hashTab)) {
+    switchTab(hashTab);
+  }
+});
 
 function openEventDrawer(eventId) {
   const evt = eventsData.find(e => e.event_id === eventId);

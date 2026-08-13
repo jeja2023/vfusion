@@ -76,7 +76,7 @@ async function uploadCollectorWebPatchUpgrade() {
         statusBox.style.background = '#f0fdf4';
         statusBox.style.border = '1px solid #bbf7d0';
         statusBox.style.color = '#15803d';
-        statusBox.innerText = `✓ ${json.message}`;
+        statusBox.innerText = `[成功] ${json.message}`;
       }
       showToast('补丁更新成功！服务将在 3 秒内自动平滑重载。');
       setTimeout(() => {
@@ -85,18 +85,18 @@ async function uploadCollectorWebPatchUpgrade() {
     } else {
       if (statusBox) {
         statusBox.style.background = '#fef2f2';
-        statusBox.style.border = '1px solid #fecaca';
+        statusBox.style.border = '#fecaca';
         statusBox.style.color = '#b91c1c';
-        statusBox.innerText = `✕ 升级失败: ${json.error}`;
+        statusBox.innerText = `[失败] 升级失败: ${json.error}`;
       }
       showToast(json.error || '视频网端在线平滑升级失败', 'error');
     }
   } catch (e) {
     if (statusBox) {
       statusBox.style.background = '#fef2f2';
-      statusBox.style.border = '1px solid #fecaca';
+      statusBox.style.border = '#fecaca';
       statusBox.style.color = '#b91c1c';
-      statusBox.innerText = `✕ 传输网络异常: ${e.message}`;
+      statusBox.innerText = `[失败] 传输网络异常: ${e.message}`;
     }
     showToast('上传补丁包发生网络错误', 'error');
   }
@@ -120,7 +120,7 @@ function onUpgradeFileSelected(input) {
       dropzone.style.borderColor = '#4ade80';
     }
   } else {
-    if (titleEl) titleEl.innerText = '📁 点击或拖拽上传补丁包 (.zip)';
+    if (titleEl) titleEl.innerText = '点击或拖拽上传补丁包 (.zip)';
     if (subEl) subEl.innerText = '支持选择 vfusion-patch-v*.zip 增量升级文件';
     if (dropzone) {
       dropzone.style.background = '#ffffff';

@@ -1,93 +1,139 @@
-<div class="card">
-  <div class="card-title"><span>系统用户与 RBAC 权限管理</span></div>
-
-  <div class="split-layout">
-    <!-- 左栏：新增用户表单 -->
-    <div class="split-col">
-      <h3 style="font-size:0.925rem; font-weight:700; color:var(--text-main);">+ 新增用户账号</h3>
-      <div class="builder-form">
-        <div class="form-field-item"><label>用户名 (例如 zhangsan)</label><input type="text" id="newUsername" placeholder="用户名"></div>
-        <div class="form-field-item"><label>姓名 (例如 张三)</label><input type="text" id="newFullname" placeholder="真实姓名"></div>
-        <div class="form-field-item"><label>登录密码</label><input type="password" id="newUserPwd" placeholder="设置初始密码"></div>
-        <div class="form-field-item">
-          <label>指派角色</label>
-          <select id="newUserRole">
-            <option value="user">普通用户 (user)</option>
-            <option value="admin">管理员 (admin)</option>
-          </select>
-        </div>
-        <button class="btn btn-primary" style="padding:0.5rem; justify-content:center;" onclick="createNewUser()">+ 创建用户账号</button>
-      </div>
+<div class="card" style="padding: 0.75rem 1rem; margin-bottom: 0.5rem;">
+  <div class="card-header" style="margin-bottom: 0.4rem; padding-bottom: 0.35rem; display:flex; align-items:center; justify-content:space-between;">
+    <div>
+      <h2 style="font-size:0.9rem; display:flex; align-items:center; gap:0.4rem;">
+        <svg class="icon-svg" viewBox="0 0 24 24" style="color:var(--primary);"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        系统用户与 RBAC 权限管理
+      </h2>
+      <p style="font-size:0.725rem; margin-top:1px;">管理系统用户账号、基于角色的权限分配（RBAC）与安全审计</p>
     </div>
+    <div style="display:flex; gap:0.4rem; align-items:center;">
+      <button class="btn btn-primary" style="padding:0.3rem 0.65rem; font-size:0.75rem; display:flex; align-items:center; gap:0.3rem;" onclick="openAddUserModal()">
+        <svg class="icon-svg" viewBox="0 0 24 24" style="width:14px; height:14px;"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/></svg>
+        + 新增用户账号
+      </button>
+    </div>
+  </div>
 
-    <!-- 右栏：用户账号列表 -->
-    <div class="split-col">
-      <h3 style="font-size:0.925rem; font-weight:700; color:var(--text-main);">系统账号列表</h3>
-      <div class="table-container">
-        <table>
-          <thead><tr><th class="col-idx">序号</th><th>用户名</th><th>真实姓名</th><th>角色</th><th>状态</th><th>操作</th></tr></thead>
-          <tbody id="usersTableBody"></tbody>
-        </table>
+  <div style="display:flex; flex-direction:column; gap:0.4rem;">
+    <div class="table-container">
+      <table class="compact-table" style="width:100%;">
+        <thead>
+          <tr>
+            <th class="col-idx" style="width:50px;">序号</th>
+            <th style="width:160px;">用户名</th>
+            <th style="width:160px;">真实姓名</th>
+            <th style="width:120px;">角色</th>
+            <th style="width:100px;">状态</th>
+            <th style="width:200px; text-align:center;">操作</th>
+          </tr>
+        </thead>
+        <tbody id="usersTableBody">
+          <tr><td colspan="6" style="text-align:center; color:var(--text-muted);">加载中...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination-bar" id="usersPagination">
+      <div class="pagination-info">
+        <span>共 <strong id="usersTotalCount">0</strong> 个账号</span>
+        <span>第 <strong id="usersCurrentPageText">1</strong> / <strong id="usersTotalPagesText">1</strong> 页</span>
       </div>
-      <div class="pagination-bar" id="usersPagination">
-        <div class="pagination-info">
-          <span>共 <strong id="usersTotalCount">0</strong> 个账号</span>
-          <span>第 <strong id="usersCurrentPageText">1</strong> / <strong id="usersTotalPagesText">1</strong> 页</span>
-        </div>
-        <div class="pagination-controls">
-          <select id="usersPageSizeSelect" onchange="changeUsersPageSize(this.value)">
-            <option value="10">10 条/页</option>
-            <option value="20">20 条/页</option>
-            <option value="50">50 条/页</option>
-          </select>
-          <button class="btn-page" id="usersPrevBtn" onclick="prevUsersPage()">上一页</button>
-          <button class="btn-page" id="usersNextBtn" onclick="nextUsersPage()">下一页</button>
-        </div>
+      <div class="pagination-controls">
+        <select id="usersPageSizeSelect" onchange="changeUsersPageSize(this.value)">
+          <option value="10">10 条/页</option>
+          <option value="20">20 条/页</option>
+          <option value="50">50 条/页</option>
+        </select>
+        <button class="btn-page" id="usersPrevBtn" onclick="prevUsersPage()">上一页</button>
+        <button class="btn-page" id="usersNextBtn" onclick="nextUsersPage()">下一页</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- 编辑用户账号 Modal -->
-<div id="editUserModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); z-index:1150; align-items:center; justify-content:center;" onclick="closeEditUserModal()">
-  <div style="position:relative; width:440px; max-width:92vw; background:#ffffff; border-radius:12px; padding:1.5rem; box-shadow:0 20px 25px -5px rgba(0,0,0,0.3); border:1px solid #e2e8f0;" onclick="event.stopPropagation()">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; padding-bottom:0.75rem; border-bottom:1px solid #e2e8f0;">
-      <h3 style="font-size:1.05rem; font-weight:700; color:#1e293b;">编辑用户信息</h3>
-      <button onclick="closeEditUserModal()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#64748b; font-weight:bold;">✕</button>
+<!-- Modal 1: + 新增用户账号 弹窗 -->
+<div id="addUserModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.45); z-index:1150; justify-content:center; align-items:center;">
+  <div class="card" style="width:480px; max-width:92vw; background:#fff; border-radius:10px; padding:1.25rem; box-shadow:0 12px 30px rgba(0,0,0,0.2);">
+    <div style="font-size:0.925rem; font-weight:700; color:var(--primary); margin-bottom:0.8rem; border-bottom:1px solid var(--border-color); padding-bottom:0.5rem; display:flex; align-items:center; justify-content:space-between;">
+      <div style="display:flex; align-items:center; gap:0.4rem;">
+        <svg class="icon-svg" viewBox="0 0 24 24" style="width:16px; height:16px;"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/></svg>
+        新增系统用户账号
+      </div>
+      <button type="button" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--text-muted);" onclick="closeAddUserModal()">&times;</button>
     </div>
 
-    <form onsubmit="handleSaveUser(event)">
-      <input type="hidden" id="editUserId">
-      <div style="display:flex; flex-direction:column; gap:1rem;">
-        <div>
-          <label style="display:block; font-size:0.85rem; font-weight:600; color:var(--text-main); margin-bottom:0.35rem;">用户名</label>
-          <input type="text" id="editUsername" disabled style="width:100%; padding:0.5rem 0.75rem; border:1px solid var(--border-color); border-radius:6px; font-size:0.875rem; background:#f8fafc; color:#64748b;">
-        </div>
-        <div>
-          <label style="display:block; font-size:0.85rem; font-weight:600; color:var(--text-main); margin-bottom:0.35rem;">真实姓名 <span style="color:red;">*</span></label>
-          <input type="text" id="editFullname" required style="width:100%; padding:0.5rem 0.75rem; border:1px solid var(--border-color); border-radius:6px; font-size:0.875rem;">
-        </div>
-        <div>
-          <label style="display:block; font-size:0.85rem; font-weight:600; color:var(--text-main); margin-bottom:0.35rem;">指派角色</label>
-          <select id="editUserRole" style="width:100%; padding:0.5rem 0.75rem; border:1px solid var(--border-color); border-radius:6px; font-size:0.875rem;">
-            <option value="user">普通用户 (user)</option>
-            <option value="admin">管理员 (admin)</option>
-          </select>
-        </div>
-        <div>
-          <label style="display:block; font-size:0.85rem; font-weight:600; color:var(--text-main); margin-bottom:0.35rem;">账号状态</label>
-          <select id="editUserStatus" style="width:100%; padding:0.5rem 0.75rem; border:1px solid var(--border-color); border-radius:6px; font-size:0.875rem;">
-            <option value="ACTIVE">启用 (ACTIVE)</option>
-            <option value="INACTIVE">禁用 (INACTIVE)</option>
-          </select>
-        </div>
+    <form onsubmit="handleCreateUserSubmit(event)" autocomplete="off">
+      <div class="form-group" style="margin-bottom:0.6rem;">
+        <label style="font-size:0.775rem; font-weight:600;">用户名 (登录账号) <span style="color:red;">*</span></label>
+        <input type="text" id="newUsername" placeholder="例如: zhangsan" required style="padding:0.35rem 0.6rem; font-size:0.8rem; height:32px;">
       </div>
 
-      <div style="margin-top:1.5rem; text-align:right; display:flex; justify-content:flex-end; gap:0.5rem;">
-        <button type="button" class="btn" style="background:#f1f5f9; color:#475569;" onclick="closeEditUserModal()">取消</button>
-        <button type="submit" class="btn btn-primary" style="padding:0.5rem 1.25rem;">保存修改</button>
+      <div class="form-group" style="margin-bottom:0.6rem;">
+        <label style="font-size:0.775rem; font-weight:600;">真实姓名 <span style="color:red;">*</span></label>
+        <input type="text" id="newFullname" placeholder="例如: 张三" required style="padding:0.35rem 0.6rem; font-size:0.8rem; height:32px;">
+      </div>
+
+      <div class="form-group" style="margin-bottom:0.6rem;">
+        <label style="font-size:0.775rem; font-weight:600;">初始登录密码 <span style="color:red;">*</span></label>
+        <input type="password" id="newUserPwd" placeholder="设置初始密码" required style="padding:0.35rem 0.6rem; font-size:0.8rem; height:32px;" autocomplete="new-password">
+      </div>
+
+      <div class="form-group" style="margin-bottom:0.8rem;">
+        <label style="font-size:0.775rem; font-weight:600;">指派角色</label>
+        <select id="newUserRole" style="padding:0.35rem 0.6rem; font-size:0.8rem; height:32px;">
+          <option value="user">普通用户 (user)</option>
+          <option value="admin">管理员 (admin)</option>
+        </select>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:0.5rem;">
+        <button type="button" class="btn btn-secondary" style="padding:0.3rem 0.75rem; font-size:0.75rem;" onclick="closeAddUserModal()">取消</button>
+        <button type="submit" class="btn btn-primary" style="padding:0.3rem 0.85rem; font-size:0.75rem;">确认创建用户</button>
       </div>
     </form>
   </div>
 </div>
 
+<!-- Modal 2: 编辑用户账号 弹窗 -->
+<div id="editUserModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.45); z-index:1150; justify-content:center; align-items:center;">
+  <div class="card" style="width:480px; max-width:92vw; background:#fff; border-radius:10px; padding:1.25rem; box-shadow:0 12px 30px rgba(0,0,0,0.2);">
+    <div style="font-size:0.925rem; font-weight:700; color:var(--text-main); margin-bottom:0.8rem; border-bottom:1px solid var(--border-color); padding-bottom:0.5rem; display:flex; align-items:center; justify-content:space-between;">
+      <div>编辑用户信息</div>
+      <button type="button" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--text-muted);" onclick="closeEditUserModal()">&times;</button>
+    </div>
+
+    <form onsubmit="handleSaveUser(event)" autocomplete="off">
+      <input type="hidden" id="editUserId">
+      <div class="form-group" style="margin-bottom:0.6rem;">
+        <label style="font-size:0.775rem; font-weight:600;">用户名</label>
+        <input type="text" id="editUsername" disabled style="padding:0.35rem 0.6rem; font-size:0.8rem; height:32px; background:#f8fafc; color:#64748b;">
+      </div>
+
+      <div class="form-group" style="margin-bottom:0.6rem;">
+        <label style="font-size:0.775rem; font-weight:600;">真实姓名 <span style="color:red;">*</span></label>
+        <input type="text" id="editFullname" required style="padding:0.35rem 0.6rem; font-size:0.8rem; height:32px;">
+      </div>
+
+      <div class="form-group" style="margin-bottom:0.6rem;">
+        <label style="font-size:0.775rem; font-weight:600;">指派角色</label>
+        <select id="editUserRole" style="padding:0.35rem 0.6rem; font-size:0.8rem; height:32px;">
+          <option value="user">普通用户 (user)</option>
+          <option value="admin">管理员 (admin)</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="margin-bottom:0.8rem;">
+        <label style="font-size:0.775rem; font-weight:600;">账号状态</label>
+        <select id="editUserStatus" style="padding:0.35rem 0.6rem; font-size:0.8rem; height:32px;">
+          <option value="ACTIVE">启用 (ACTIVE)</option>
+          <option value="INACTIVE">禁用 (INACTIVE)</option>
+        </select>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:0.5rem;">
+        <button type="button" class="btn btn-secondary" style="padding:0.3rem 0.75rem; font-size:0.75rem;" onclick="closeEditUserModal()">取消</button>
+        <button type="submit" class="btn btn-primary" style="padding:0.3rem 0.85rem; font-size:0.75rem;">保存修改</button>
+      </div>
+    </form>
+  </div>
+</div>

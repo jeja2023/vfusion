@@ -42,12 +42,52 @@ function renderPersonnelArchive() {
         <td><code>${escapeHtml(item.last_seen ? new Date(item.last_seen).toLocaleString() : '-')}</code></td>
         <td><code>${escapeHtml(item.last_event_id || '-')}</code></td>
         <td>
-          <button class="btn" style="padding:0.2rem 0.45rem; font-size:0.75rem; background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8;" onclick="editPersonnel('${escapeJsString(item.id)}', '${escapeJsString(item.name)}', '${escapeJsString(item.id_card)}', '${escapeJsString(item.domicile)}')">✏️ 编辑</button>
-          <button class="btn" style="padding:0.2rem 0.45rem; font-size:0.75rem; background:#fef2f2; border:1px solid #fecaca; color:#dc2626;" onclick="deletePersonnel('${escapeJsString(item.id)}')">🗑️ 删除</button>
+          <button class="btn" style="padding:0.2rem 0.45rem; font-size:0.75rem; background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8;" onclick="editPersonnel('${escapeJsString(item.id)}', '${escapeJsString(item.name)}', '${escapeJsString(item.id_card)}', '${escapeJsString(item.domicile)}')">编辑</button>
+          <button class="btn" style="padding:0.2rem 0.45rem; font-size:0.75rem; background:#fef2f2; border:1px solid #fecaca; color:#dc2626;" onclick="deletePersonnel('${escapeJsString(item.id)}')">删除</button>
         </td>
       </tr>
     `;
   }).join('');
+}
+
+function openAddPersonnelModal() {
+  document.getElementById('newPersonnelName').value = '';
+  document.getElementById('newPersonnelIdCard').value = '';
+  document.getElementById('newPersonnelDomicile').value = '';
+  const modal = document.getElementById('addPersonnelModal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeAddPersonnelModal() {
+  const modal = document.getElementById('addPersonnelModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function handleAddPersonnelSubmit(e) {
+  if (e) e.preventDefault();
+  const name = document.getElementById('newPersonnelName').value.trim();
+  const id_card = document.getElementById('newPersonnelIdCard').value.trim();
+  const domicile = document.getElementById('newPersonnelDomicile').value.trim();
+
+  if (!name) { showToast('人员姓名不能为空！', 'error'); return; }
+
+  try {
+    const res = await fetch('/api/personnel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, id_card, domicile, last_seen: new Date().toISOString() })
+    });
+    const json = await res.json();
+    if (json.success) {
+      showToast('涉事人员档案登记成功！');
+      closeAddPersonnelModal();
+      loadPersonnelArchive();
+    } else {
+      showToast(json.error || '登记失败', 'error');
+    }
+  } catch (err) {
+    showToast('网络请求错误: ' + err.message, 'error');
+  }
 }
 
 function editPersonnel(id, curName, curIdCard, curDomicile) {

@@ -959,25 +959,34 @@ app.post('/api/publish', (req, res) => {
         });
       }
 
-      // 如果配置并启用了第三方远程 FTP 服务器，自动将生成的 Zip 包上传至 FTP
+      // 如果配置并启用了第三方远程 FTP 服务器，自动将生成的 Zip 包上传至所有开启的 FTP
       let ftpNotice = ' (远程 FTP 未开启，包已存入本地网闸目录)';
       try {
-        if (fs.existsSync(SECURITY_CONFIG_FILE)) {
-          const sec = JSON.parse(fs.readFileSync(SECURITY_CONFIG_FILE, 'utf8'));
-          if (sec && sec.ftp_enabled && sec.ftp_host) {
+        const servers = getCollectorFtpServers();
+        const activeServers = servers.filter(s => s.ftp_enabled !== false && s.ftp_host);
+        if (activeServers.length > 0) {
+          let successCount = 0;
+          let failCount = 0;
+          for (const s of activeServers) {
             try {
-              const ftpRes = await uploadToRemoteFtp(result.zipPath, `${result.pkgName}.zip`, sec);
+              const ftpRes = await uploadToRemoteFtp(result.zipPath, `${result.pkgName}.zip`, s);
               const remoteName = (ftpRes && ftpRes.remoteFileName) ? ftpRes.remoteFileName : `${result.pkgName}.zip`;
-              ftpNotice = ` (已自动同步推送至 FTP 文件: ${remoteName})`;
-              addCollectorAuditLog('FTP_UPLOAD', `同步推送单据至远程 FTP 服务器 [${sec.ftp_host}:${sec.ftp_port || 21}${sec.ftp_remote_dir || '/'}/${remoteName}] 成功`, 'SUCCESS');
+              s.last_push_status = `成功: ${new Date().toLocaleTimeString('zh-CN')} 上传 ${remoteName}`;
+              addCollectorAuditLog('FTP_UPLOAD', `同步推送单据包至远程 FTP 节点 [${s.name || s.ftp_host} - ${s.ftp_host}:${s.ftp_port || 21}${s.ftp_remote_dir || '/'}/${remoteName}] 成功`, 'SUCCESS');
+              successCount++;
             } catch (ftpErr) {
-              console.error('[VFusion Collector] 同步远程 FTP 异常:', ftpErr);
-              ftpNotice = ` (推送远程 FTP 失败: ${ftpErr.message})`;
-              addCollectorAuditLog('ERROR', `推送到远程 FTP 服务器失败: ${ftpErr.message}`, 'WARN');
+              console.error(`[VFusion Collector] 同步远程 FTP [${s.name || s.ftp_host}] 异常:`, ftpErr);
+              s.last_push_status = `异常: ${ftpErr.message}`;
+              addCollectorAuditLog('ERROR', `推送到远程 FTP 节点 [${s.name || s.ftp_host}] 失败: ${ftpErr.message}`, 'WARN');
+              failCount++;
             }
           }
+          saveCollectorFtpServers(servers);
+          ftpNotice = ` (已同步推送至 ${successCount}/${activeServers.length} 个开启的 FTP 通道节点${failCount > 0 ? `，${failCount} 个节点报错` : ''})`;
         }
-      } catch (e) {}
+      } catch (e) {
+        console.error('[VFusion Collector] 多 FTP 推送引擎异常:', e);
+      }
 
       res.json({
         success: true,
@@ -996,6 +1005,172 @@ app.post('/api/publish', (req, res) => {
       res.status(500).json({ success: false, error: error.message });
     }
   });
+});
+
+function getCollectorFtpServers() {
+  try {
+    let sec = {};
+    if (fs.existsSync(SECURITY_CONFIG_FILE)) {
+      sec = JSON.parse(fs.readFileSync(SECURITY_CONFIG_FILE, 'utf8'));
+    }
+    if (Array.isArray(sec.collector_ftp_servers)) {
+      return sec.collector_ftp_servers;
+    }
+    if (sec.ftp_host) {
+      const defaultServer = {
+        id: 'ftp_coll_' + Date.now(),
+        name: '视频网默认 FTP 节点',
+        ftp_host: sec.ftp_host,
+        ftp_port: sec.ftp_port || 21,
+        ftp_user: sec.ftp_user || '',
+        ftp_password: sec.ftp_password || '',
+        ftp_remote_dir: sec.ftp_remote_dir || '/vfusion_packages',
+        pkg_prefix: sec.pkg_prefix || 'vfusion_',
+        ftp_file_ext: sec.ftp_file_ext || '.jpg',
+        ftp_enabled: sec.ftp_enabled !== false,
+        last_push_status: '初始化归档',
+        created_at: new Date().toISOString()
+      };
+      sec.collector_ftp_servers = [defaultServer];
+      writeJsonAtomic(SECURITY_CONFIG_FILE, sec);
+      return sec.collector_ftp_servers;
+    }
+    return [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveCollectorFtpServers(servers) {
+  let sec = {};
+  if (fs.existsSync(SECURITY_CONFIG_FILE)) {
+    sec = JSON.parse(fs.readFileSync(SECURITY_CONFIG_FILE, 'utf8'));
+  }
+  sec.collector_ftp_servers = servers;
+  writeJsonAtomic(SECURITY_CONFIG_FILE, sec);
+}
+
+// 视频网采集端：多 FTP 服务器节点 CRUD REST API
+app.get('/api/ftp/servers', (req, res) => {
+  const servers = getCollectorFtpServers();
+  const safeServers = servers.map(s => ({
+    ...s,
+    ftp_password: s.ftp_password ? '********' : ''
+  }));
+  res.json({ success: true, data: safeServers });
+});
+
+app.post('/api/ftp/servers', requireRole('admin'), (req, res) => {
+  try {
+    const { name, ftp_host, ftp_port, ftp_user, ftp_password, ftp_remote_dir, pkg_prefix, ftp_file_ext, ftp_enabled } = req.body;
+    if (!ftp_host || !ftp_host.trim()) {
+      return res.status(400).json({ success: false, error: 'FTP 服务器 IP / 域名不能为空' });
+    }
+    const servers = getCollectorFtpServers();
+    const newServer = {
+      id: 'ftp_coll_' + Date.now(),
+      name: name && name.trim() ? name.trim() : `视频网 FTP_${ftp_host}`,
+      ftp_host: ftp_host.trim(),
+      ftp_port: parseInt(ftp_port) || 21,
+      ftp_user: (ftp_user || '').trim(),
+      ftp_password: ftp_password || '',
+      ftp_remote_dir: (ftp_remote_dir || '/vfusion_packages').trim(),
+      pkg_prefix: (pkg_prefix || 'vfusion_').trim(),
+      ftp_file_ext: ftp_file_ext || '.jpg',
+      ftp_enabled: ftp_enabled !== false,
+      last_push_status: '新注册未推送',
+      created_at: new Date().toISOString()
+    };
+    servers.push(newServer);
+    saveCollectorFtpServers(servers);
+    addCollectorAuditLog('FTP_CONFIG', `视频网端注册新增 FTP 服务器节点 [${newServer.name} - ${newServer.ftp_host}:${newServer.ftp_port}]`, 'SUCCESS');
+    res.json({ success: true, message: 'FTP 节点注册添加成功', data: newServer });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.put('/api/ftp/servers/:id', requireRole('admin'), (req, res) => {
+  try {
+    const { id } = req.params;
+    const servers = getCollectorFtpServers();
+    const idx = servers.findIndex(s => String(s.id) === String(id));
+    if (idx === -1) return res.status(404).json({ success: false, error: '未找到指定的 FTP 节点' });
+
+    const target = servers[idx];
+    const { name, ftp_host, ftp_port, ftp_user, ftp_password, ftp_remote_dir, pkg_prefix, ftp_file_ext, ftp_enabled } = req.body;
+
+    if (name !== undefined) target.name = name;
+    if (ftp_host !== undefined) target.ftp_host = ftp_host;
+    if (ftp_port !== undefined) target.ftp_port = parseInt(ftp_port) || 21;
+    if (ftp_user !== undefined) target.ftp_user = ftp_user;
+    if (ftp_password !== undefined && ftp_password !== '********') target.ftp_password = ftp_password;
+    if (ftp_remote_dir !== undefined) target.ftp_remote_dir = ftp_remote_dir;
+    if (pkg_prefix !== undefined) target.pkg_prefix = pkg_prefix;
+    if (ftp_file_ext !== undefined) target.ftp_file_ext = ftp_file_ext;
+    if (ftp_enabled !== undefined) target.ftp_enabled = ftp_enabled;
+
+    saveCollectorFtpServers(servers);
+    addCollectorAuditLog('FTP_CONFIG', `视频网端更新 FTP 服务器节点配置 [${target.name}]`, 'SUCCESS');
+    res.json({ success: true, message: 'FTP 节点配置更新成功' });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.patch('/api/ftp/servers/:id/toggle', requireRole('admin'), (req, res) => {
+  try {
+    const { id } = req.params;
+    const { enabled } = req.body;
+    const servers = getCollectorFtpServers();
+    const target = servers.find(s => String(s.id) === String(id));
+    if (!target) return res.status(404).json({ success: false, error: '未找到指定的 FTP 节点' });
+
+    target.ftp_enabled = !!enabled;
+    saveCollectorFtpServers(servers);
+    addCollectorAuditLog('FTP_CONFIG', `视频网端 ${enabled ? '开启' : '关闭'} FTP 通道节点 [${target.name}]`, 'SUCCESS');
+    res.json({ success: true, message: `FTP 通道节点已${enabled ? '开启' : '关闭'}` });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.delete('/api/ftp/servers/:id', requireRole('admin'), (req, res) => {
+  try {
+    const { id } = req.params;
+    let servers = getCollectorFtpServers();
+    const target = servers.find(s => String(s.id) === String(id));
+    servers = servers.filter(s => String(s.id) !== String(id));
+    saveCollectorFtpServers(servers);
+    addCollectorAuditLog('FTP_CONFIG', `视频网端移除 FTP 通道节点 [${target ? target.name : id}]`, 'SUCCESS');
+    res.json({ success: true, message: 'FTP 节点已移除' });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.post('/api/ftp/servers/:id/test', requireRole('admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const servers = getCollectorFtpServers();
+    let config;
+    if (id === 'new') {
+      config = { ...req.body };
+    } else {
+      const target = servers.find(s => String(s.id) === String(id));
+      if (!target) return res.status(404).json({ success: false, error: '未找到指定的 FTP 节点' });
+      config = { ...target, ...req.body };
+      if (!config.ftp_password || config.ftp_password === '********') {
+        config.ftp_password = target.ftp_password || '';
+      }
+    }
+    const testResult = await testFtpConnection(config);
+    addCollectorAuditLog('FTP_TEST', `视频网端测试 FTP 节点 [${config.name || config.ftp_host}] 连通性成功`, 'SUCCESS');
+    res.json(testResult);
+  } catch (err) {
+    addCollectorAuditLog('FTP_TEST', `视频网端测试 FTP 连通性失败: ${err.message}`, 'WARN');
+    res.status(400).json({ success: false, error: err.message });
+  }
 });
 
 // 视频网采集端：获取与保存 FTP 与 HMAC 配置 API

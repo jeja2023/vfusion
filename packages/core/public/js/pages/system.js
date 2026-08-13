@@ -181,7 +181,7 @@ async function testFtpServerConnection() {
         box.style.background = '#f0fdf4';
         box.style.border = '1px solid #bbf7d0';
         box.style.color = '#15803d';
-        box.innerText = `✓ ${json.message}`;
+        box.innerText = `[成功] ${json.message}`;
       }
       showToast('FTP 远程服务器连通性测试通过！');
     } else {
@@ -189,7 +189,7 @@ async function testFtpServerConnection() {
         box.style.background = '#fef2f2';
         box.style.border = '1px solid #fecaca';
         box.style.color = '#b91c1c';
-        box.innerText = `✕ 测试失败: ${json.error}`;
+        box.innerText = `[失败] 测试失败: ${json.error}`;
       }
       showToast(json.error, 'error');
     }
@@ -198,7 +198,7 @@ async function testFtpServerConnection() {
       box.style.background = '#fef2f2';
       box.style.border = '1px solid #fecaca';
       box.style.color = '#b91c1c';
-      box.innerText = `✕ 网络错误: ${e.message}`;
+      box.innerText = `[失败] 网络错误: ${e.message}`;
     }
     showToast('无法连接到服务端校验接口', 'error');
   }
@@ -240,7 +240,7 @@ async function uploadWebPatchUpgrade() {
         statusBox.style.background = '#f0fdf4';
         statusBox.style.border = '1px solid #bbf7d0';
         statusBox.style.color = '#15803d';
-        statusBox.innerText = `✓ ${json.message}`;
+        statusBox.innerText = `[成功] ${json.message}`;
       }
       showToast('补丁更新成功！服务将在 3 秒内自动平滑重载。');
       setTimeout(() => {
@@ -251,7 +251,7 @@ async function uploadWebPatchUpgrade() {
         statusBox.style.background = '#fef2f2';
         statusBox.style.border = '1px solid #fecaca';
         statusBox.style.color = '#b91c1c';
-        statusBox.innerText = `✕ 升级失败: ${json.error}`;
+        statusBox.innerText = `[失败] 升级失败: ${json.error}`;
       }
       showToast(json.error || '在线平滑升级失败', 'error');
     }
@@ -260,7 +260,7 @@ async function uploadWebPatchUpgrade() {
       statusBox.style.background = '#fef2f2';
       statusBox.style.border = '1px solid #fecaca';
       statusBox.style.color = '#b91c1c';
-      statusBox.innerText = `✕ 传输网络异常: ${e.message}`;
+      statusBox.innerText = `[失败] 传输网络异常: ${e.message}`;
     }
     showToast('上传补丁包发生网络错误', 'error');
   }
@@ -277,14 +277,14 @@ function onUpgradeFileSelected(input) {
     const sizeKB = (file.size / 1024).toFixed(1);
     const sizeStr = file.size > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
 
-    if (titleEl) titleEl.innerText = `✓ 已选择: ${file.name}`;
+    if (titleEl) titleEl.innerText = `[已选择]: ${file.name}`;
     if (subEl) subEl.innerText = `文件体积: ${sizeStr} (点击更换文件)`;
     if (dropzone) {
       dropzone.style.background = '#f0fdf4';
       dropzone.style.borderColor = '#4ade80';
     }
   } else {
-    if (titleEl) titleEl.innerText = '📁 点击或拖拽上传补丁包 (.zip)';
+    if (titleEl) titleEl.innerText = '点击或拖拽上传补丁包 (.zip)';
     if (subEl) subEl.innerText = '支持选择 vfusion-patch-v*.zip 增量升级文件';
     if (dropzone) {
       dropzone.style.background = '#ffffff';

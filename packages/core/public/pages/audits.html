@@ -5,7 +5,7 @@
   </div>
   
   <div class="filter-bar">
-    <input type="text" id="auditKeyword" placeholder="搜索审计事件/描述信息..." oninput="loadFullAuditLogs()">
+    <input type="text" id="auditKeyword" placeholder="搜索审计事件/描述信息..." oninput="loadFullAuditLogs()" autocomplete="off">
     <select id="auditStatusFilter" onchange="loadFullAuditLogs()">
       <option value="">所有状态级别</option>
       <option value="SUCCESS">成功 (SUCCESS)</option>

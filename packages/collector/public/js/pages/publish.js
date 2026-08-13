@@ -150,7 +150,7 @@ function renderDynamicForm(fields) {
     } else if (field.type === 'textarea') {
       inputHtml = `<textarea name="${safeKey}" placeholder="请输入${safeLabel}" style="height:60px; min-height:54px;" ${field.required ? 'required' : ''}>${safeVal}</textarea>`;
     } else {
-      inputHtml = `<input type="text" name="${safeKey}" value="${safeVal}" placeholder="请输入${safeLabel}" ${field.required ? 'required' : ''}>`;
+      inputHtml = `<input type="text" name="${safeKey}" value="${safeVal}" placeholder="请输入${safeLabel}" autocomplete="off" ${field.required ? 'required' : ''}>`;
     }
 
     group.innerHTML = `
@@ -211,8 +211,8 @@ function renderFilePreviews() {
     <div style="display:flex; flex-direction:column; width:100%; height:100%; min-height:280px; position:relative; background:#0f172a; border-radius:10px; overflow:hidden;">
       <div style="flex:1; display:flex; align-items:center; justify-content:center; padding:0.75rem; position:relative; min-height:220px; overflow:hidden;" onclick="event.stopPropagation(); if(typeof openImageLightbox === 'function') openImageLightbox('${imgUrl}', '抓拍照片预览: ${escapeHtml(file.name)}')">
         <img src="${imgUrl}" style="max-width:100%; max-height:250px; width:auto; height:auto; object-fit:contain; border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.5); cursor:pointer;" title="点击放大预览: ${escapeHtml(file.name)}">
-        <div style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); color:#fff; font-size:0.725rem; padding:3px 8px; border-radius:12px; border:1px solid rgba(255,255,255,0.2); pointer-events:none;">
-          🔍 点击放大预览
+        <div style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); color:#fff; font-size:0.725rem; padding:3px 8px; border-radius:12px; border:1px solid rgba(255,255,255,0.2); pointer-events:none; display:flex; align-items:center; gap:0.25rem;">
+          <svg viewBox="0 0 24 24" style="width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:2;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> 点击放大预览
         </div>
       </div>
       <div style="background:rgba(15,23,42,0.92); backdrop-filter:blur(4px); padding:0.6rem 0.85rem; border-top:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; color:#fff; font-size:0.8rem; z-index:10;" onclick="event.stopPropagation()">
@@ -300,11 +300,11 @@ function bindPublishFormSubmit() {
     formData.append('event_id', 'EVT_' + Date.now());
 
     if (currentUser) {
-      formData.append('operator', `${currentUser.name} (${currentUser.username})`);
+      formData.append('operator', formatUserWithRealName(currentUser.username, currentUser.name));
       formData.append('operator_username', currentUser.username);
       formData.append('operator_name', currentUser.name);
     } else {
-      formData.append('operator', '视频网操作员 (operator)');
+      formData.append('operator', 'operator (视频网操作员)');
       formData.append('operator_username', 'operator');
       formData.append('operator_name', '视频网操作员');
     }

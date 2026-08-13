@@ -1,4 +1,5 @@
 let evtCurrentPage = 1, evtPageSize = 10;
+let taskCurrentPage = 1, taskPageSize = 10;
 let coreTasksData = [];
 let coreViewMode = 'event';
 let currentCorePhotos = [];
@@ -117,12 +118,26 @@ function renderTaskMatrix() {
     return matchKw && matchTask;
   });
 
-  if (filteredTasks.length === 0) {
+  const totalCount = filteredTasks.length;
+  const totalPages = Math.ceil(totalCount / taskPageSize) || 1;
+  if (taskCurrentPage > totalPages) taskCurrentPage = totalPages;
+  if (taskCurrentPage < 1) taskCurrentPage = 1;
+
+  if (document.getElementById('taskTotalCount')) document.getElementById('taskTotalCount').innerText = totalCount;
+  if (document.getElementById('taskCurrentPageText')) document.getElementById('taskCurrentPageText').innerText = taskCurrentPage;
+  if (document.getElementById('taskTotalPagesText')) document.getElementById('taskTotalPagesText').innerText = totalPages;
+  if (document.getElementById('taskPrevBtn')) document.getElementById('taskPrevBtn').disabled = taskCurrentPage <= 1;
+  if (document.getElementById('taskNextBtn')) document.getElementById('taskNextBtn').disabled = taskCurrentPage >= totalPages;
+
+  if (totalCount === 0) {
     tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:3rem; color:var(--text-muted);">暂无匹配的已摆渡汇聚任务数据</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = filteredTasks.map((t, idx) => {
+  const paged = filteredTasks.slice((taskCurrentPage - 1) * taskPageSize, taskCurrentPage * taskPageSize);
+
+  tbody.innerHTML = paged.map((t, idx) => {
+    const globalIdx = (taskCurrentPage - 1) * taskPageSize + idx + 1;
     const isActive = t.status === 'ACTIVE';
     const statusBadge = isActive
       ? `<span style="background:#e0f2fe; color:#0284c7; font-size:0.75rem; font-weight:700; padding:0.2rem 0.5rem; border-radius:4px; border:1px solid #bae6fd;">进行中</span>`
@@ -130,11 +145,11 @@ function renderTaskMatrix() {
 
     const latestTime = t.latest_timestamp ? new Date(t.latest_timestamp).toLocaleString() : '暂无数据';
     const rawContributors = (t.contributors && t.contributors.length > 0) ? t.contributors : [t.creator_name || t.creator_username || '视频网操作员'];
-    const contributors = rawContributors.map(c => typeof c === 'string' ? c.split('(')[0].trim() : c).join(', ');
+    const contributors = rawContributors.map(c => formatUserForTable(c)).join(', ');
 
     return `
       <tr style="cursor:pointer;" onclick="openTaskDetailDrawer('${escapeJsString(t.task_code)}')">
-        <td class="col-idx" style="font-weight:600; color:#64748b;">${idx + 1}</td>
+        <td class="col-idx" style="font-weight:600; color:#64748b;">${globalIdx}</td>
         <td>
           <strong style="color:var(--text-main); font-size:0.875rem;">${escapeHtml(t.task_name)}</strong>
         </td>
@@ -160,6 +175,10 @@ function renderTaskMatrix() {
     `;
   }).join('');
 }
+
+function changeTaskPageSize(val) { taskPageSize = parseInt(val); taskCurrentPage = 1; renderTaskMatrix(); }
+function prevTaskPage() { if (taskCurrentPage > 1) { taskCurrentPage--; renderTaskMatrix(); } }
+function nextTaskPage() { taskCurrentPage++; renderTaskMatrix(); }
 
 async function openTaskDetailDrawer(taskCode) {
   try {
@@ -251,7 +270,7 @@ async function openTaskDetailDrawer(taskCode) {
             ${field('任务编号', escapeHtml(t.task_code || '-'), true)}
             ${field('任务状态', `<span style="background:${sBg}; color:${sColor}; padding:0.1rem 0.5rem; border-radius:4px; font-weight:600; font-size:0.775rem;">${sLabel}</span>`)}
             ${field('任务说明', escapeHtml(t.description || '无任务说明'))}
-            ${field('创建人', escapeHtml((t.creator_name || t.creator_username || '-').split('(')[0].trim()))}
+            ${field('创建人', escapeHtml(formatUserWithRealName(t.creator_username, t.creator_name)))}
           </div>
 
           <!-- 数据统计 -->
@@ -385,7 +404,7 @@ function renderEvents() {
     const p = item.payload || {};
 
     const imgsHtml = (item.files || []).map(f =>
-      `<img src="${escapeHtml(f.url)}" style="width:34px; height:34px; object-fit:cover; border-radius:6px; border:1px solid var(--border-color); cursor:pointer; transition:transform 0.15s;" onclick="event.stopPropagation(); openImageLightbox('${escapeJsString(f.url)}', '现场照片放大预览 (${escapeJsString(f.filename || '001.jpg')})')" title="点击在弹窗中放大查看">`
+      `<img src="${escapeHtml(f.url)}" style="width:24px; height:24px; object-fit:cover; border-radius:4px; border:1px solid var(--border-color); cursor:pointer; transition:transform 0.15s;" onclick="event.stopPropagation(); openImageLightbox('${escapeJsString(f.url)}', '现场照片放大预览 (${escapeJsString(f.filename || '001.jpg')})')" title="点击在弹窗中放大查看">`
     ).join(' ');
 
     const personStr = p.person_name
@@ -398,7 +417,7 @@ function renderEvents() {
         <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(item.event_id)}"><strong style="color:var(--primary); font-family:monospace; font-size:0.8rem;">${escapeHtml(item.event_id)}</strong></td>
         <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(item.task_name || '')}"><strong style="color:var(--text-main); font-weight:700; font-size:0.8rem;">${escapeHtml(item.task_name || '-')}</strong></td>
         <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:0.775rem; color:var(--text-sub);">${escapeHtml(new Date(item.submit_time || item.timestamp).toLocaleString())}</td>
-        <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><span style="font-weight:600; color:var(--text-main); font-size:0.8rem;">${escapeHtml((item.operator_name || item.operator || '-').split('(')[0].trim())}</span></td>
+        <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><span style="font-weight:600; color:var(--text-main); font-size:0.8rem;">${escapeHtml(formatUserForTable(item.operator_name || item.operator))}</span></td>
         <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(p.location || '-')}"><span style="font-weight:500; font-size:0.8rem;">${escapeHtml(p.location || '-')}</span></td>
         <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><span class="ai-tag-badge" style="background:#f0f9ff; color:#0369a1; border-color:#bae6fd; font-weight:600; font-size:0.75rem;">${escapeHtml(p.transportation || '-')}</span></td>
         <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${personStr}</td>

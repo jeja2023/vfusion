@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { writeJsonAtomic } = require('./json_store');
 
 /**
  * 视汇 (VFusion) 嵌入式 SQLite 高性能数据库引擎
@@ -18,6 +19,9 @@ class SQLiteStorageEngine {
     this.dbPath = dbPath;
     this.db = null;
     this.isNative = false;
+    this.eventIdCounter = Date.now();
+    this.taskIdCounter = Date.now();
+    this.pendingWrites = Promise.resolve();
     this.init();
   }
 
@@ -31,6 +35,9 @@ class SQLiteStorageEngine {
         if (err) console.error('[VFusion SQLite] 连接数据库失败:', err);
         else console.log(`[VFusion SQLite] 已连接到 SQLite 数据库文件: ${path.basename(this.dbPath)}`);
       });
+
+      this.db.run('PRAGMA journal_mode = WAL');
+      this.db.run('PRAGMA busy_timeout = 5000');
 
       this.createTablesNative();
     }
@@ -127,99 +134,109 @@ class SQLiteStorageEngine {
         )
       `);
       this.db.run(`ALTER TABLE tasks ADD COLUMN shared_users TEXT DEFAULT '[]'`, () => {});
+      this.db.run('CREATE INDEX IF NOT EXISTS idx_events_task_code ON events(task_code)');
+      this.db.run('CREATE INDEX IF NOT EXISTS idx_events_app_id ON events(app_id)');
+      this.db.run('CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events(timestamp)');
+      this.db.run('CREATE INDEX IF NOT EXISTS idx_tasks_share_code ON tasks(share_code)');
     });
+  }
+
+  parseJson(value, fallback) {
+    try { return typeof value === 'string' ? JSON.parse(value || JSON.stringify(fallback)) : (value ?? fallback); }
+    catch (e) { return fallback; }
+  }
+
+  writeFallback(filePath, list) {
+    writeJsonAtomic(filePath, list);
   }
 
   // 写入事件单据
   saveEvent(record) {
-    if (this.isNative && this.db) {
-      const stmt = this.db.prepare(`
-        INSERT OR REPLACE INTO events (id, app_id, biz_type, event_id, task_name, task_code, timestamp, operator, payload, files, zip_hash, signature, ai_tags, status, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-      stmt.run(
-        record.id || Date.now(),
-        record.app_id || 'sys_gate_security',
-        record.biz_type || 'GENERAL',
-        record.event_id,
-        record.task_name || '默认安防巡检任务',
-        record.task_code || 'TASK_DEFAULT',
-        record.timestamp,
-        record.operator,
-        JSON.stringify(record.payload || {}),
-        JSON.stringify(record.files || []),
-        record.zip_hash,
-        record.signature,
-        JSON.stringify(record.ai_tags || []),
-        record.status || 'RECEIVED',
-        record.created_at || new Date().toISOString()
-      );
-      stmt.finalize();
-    }
-    // 同时也写一份降级 JSON 备份文件，确保绝无数据丢包
-    try {
+    const norm = {
+      id: record.id || ++this.eventIdCounter,
+      app_id: record.app_id || 'sys_gate_security',
+      biz_type: record.biz_type || 'GENERAL',
+      event_id: record.event_id,
+      task_name: record.task_name || '默认安防巡检任务',
+      task_code: record.task_code || 'TASK_DEFAULT',
+      timestamp: record.timestamp,
+      operator: record.operator,
+      payload: record.payload || {},
+      files: record.files || [],
+      zip_hash: record.zip_hash || '',
+      signature: record.signature || '',
+      ai_tags: record.ai_tags || [],
+      status: record.status || 'RECEIVED',
+      created_at: record.created_at || new Date().toISOString()
+    };
+    if (!this.isNative || !this.db) {
       const jsonPath = `${this.dbPath}.fallback.json`;
-      let list = [];
-      if (fs.existsSync(jsonPath)) {
-        list = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
-      }
-      const existingIdx = list.findIndex(e => e.event_id === record.event_id);
-      const norm = {
-        id: record.id || Date.now(),
-        app_id: record.app_id || 'sys_gate_security',
-        biz_type: record.biz_type || 'GENERAL',
-        event_id: record.event_id,
-        task_name: record.task_name || '默认安防巡检任务',
-        task_code: record.task_code || 'TASK_DEFAULT',
-        timestamp: record.timestamp,
-        operator: record.operator,
-        payload: record.payload || {},
-        files: record.files || [],
-        zip_hash: record.zip_hash || '',
-        signature: record.signature || '',
-        ai_tags: record.ai_tags || [],
-        status: record.status || 'RECEIVED',
-        created_at: record.created_at || new Date().toISOString()
-      };
-      if (existingIdx >= 0) list[existingIdx] = norm;
-      else list.unshift(norm);
-      fs.writeFileSync(jsonPath, JSON.stringify(list, null, 2), 'utf8');
-    } catch (e) {}
+      let list = this.parseJson(fs.existsSync(jsonPath) ? fs.readFileSync(jsonPath, 'utf8') : '[]', []);
+      const existingIdx = list.findIndex(e => e.event_id === norm.event_id);
+      if (existingIdx >= 0) list[existingIdx] = norm; else list.unshift(norm);
+      this.writeFallback(jsonPath, list);
+      return Promise.resolve(norm);
+    }
+    const operation = () => new Promise((resolve, reject) => {
+      this.db.serialize(() => this.db.run(`
+        INSERT INTO events (id, app_id, biz_type, event_id, task_name, task_code, timestamp, operator, payload, files, zip_hash, signature, ai_tags, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(event_id) DO UPDATE SET
+          app_id=excluded.app_id, biz_type=excluded.biz_type, task_name=excluded.task_name,
+          task_code=excluded.task_code, timestamp=excluded.timestamp, operator=excluded.operator,
+          payload=excluded.payload, files=excluded.files, zip_hash=excluded.zip_hash,
+          signature=excluded.signature, ai_tags=excluded.ai_tags, status=excluded.status,
+          created_at=excluded.created_at
+      `, [norm.id, norm.app_id, norm.biz_type, norm.event_id, norm.task_name, norm.task_code, norm.timestamp, norm.operator,
+        JSON.stringify(norm.payload), JSON.stringify(norm.files), norm.zip_hash, norm.signature, JSON.stringify(norm.ai_tags), norm.status, norm.created_at], function (err) {
+        if (err) return reject(err);
+        resolve(norm);
+      }));
+    });
+    this.pendingWrites = this.pendingWrites.catch(() => {}).then(operation);
+    return this.pendingWrites.then(() => norm);
   }
 
   // 查询事件单据列表
-  getEvents(appId = null) {
+  getEvents(appId = null, options = {}) {
+    const limit = Math.min(Math.max(Number(options.limit) || 1000, 1), 5000);
+    const offset = Math.max(Number(options.offset) || 0, 0);
+    const taskCode = options.taskCode || null;
     return new Promise((resolve) => {
       if (this.isNative && this.db) {
-        let sql = 'SELECT * FROM events ORDER BY id DESC';
+        let sql = 'SELECT * FROM events WHERE 1=1';
         let params = [];
-        if (appId) {
-          sql = 'SELECT * FROM events WHERE app_id = ? ORDER BY id DESC';
-          params = [appId];
-        }
-        this.db.all(sql, params, (err, rows) => {
-          if (err || !rows || rows.length === 0) return resolve(this.getFallbackEvents(appId));
+        if (appId) { sql += ' AND app_id = ?'; params.push(appId); }
+        if (taskCode) { sql += ' AND task_code = ?'; params.push(taskCode); }
+        sql += ' ORDER BY id DESC LIMIT ? OFFSET ?';
+        params.push(limit, offset);
+        this.pendingWrites.then(() => this.db.all(sql, params, (err, rows) => {
+          if (err) return resolve(this.getFallbackEvents(appId, { taskCode, limit, offset }));
+          if (!rows || rows.length === 0) return resolve([]);
           const results = rows.map(r => ({
             ...r,
-            payload: typeof r.payload === 'string' ? JSON.parse(r.payload || '{}') : (r.payload || {}),
-            files: typeof r.files === 'string' ? JSON.parse(r.files || '[]') : (r.files || []),
-            ai_tags: typeof r.ai_tags === 'string' ? JSON.parse(r.ai_tags || '[]') : (r.ai_tags || [])
+            payload: this.parseJson(r.payload, {}),
+            files: this.parseJson(r.files, []),
+            ai_tags: this.parseJson(r.ai_tags, [])
           }));
           resolve(results);
-        });
+        })).catch(() => resolve([]));
       } else {
-        resolve(this.getFallbackEvents(appId));
+        resolve(this.getFallbackEvents(appId, { taskCode, limit, offset }));
       }
     });
   }
 
-  getFallbackEvents(appId = null) {
+  getFallbackEvents(appId = null, options = {}) {
     try {
       const jsonPath = `${this.dbPath}.fallback.json`;
       if (fs.existsSync(jsonPath)) {
-        let list = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+        let list = this.parseJson(fs.readFileSync(jsonPath, 'utf8'), []);
         if (appId) list = list.filter(e => e.app_id === appId);
-        return list;
+        if (options.taskCode) list = list.filter(e => e.task_code === options.taskCode);
+        const limit = Math.min(Math.max(Number(options.limit) || 1000, 1), 5000);
+        const offset = Math.max(Number(options.offset) || 0, 0);
+        return list.slice(offset, offset + limit);
       }
     } catch (e) {}
     return [];
@@ -227,14 +244,13 @@ class SQLiteStorageEngine {
 
   // 写入审计日志
   addAuditLog(type, message, status = 'INFO') {
-    if (this.isNative && this.db) {
-      const stmt = this.db.prepare(`
-        INSERT INTO audit_logs (id, timestamp, type, message, status)
-        VALUES (?, ?, ?, ?, ?)
-      `);
-      stmt.run(Date.now(), new Date().toISOString(), type, message, status);
-      stmt.finalize();
-    }
+    if (!this.isNative || !this.db) return Promise.resolve();
+    const operation = () => new Promise((resolve, reject) => this.db.serialize(() => this.db.run(`
+      INSERT INTO audit_logs (id, timestamp, type, message, status)
+      VALUES (?, ?, ?, ?, ?)
+    `, [Date.now(), new Date().toISOString(), type, message, status], err => err ? reject(err) : resolve())));
+    this.pendingWrites = this.pendingWrites.catch(() => {}).then(operation);
+    return this.pendingWrites;
   }
 
   // 获取审计日志
@@ -256,10 +272,10 @@ class SQLiteStorageEngine {
           params.push(typeFilter);
         }
         sql += ' ORDER BY id DESC LIMIT 300';
-        this.db.all(sql, params, (err, rows) => {
+        this.pendingWrites.then(() => this.db.all(sql, params, (err, rows) => {
           if (err) return resolve([]);
           resolve(rows);
-        });
+        })).catch(() => resolve([]));
       } else {
         resolve([]);
       }
@@ -269,9 +285,9 @@ class SQLiteStorageEngine {
   // 任务管理: 保存/更新任务
   saveTask(task) {
     const now = new Date().toISOString();
-    const sharedUsersArr = Array.isArray(task.shared_users) ? task.shared_users : (typeof task.shared_users === 'string' ? (JSON.parse(task.shared_users || '[]')) : []);
+    const sharedUsersArr = Array.isArray(task.shared_users) ? task.shared_users : this.parseJson(task.shared_users, []);
     const taskRecord = {
-      id: task.id || Date.now(),
+      id: task.id || ++this.taskIdCounter,
       task_code: task.task_code,
       task_name: task.task_name || '未命名任务',
       description: task.description || '',
@@ -285,55 +301,41 @@ class SQLiteStorageEngine {
       updated_at: now
     };
 
-    if (this.isNative && this.db) {
-      const stmt = this.db.prepare(`
-        INSERT OR REPLACE INTO tasks (id, task_code, task_name, description, creator_username, creator_name, share_code, is_shared, shared_users, status, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-      stmt.run(
-        taskRecord.id,
-        taskRecord.task_code,
-        taskRecord.task_name,
-        taskRecord.description,
-        taskRecord.creator_username,
-        taskRecord.creator_name,
-        taskRecord.share_code,
-        taskRecord.is_shared,
-        JSON.stringify(taskRecord.shared_users),
-        taskRecord.status,
-        taskRecord.created_at,
-        taskRecord.updated_at
-      );
-      stmt.finalize();
-    }
-
-    try {
+    if (!this.isNative || !this.db) {
       const jsonPath = `${this.dbPath}.tasks_fallback.json`;
-      let list = [];
-      if (fs.existsSync(jsonPath)) {
-        list = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
-      }
+      let list = fs.existsSync(jsonPath) ? this.parseJson(fs.readFileSync(jsonPath, 'utf8'), []) : [];
       const existingIdx = list.findIndex(t => t.task_code === taskRecord.task_code);
       if (existingIdx >= 0) list[existingIdx] = { ...list[existingIdx], ...taskRecord };
       else list.unshift(taskRecord);
-      fs.writeFileSync(jsonPath, JSON.stringify(list, null, 2), 'utf8');
-    } catch (e) {}
-
-    return taskRecord;
+      this.writeFallback(jsonPath, list);
+      return Promise.resolve(taskRecord);
+    }
+    const operation = () => new Promise((resolve, reject) => this.db.serialize(() => this.db.run(`
+      INSERT INTO tasks (id, task_code, task_name, description, creator_username, creator_name, share_code, is_shared, shared_users, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(task_code) DO UPDATE SET task_name=excluded.task_name, description=excluded.description,
+        creator_username=excluded.creator_username, creator_name=excluded.creator_name, share_code=excluded.share_code,
+        is_shared=excluded.is_shared, shared_users=excluded.shared_users, status=excluded.status,
+        created_at=excluded.created_at, updated_at=excluded.updated_at
+    `, [taskRecord.id, taskRecord.task_code, taskRecord.task_name, taskRecord.description, taskRecord.creator_username,
+      taskRecord.creator_name, taskRecord.share_code, taskRecord.is_shared, JSON.stringify(taskRecord.shared_users),
+      taskRecord.status, taskRecord.created_at, taskRecord.updated_at], err => err ? reject(err) : resolve(taskRecord))));
+    this.pendingWrites = this.pendingWrites.catch(() => {}).then(operation);
+    return this.pendingWrites.then(() => taskRecord);
   }
 
   // 获取所有任务
   getTasks() {
     return new Promise((resolve) => {
       if (this.isNative && this.db) {
-        this.db.all('SELECT * FROM tasks ORDER BY updated_at DESC', [], (err, rows) => {
+        this.pendingWrites.then(() => this.db.all('SELECT * FROM tasks ORDER BY updated_at DESC', [], (err, rows) => {
           if (err || !rows || rows.length === 0) return resolve(this.getFallbackTasks());
           resolve(rows.map(r => ({
             ...r,
             is_shared: Boolean(r.is_shared),
-            shared_users: Array.isArray(r.shared_users) ? r.shared_users : (typeof r.shared_users === 'string' ? (JSON.parse(r.shared_users || '[]')) : [])
+            shared_users: this.parseJson(r.shared_users, [])
           })));
-        });
+        })).catch(() => resolve(this.getFallbackTasks()));
       } else {
         resolve(this.getFallbackTasks());
       }
@@ -344,7 +346,7 @@ class SQLiteStorageEngine {
     try {
       const jsonPath = `${this.dbPath}.tasks_fallback.json`;
       if (fs.existsSync(jsonPath)) {
-        const list = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+        const list = this.parseJson(fs.readFileSync(jsonPath, 'utf8'), []);
         return list.map(t => ({
           ...t,
           shared_users: Array.isArray(t.shared_users) ? t.shared_users : []
@@ -357,14 +359,14 @@ class SQLiteStorageEngine {
   getTaskByCode(taskCode) {
     return new Promise((resolve) => {
       if (this.isNative && this.db) {
-        this.db.get('SELECT * FROM tasks WHERE task_code = ? OR share_code = ?', [taskCode, taskCode], (err, row) => {
+        this.pendingWrites.then(() => this.db.get('SELECT * FROM tasks WHERE task_code = ? OR share_code = ?', [taskCode, taskCode], (err, row) => {
           if (err || !row) return resolve(this.getFallbackTasks().find(t => t.task_code === taskCode || t.share_code === taskCode) || null);
           resolve({
             ...row,
             is_shared: Boolean(row.is_shared),
-            shared_users: Array.isArray(row.shared_users) ? row.shared_users : (typeof row.shared_users === 'string' ? (JSON.parse(row.shared_users || '[]')) : [])
+            shared_users: this.parseJson(row.shared_users, [])
           });
-        });
+        })).catch(() => resolve(null));
       } else {
         resolve(this.getFallbackTasks().find(t => t.task_code === taskCode || t.share_code === taskCode) || null);
       }
@@ -373,81 +375,74 @@ class SQLiteStorageEngine {
 
   updateTaskStatus(taskCode, status) {
     const now = new Date().toISOString();
-    if (this.isNative && this.db) {
-      this.db.run('UPDATE tasks SET status = ?, updated_at = ? WHERE task_code = ?', [status, now, taskCode]);
-    }
-    try {
+    if (!this.isNative || !this.db) {
       const jsonPath = `${this.dbPath}.tasks_fallback.json`;
       if (fs.existsSync(jsonPath)) {
-        let list = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+        let list = this.parseJson(fs.readFileSync(jsonPath, 'utf8'), []);
         const t = list.find(x => x.task_code === taskCode);
         if (t) { t.status = status; t.updated_at = now; }
-        fs.writeFileSync(jsonPath, JSON.stringify(list, null, 2), 'utf8');
+        this.writeFallback(jsonPath, list);
       }
-    } catch (e) {}
+      return Promise.resolve();
+    }
+    const operation = () => new Promise((resolve, reject) => this.db.serialize(() => this.db.run('UPDATE tasks SET status = ?, updated_at = ? WHERE task_code = ?', [status, now, taskCode], err => err ? reject(err) : resolve())));
+    this.pendingWrites = this.pendingWrites.catch(() => {}).then(operation);
+    return this.pendingWrites;
   }
 
   // 编辑任务详情
-  updateTaskDetails(taskCode, updates = {}) {
+  async updateTaskDetails(taskCode, updates = {}) {
     const now = new Date().toISOString();
-    return new Promise((resolve) => {
-      this.getTaskByCode(taskCode).then(task => {
-        if (!task) return resolve(null);
-        const updatedTask = {
+    const task = await this.getTaskByCode(taskCode);
+    if (!task) return null;
+    const updatedTask = {
           ...task,
           task_name: updates.task_name !== undefined ? updates.task_name : task.task_name,
           description: updates.description !== undefined ? updates.description : task.description,
           is_shared: updates.is_shared !== undefined ? (updates.is_shared ? 1 : 0) : task.is_shared,
-          shared_users: updates.shared_users !== undefined ? (Array.isArray(updates.shared_users) ? updates.shared_users : (typeof updates.shared_users === 'string' ? JSON.parse(updates.shared_users || '[]') : [])) : (task.shared_users || []),
+          shared_users: updates.shared_users !== undefined ? (Array.isArray(updates.shared_users) ? updates.shared_users : this.parseJson(updates.shared_users, [])) : (task.shared_users || []),
           status: updates.status || task.status,
           updated_at: now
         };
-        if (this.isNative && this.db) {
-          this.db.run(
-            'UPDATE tasks SET task_name = ?, description = ?, is_shared = ?, shared_users = ?, status = ?, updated_at = ? WHERE task_code = ?',
-            [updatedTask.task_name, updatedTask.description, updatedTask.is_shared ? 1 : 0, JSON.stringify(updatedTask.shared_users), updatedTask.status, now, taskCode]
-          );
-        }
-        try {
+    if (this.isNative && this.db) {
+      await this.pendingWrites;
+      await new Promise((resolve, reject) => this.db.run(
+        'UPDATE tasks SET task_name = ?, description = ?, is_shared = ?, shared_users = ?, status = ?, updated_at = ? WHERE task_code = ?',
+        [updatedTask.task_name, updatedTask.description, updatedTask.is_shared ? 1 : 0, JSON.stringify(updatedTask.shared_users), updatedTask.status, now, taskCode], err => err ? reject(err) : resolve()
+      ));
+    } else {
           const jsonPath = `${this.dbPath}.tasks_fallback.json`;
           if (fs.existsSync(jsonPath)) {
-            let list = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+            let list = this.parseJson(fs.readFileSync(jsonPath, 'utf8'), []);
             const idx = list.findIndex(x => x.task_code === taskCode);
             if (idx >= 0) { list[idx] = { ...list[idx], ...updatedTask }; }
-            fs.writeFileSync(jsonPath, JSON.stringify(list, null, 2), 'utf8');
+            this.writeFallback(jsonPath, list);
           }
-        } catch (e) {}
-        resolve(updatedTask);
-      });
-    });
+    }
+    return updatedTask;
   }
 
   // 删除任务
   deleteTask(taskCode) {
-    return new Promise((resolve) => {
-      if (this.isNative && this.db) {
-        this.db.run('DELETE FROM tasks WHERE task_code = ?', [taskCode]);
-      }
-      try {
+    if (this.isNative && this.db) {
+      const operation = () => new Promise((resolve, reject) => this.db.serialize(() => this.db.run('DELETE FROM tasks WHERE task_code = ?', [taskCode], err => err ? reject(err) : resolve(true))));
+      this.pendingWrites = this.pendingWrites.catch(() => {}).then(operation);
+      return this.pendingWrites;
+    }
+    try {
         const jsonPath = `${this.dbPath}.tasks_fallback.json`;
         if (fs.existsSync(jsonPath)) {
-          let list = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+          let list = this.parseJson(fs.readFileSync(jsonPath, 'utf8'), []);
           list = list.filter(x => x.task_code !== taskCode);
-          fs.writeFileSync(jsonPath, JSON.stringify(list, null, 2), 'utf8');
+          this.writeFallback(jsonPath, list);
         }
-      } catch (e) {}
-      resolve(true);
-    });
+    } catch (e) { return Promise.reject(e); }
+    return Promise.resolve(true);
   }
 
   // 获取任务下按时间顺序（Chronological Order）排列的所有图片
   async getTaskImages(taskCode = null, sortOrder = 'ASC') {
-    const allEvents = await this.getEvents();
-    let events = allEvents;
-    if (taskCode) {
-      const targetCodeLower = String(taskCode).trim().toLowerCase();
-      events = allEvents.filter(e => String(e.task_code || '').trim().toLowerCase() === targetCodeLower);
-    }
+    const events = await this.getEvents(null, { taskCode, limit: 5000 });
     const images = [];
     events.forEach(evt => {
       const files = evt.files || [];
@@ -519,7 +514,7 @@ class SQLiteStorageEngine {
     files[targetFileIdx] = updatedFile;
 
     targetEvent.files = files;
-    this.saveEvent(targetEvent);
+    await this.saveEvent(targetEvent);
     return updatedFile;
   }
 
@@ -541,10 +536,14 @@ class SQLiteStorageEngine {
 
     if (!targetEvent) return false;
 
-    this.saveEvent(targetEvent);
+    await this.saveEvent(targetEvent);
     return true;
+  }
+
+  close() {
+    if (!this.db) return Promise.resolve();
+    return new Promise((resolve, reject) => this.db.close(err => err ? reject(err) : resolve()));
   }
 }
 
 module.exports = SQLiteStorageEngine;
-

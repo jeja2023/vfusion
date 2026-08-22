@@ -10,7 +10,9 @@ const crypto = require('crypto');
 const { unpackAndVerifyPackage } = require('../common/unpacker');
 const { DEFAULT_FORM_SCHEMA, getHmacSecret, setHmacSecret } = require('../common/protocol');
 const { hashPassword, verifyPassword, buildDefaultUsers, generateToken, verifyToken, setTokenSecret } = require('../common/auth');
-const { authMiddleware, requireRole } = require('../common/auth_middleware');
+const { authMiddleware, assetAuthMiddleware, requireRole } = require('../common/auth_middleware');
+const { isSafeIdentifier, isSafeFileName: isSafeFileNameUtil, resolveInside, assertJsonObject, validateHttpUrl, validateHttpUrlResolved } = require('../common/security_utils');
+const { writeJsonAtomic: writeJsonAtomicSafe, updateJsonAtomic } = require('../common/json_store');
 
 const SQLiteStorageEngine = require('../common/db_sqlite');
 const { buildEventTags } = require('../common/event_tags');
@@ -18,6 +20,8 @@ const { ensureSslCertificates } = require('../common/ssl_cert');
 const { testFtpConnection, uploadToRemoteFtp, downloadFromRemoteFtp } = require('../common/ftp_client');
 const { formidable } = require('formidable');
 const { performOnlineUpgrade } = require('../common/system_upgrader');
+const { createRateLimiter } = require('../common/rate_limiter');
+const { normalizeCoordinates, normalizeMonitoringPoint, readMonitoringPoints, findMonitoringPoint, applyMonitoringPoint, createMonitoringPointId, monitoringPointsToCsv } = require('../common/monitoring_points');
 
 const app = express();
 const PORT = process.env.CORE_PORT || process.env.PORT || 5002;
@@ -59,6 +63,7 @@ function getPkgPrefix() {
 }
 
 const coreSqlite = new SQLiteStorageEngine(path.join(STORAGE_ROOT, 'vfusion_core.db'));
+const loginRateLimiter = createRateLimiter({ windowMs: 60_000, max: 10, keyFn: req => `${req.ip || 'unknown'}:${String(req.body?.username || '').slice(0, 64)}` });
 const FTP_OUT_DIR = getFtpOutDir();
 const FTP_IN_DIR = getFtpInDir();
 const ARCHIVE_DIR = path.join(STORAGE_ROOT, 'archive');
@@ -69,20 +74,20 @@ const DB_FILE = path.join(STORAGE_ROOT, 'db.json');
 const SCHEMA_FILE = path.join(STORAGE_ROOT, 'schema.json');
 const WEBHOOKS_FILE = path.join(STORAGE_ROOT, 'webhooks.json');
 const USERS_FILE = path.join(STORAGE_ROOT, 'users.json');
+const MONITORING_POINTS_FILE = path.join(STORAGE_ROOT, 'monitoring_points.json');
 
 [STORAGE_ROOT, FTP_OUT_DIR, FTP_IN_DIR, ARCHIVE_DIR, ERROR_DIR, ASSETS_DIR, COLLECTOR_ASSETS_DIR].forEach(dir => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
 function writeJsonAtomic(filePath, data) {
-  const tmpPath = `${filePath}.tmp_${Date.now()}`;
-  fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf8');
-  fs.renameSync(tmpPath, filePath);
+  return writeJsonAtomicSafe(filePath, data);
 }
 
 if (!fs.existsSync(DB_FILE)) writeJsonAtomic(DB_FILE, { events: [], audit_logs: [], alerts: [] });
 if (!fs.existsSync(SCHEMA_FILE)) writeJsonAtomic(SCHEMA_FILE, DEFAULT_FORM_SCHEMA);
 if (!fs.existsSync(WEBHOOKS_FILE)) writeJsonAtomic(WEBHOOKS_FILE, []);
+if (!fs.existsSync(MONITORING_POINTS_FILE)) writeJsonAtomic(MONITORING_POINTS_FILE, []);
 
 // 首次启动时生成随机 HMAC / Token 密钥，避免固定密钥随源码分发
 if (!fs.existsSync(SECURITY_CONFIG_FILE)) {
@@ -159,28 +164,45 @@ function setAutoDiodeInterval(seconds) {
 // CORS 白名单：默认仅允许同源与显式配置的来源，避免任意站点驱动内网 API
 const ALLOWED_ORIGINS = (process.env.VFUSION_ALLOWED_ORIGINS || '')
   .split(',').map(s => s.trim()).filter(Boolean);
-app.use(cors({
-  origin: (origin, cb) => {
-    if (!origin || ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
-    return cb(new Error('该来源不在 CORS 白名单内'));
-  }
-}));
+app.use((req, res, next) => {
+  const origin = req.get('Origin');
+  if (!origin) return next();
+  const host = req.get('Host');
+  const sameOrigin = host && (origin === `http://${host}` || origin === `https://${host}`);
+  if (sameOrigin || ALLOWED_ORIGINS.includes(origin)) return next();
+  return res.status(403).json({ success: false, error: '该来源不在 CORS 白名单内' });
+});
+app.use(cors({ origin: true }));
 app.use(express.json({ limit: '2mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/assets', express.static(ASSETS_DIR));
-app.use('/assets', express.static(COLLECTOR_ASSETS_DIR));
-app.use('/collector-assets', express.static(COLLECTOR_ASSETS_DIR));
-app.use('/collector-assets', express.static(ASSETS_DIR));
 app.get('/favicon.ico', (req, res) => res.status(204).end());
+app.disable('x-powered-by');
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  next();
+});
 
 // 统一身份认证：登录接口与静态资源之外的所有 API 均需有效 Token
 app.use(authMiddleware({
   loadUser: (id) => readUsers().find(u => u.id === id) || null
 }));
 
+const protectedAssetAuth = assetAuthMiddleware({
+  loadUser: (id) => readUsers().find(u => u.id === id) || null
+});
+app.use('/assets', protectedAssetAuth, express.static(ASSETS_DIR, { fallthrough: false }));
+app.use('/assets', protectedAssetAuth, express.static(COLLECTOR_ASSETS_DIR, { fallthrough: false }));
+app.use('/collector-assets', protectedAssetAuth, express.static(COLLECTOR_ASSETS_DIR, { fallthrough: false }));
+app.use('/collector-assets', protectedAssetAuth, express.static(ASSETS_DIR, { fallthrough: false }));
+
 function readDb() {
   try {
     const db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+    if (!db || typeof db !== 'object' || Array.isArray(db)) throw new Error('数据库格式无效');
+    if (!Array.isArray(db.events)) db.events = [];
+    if (!Array.isArray(db.audit_logs)) db.audit_logs = [];
     if (!db.alerts) db.alerts = [];
     return db;
   }
@@ -189,51 +211,61 @@ function readDb() {
 function writeDb(db) { writeJsonAtomic(DB_FILE, db); }
 
 function readUsers() {
-  try { return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8')); }
-  catch (e) { return []; }
+  try {
+    const users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
+    if (Array.isArray(users) && users.length > 0) return users;
+  } catch (e) {}
+  const defaults = buildDefaultUsers();
+  writeJsonAtomic(USERS_FILE, defaults);
+  return defaults;
 }
 function writeUsers(list) { writeJsonAtomic(USERS_FILE, list); }
 
 function readWebhooks() {
-  try { return JSON.parse(fs.readFileSync(WEBHOOKS_FILE, 'utf8')); }
+  try {
+    const hooks = JSON.parse(fs.readFileSync(WEBHOOKS_FILE, 'utf8'));
+    return Array.isArray(hooks) ? hooks : [];
+  }
   catch (e) { return []; }
 }
 function writeWebhooks(list) { writeJsonAtomic(WEBHOOKS_FILE, list); }
 
 function addAuditLog(type, message, status = 'INFO') {
-  const db = readDb();
-  db.audit_logs.unshift({
-    id: Date.now(),
-    timestamp: new Date().toISOString(),
-    type,
-    message,
-    status
+  updateJsonAtomic(DB_FILE, { events: [], audit_logs: [], alerts: [] }, db => {
+    if (!db || typeof db !== 'object' || Array.isArray(db)) db = { events: [], audit_logs: [], alerts: [] };
+    if (!Array.isArray(db.audit_logs)) db.audit_logs = [];
+    db.audit_logs.unshift({ id: Date.now(), timestamp: new Date().toISOString(), type, message, status });
+    if (db.audit_logs.length > 500) db.audit_logs = db.audit_logs.slice(0, 500);
+    return db;
   });
-  if (db.audit_logs.length > 500) db.audit_logs = db.audit_logs.slice(0, 500);
-  writeDb(db);
-  coreSqlite.addAuditLog(type, message, status);
+  coreSqlite.addAuditLog(type, message, status).catch(err => console.error('[VFusion Core] 审计日志写入失败:', err.message));
 }
 
 function addSystemAlert(title, message, level = 'WARN') {
-  const db = readDb();
-  db.alerts.unshift({
-    id: Date.now(),
-    timestamp: new Date().toISOString(),
-    title,
-    message,
-    level,
-    read: false
+  updateJsonAtomic(DB_FILE, { events: [], audit_logs: [], alerts: [] }, db => {
+    if (!db || typeof db !== 'object' || Array.isArray(db)) db = { events: [], audit_logs: [], alerts: [] };
+    if (!Array.isArray(db.alerts)) db.alerts = [];
+    db.alerts.unshift({ id: Date.now(), timestamp: new Date().toISOString(), title, message, level, read: false });
+    if (db.alerts.length > 100) db.alerts = db.alerts.slice(0, 100);
+    return db;
   });
-  if (db.alerts.length > 100) db.alerts = db.alerts.slice(0, 100);
-  writeDb(db);
 }
 
 function tagEvent(eventRecord) {
   return buildEventTags(eventRecord);
 }
 
+function fixedDnsLookup(addresses) {
+  return (hostname, options, callback) => {
+    const requestedFamily = options && options.family ? options.family : 0;
+    const selected = requestedFamily ? addresses.find(item => item.family === requestedFamily) : addresses[0];
+    if (!selected) return callback(new Error('Webhook 目标地址解析失败'));
+    callback(null, selected.address, selected.family);
+  };
+}
+
 // 身份认证 API
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', loginRateLimiter, (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ success: false, error: '用户名与密码不能为空' });
 
@@ -276,6 +308,103 @@ app.get('/api/auth/me', (req, res) => {
   res.json({ success: true, data: { id: user.id, username: user.username, name: user.name, role: user.role } });
 });
 
+// 离线监控点位主数据：坐标由现场测绘/设备台账维护，不依赖外部地图服务
+app.get('/api/monitoring-points', (req, res) => {
+  const includeDisabled = req.user && req.user.role === 'admin' && String(req.query.include_disabled || '') === '1';
+  const query = String(req.query.query || '').trim().toLowerCase();
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 30));
+  const filtered = readMonitoringPoints(MONITORING_POINTS_FILE)
+    .filter(point => includeDisabled || point.enabled !== false)
+    .filter(point => !query || [point.point_id, point.name, point.location, point.description].some(value => String(value || '').toLowerCase().includes(query)));
+  const total = filtered.length;
+  const points = filtered.slice((page - 1) * limit, page * limit);
+  res.json({ success: true, data: points, pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
+});
+
+app.get('/api/monitoring-points/export', requireRole('admin'), (req, res) => {
+  const points = readMonitoringPoints(MONITORING_POINTS_FILE);
+  const format = String(req.query.format || 'csv').toLowerCase();
+  if (format === 'json') {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="monitoring_points.json"');
+    return res.send(JSON.stringify(points, null, 2));
+  }
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="monitoring_points.csv"');
+  res.send(`\ufeff${monitoringPointsToCsv(points)}`);
+});
+
+app.post('/api/monitoring-points/import', requireRole('admin'), (req, res) => {
+  try {
+    const incoming = req.body && Array.isArray(req.body.points) ? req.body.points : req.body;
+    if (!Array.isArray(incoming) || incoming.length > 50000) return res.status(400).json({ success: false, error: '导入数据必须是点位数组，最多 50000 条' });
+    const normalized = incoming.map(item => normalizeMonitoringPoint(item));
+    const ids = new Set();
+    for (const point of normalized) {
+      if (ids.has(point.point_id)) throw new Error(`导入数据中存在重复点位编号: ${point.point_id}`);
+      ids.add(point.point_id);
+    }
+    const mode = req.body && !Array.isArray(req.body) ? String(req.body.mode || 'merge') : 'merge';
+    const existing = readMonitoringPoints(MONITORING_POINTS_FILE);
+    const merged = mode === 'replace' ? normalized : [...existing.filter(point => !ids.has(point.point_id)), ...normalized];
+    writeJsonAtomic(MONITORING_POINTS_FILE, merged);
+    addAuditLog('MONITORING_POINT_IMPORT', `导入监控点位 ${normalized.length} 条（${mode === 'replace' ? '覆盖' : '合并'}）`, 'SUCCESS');
+    res.json({ success: true, data: { imported: normalized.length, total: merged.length, mode } });
+  } catch (e) {
+    res.status(400).json({ success: false, error: e.message });
+  }
+});
+
+app.post('/api/monitoring-points', (req, res) => {
+  try {
+    const body = { ...(req.body || {}) };
+    if (!body.point_id) body.point_id = createMonitoringPointId('USER');
+    const point = normalizeMonitoringPoint(body);
+    const points = readMonitoringPoints(MONITORING_POINTS_FILE);
+    if (points.some(item => item.point_id === point.point_id)) {
+      return res.status(409).json({ success: false, error: '点位编号已存在' });
+    }
+    writeJsonAtomic(MONITORING_POINTS_FILE, [...points, point]);
+    addAuditLog('MONITORING_POINT_ADD', `用户 [${req.user?.username || 'unknown'}] 新增监控点位 [${point.point_id}]`, 'SUCCESS');
+    res.status(201).json({ success: true, data: point });
+  } catch (e) {
+    res.status(400).json({ success: false, error: e.message });
+  }
+});
+
+app.put('/api/monitoring-points/:point_id', requireRole('admin'), (req, res) => {
+  try {
+    const pointId = String(req.params.point_id || '').trim();
+    const points = readMonitoringPoints(MONITORING_POINTS_FILE);
+    const index = points.findIndex(item => item.point_id === pointId);
+    if (index < 0) return res.status(404).json({ success: false, error: '监控点位不存在' });
+    const point = normalizeMonitoringPoint({ ...req.body, created_at: points[index].created_at }, pointId);
+    points[index] = point;
+    writeJsonAtomic(MONITORING_POINTS_FILE, points);
+    addAuditLog('MONITORING_POINT_UPDATE', `更新监控点位 [${point.point_id}]`, 'SUCCESS');
+    res.json({ success: true, data: point });
+  } catch (e) {
+    res.status(400).json({ success: false, error: e.message });
+  }
+});
+
+app.patch('/api/monitoring-points/:point_id/toggle', requireRole('admin'), (req, res) => {
+  try {
+    const pointId = String(req.params.point_id || '').trim();
+    const points = readMonitoringPoints(MONITORING_POINTS_FILE);
+    const point = points.find(item => item.point_id === pointId);
+    if (!point) return res.status(404).json({ success: false, error: '监控点位不存在' });
+    point.enabled = req.body && req.body.enabled !== undefined ? req.body.enabled !== false : !point.enabled;
+    point.updated_at = new Date().toISOString();
+    writeJsonAtomic(MONITORING_POINTS_FILE, points);
+    addAuditLog('MONITORING_POINT_TOGGLE', `${point.enabled ? '启用' : '停用'}监控点位 [${point.point_id}]`, 'SUCCESS');
+    res.json({ success: true, data: point });
+  } catch (e) {
+    res.status(400).json({ success: false, error: e.message });
+  }
+});
+
 // 涉事人员库 API (内网端同步归档)
 app.get('/api/personnel', (req, res) => {
   const db = readDb();
@@ -299,7 +428,7 @@ app.put('/api/personnel/:id', requireRole('admin'), (req, res) => {
     domicile: domicile !== undefined ? domicile : db.personnel[idx].domicile
   };
 
-  saveDb(db);
+  writeDb(db);
   addAuditLog('PERSONNEL_EDIT', `编辑涉事人员档案 [${db.personnel[idx].name}]`, 'SUCCESS');
   res.json({ success: true, message: '人员档案已成功修改', data: db.personnel[idx] });
 });
@@ -314,7 +443,7 @@ app.delete('/api/personnel/:id', requireRole('admin'), (req, res) => {
   if (idx < 0) return res.status(404).json({ success: false, error: '涉事人员记录不存在' });
 
   const deleted = db.personnel.splice(idx, 1)[0];
-  saveDb(db);
+  writeDb(db);
   addAuditLog('PERSONNEL_DELETE', `删除涉事人员档案 [${deleted.name}]`, 'WARN');
   res.json({ success: true, message: '人员档案已成功删除' });
 });
@@ -326,7 +455,7 @@ app.get('/api/tasks', async (req, res) => {
     const events = await coreSqlite.getEvents();
 
     const taskStatsMap = {};
-    events.forEach(evt => {
+    for (const evt of events) {
       const code = evt.task_code || 'TASK_DEFAULT';
       if (!taskStatsMap[code]) {
         taskStatsMap[code] = {
@@ -343,10 +472,10 @@ app.get('/api/tasks', async (req, res) => {
       if (new Date(evt.timestamp) > new Date(taskStatsMap[code].latest_timestamp)) {
         taskStatsMap[code].latest_timestamp = evt.timestamp;
       }
-    });
+    }
 
     const knownCodes = new Set(tasks.map(t => t.task_code));
-    events.forEach(evt => {
+    for (const evt of events) {
       const code = evt.task_code || 'TASK_DEFAULT';
       if (!knownCodes.has(code)) {
         const autoTask = {
@@ -360,11 +489,11 @@ app.get('/api/tasks', async (req, res) => {
           status: 'ACTIVE',
           created_at: evt.timestamp || new Date().toISOString()
         };
-        coreSqlite.saveTask(autoTask);
+        await coreSqlite.saveTask(autoTask);
         tasks.unshift(autoTask);
         knownCodes.add(code);
       }
-    });
+    }
 
     const enrichedTasks = tasks.map(t => {
       const stats = taskStatsMap[t.task_code] || { event_count: 0, photo_count: 0, contributors: new Set(), latest_timestamp: t.created_at };
@@ -388,8 +517,11 @@ app.get('/api/tasks', async (req, res) => {
 app.get('/api/events', async (req, res) => {
   try {
     const { app_id } = req.query;
-    const events = await coreSqlite.getEvents(app_id || null);
-    res.json({ success: true, data: events });
+    if (app_id && !isSafeIdentifier(String(app_id))) return res.status(400).json({ success: false, error: '非法的应用标识' });
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 1000, 1), 5000);
+    const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
+    const events = await coreSqlite.getEvents(app_id || null, { limit, offset });
+    res.json({ success: true, data: events, pagination: { limit, offset, returned: events.length } });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
@@ -398,9 +530,9 @@ app.get('/api/events', async (req, res) => {
 app.get('/api/tasks/:code', async (req, res) => {
   try {
     const { code } = req.params;
+    if (!isSafeIdentifier(code)) return res.status(400).json({ success: false, error: '任务编号格式无效' });
     const task = await coreSqlite.getTaskByCode(code);
-    const allEvents = await coreSqlite.getEvents();
-    const taskEvents = allEvents.filter(e => e.task_code === code);
+    const taskEvents = await coreSqlite.getEvents(null, { taskCode: code, limit: 5000 });
 
     if (!task) {
       if (taskEvents.length > 0) {
@@ -430,6 +562,7 @@ app.put('/api/tasks/:code', async (req, res) => {
   try {
     const { code } = req.params;
     const { task_name, description, is_shared, status } = req.body;
+    if (!isSafeIdentifier(code)) return res.status(400).json({ success: false, error: '任务编号格式无效' });
     const task = await coreSqlite.getTaskByCode(code);
     if (!task) return res.status(404).json({ success: false, error: '任务不存在' });
 
@@ -488,7 +621,7 @@ app.put('/api/tasks/:code/status', async (req, res) => {
       return res.status(403).json({ success: false, error: '权限不足：只有任务创建者或管理员可以修改任务状态' });
     }
 
-    coreSqlite.updateTaskStatus(code, status);
+    await coreSqlite.updateTaskStatus(code, status);
     addAuditLog('TASK_STATUS', `内网端更改任务 [${code}] 状态为 ${status === 'COMPLETED' ? '已完成' : '进行中'}`, 'SUCCESS');
     res.json({ success: true, message: '任务状态更新成功' });
   } catch (e) {
@@ -501,6 +634,7 @@ app.get('/api/tasks/:code/images', async (req, res) => {
   try {
     const { code } = req.params;
     const order = (req.query.order || 'ASC').toUpperCase();
+    if (!isSafeIdentifier(code)) return res.status(400).json({ success: false, error: '任务编号格式无效' });
     const task = await coreSqlite.getTaskByCode(code);
     if (!task) return res.status(404).json({ success: false, error: '任务不存在' });
 
@@ -618,6 +752,9 @@ app.get('/api/users', requireRole('admin'), (req, res) => {
 app.post('/api/users', requireRole('admin'), (req, res) => {
   const { username, name, password, role } = req.body;
   if (!username || !password || !name) return res.status(400).json({ success: false, error: '请填写完整用户信息' });
+  if (!isSafeIdentifier(username) || username.length > 32) return res.status(400).json({ success: false, error: '用户名格式无效' });
+  if (!['admin', 'operator', 'auditor'].includes(role || 'operator')) return res.status(400).json({ success: false, error: '用户角色无效' });
+  if (typeof password !== 'string' || password.length < 8 || password.length > 256) return res.status(400).json({ success: false, error: '密码长度必须为 8-256 个字符' });
 
   const users = readUsers();
   if (users.some(u => u.username === username)) {
@@ -637,13 +774,13 @@ app.post('/api/users', requireRole('admin'), (req, res) => {
   users.push(newUser);
   writeUsers(users);
   addAuditLog('USER_ADD', `新增用户 [${name}(${username})], 赋值角色: ${newUser.role}`, 'SUCCESS');
-  res.json({ success: true, message: '用户创建成功', data: newUser });
+  res.json({ success: true, message: '用户创建成功', data: { id: newUser.id, username: newUser.username, name: newUser.name, role: newUser.role, status: newUser.status, created_at: newUser.created_at } });
 });
 
 app.put('/api/users/:id/reset-password', requireRole('admin'), (req, res) => {
   const id = parseInt(req.params.id);
   const { new_password } = req.body;
-  if (!new_password) return res.status(400).json({ success: false, error: '新密码不能为空' });
+  if (typeof new_password !== 'string' || new_password.length < 8 || new_password.length > 256) return res.status(400).json({ success: false, error: '密码长度必须为 8-256 个字符' });
 
   const users = readUsers();
   const user = users.find(u => u.id === id);
@@ -660,7 +797,7 @@ app.delete('/api/users/:id', requireRole('admin'), (req, res) => {
   let users = readUsers();
   const user = users.find(u => u.id === id);
   if (!user) return res.status(404).json({ success: false, error: '用户不存在' });
-  if (user.username === 'admin') return res.status(400).json({ success: false, error: '超级管理员内置账号不能删除' });
+  if (user.id === 101 || user.username === (process.env.VFUSION_ADMIN_USERNAME || 'admin')) return res.status(400).json({ success: false, error: '超级管理员内置账号不能删除' });
 
   users = users.filter(u => u.id !== id);
   writeUsers(users);
@@ -676,20 +813,23 @@ app.put('/api/users/:id', requireRole('admin'), (req, res) => {
   const users = readUsers();
   const user = users.find(u => u.id === id);
   if (!user) return res.status(404).json({ success: false, error: '用户不存在' });
-  if (user.username === 'admin') return res.status(400).json({ success: false, error: '超级管理员内置账号不能编辑' });
+  if (user.id === 101 || user.username === (process.env.VFUSION_ADMIN_USERNAME || 'admin')) return res.status(400).json({ success: false, error: '超级管理员内置账号不能编辑' });
 
   user.name = name;
-  if (role) user.role = role;
+  if (role) {
+    if (!['admin', 'operator', 'auditor'].includes(role)) return res.status(400).json({ success: false, error: '用户角色无效' });
+    user.role = role;
+  }
   if (status) user.status = status;
 
   writeUsers(users);
   addAuditLog('USER_UPDATE', `更新用户 [${user.name}(${user.username})], 角色: ${user.role}, 状态: ${user.status}`, 'SUCCESS');
-  res.json({ success: true, message: '用户信息更新成功', data: user });
+  res.json({ success: true, message: '用户信息更新成功', data: { id: user.id, username: user.username, name: user.name, role: user.role, status: user.status, created_at: user.created_at } });
 });
 
 
-function dispatchWebhooks(eventRecord) {
-  const hooks = readWebhooks();
+async function dispatchWebhooks(eventRecord) {
+  const hooks = readWebhooks().filter(h => h.enabled !== false);
   if (hooks.length === 0) return;
 
   const payloadStr = JSON.stringify({
@@ -701,13 +841,16 @@ function dispatchWebhooks(eventRecord) {
   const hmacSecret = getHmacSecret();
   const signature = crypto.createHmac('sha256', hmacSecret).update(payloadStr).digest('hex');
 
-  hooks.forEach(hook => {
+  for (const hook of hooks) {
     try {
-      const urlObj = new URL(hook.url);
+      const urlValidation = await validateHttpUrlResolved(hook.url);
+      if (!urlValidation.valid) throw new Error(urlValidation.error);
+      const urlObj = urlValidation.url;
       const reqModule = urlObj.protocol === 'https:' ? https : http;
 
       const req = reqModule.request(hook.url, {
         method: 'POST',
+        lookup: fixedDnsLookup(urlValidation.addresses || []),
         headers: {
           'Content-Type': 'application/json',
           'Content-Length': Buffer.byteLength(payloadStr),
@@ -715,7 +858,10 @@ function dispatchWebhooks(eventRecord) {
         }
       }, res => {
         addAuditLog('WEBHOOK', `消息分发 [${hook.name}]: HTTP ${res.statusCode}`, res.statusCode < 400 ? 'SUCCESS' : 'WARN');
+        res.resume();
       });
+
+      req.setTimeout(8000, () => req.destroy(new Error('Webhook 请求超时')));
 
       req.on('error', err => {
         addAuditLog('WEBHOOK', `消息分发失败 [${hook.name}]: ${err.message}`, 'WARN');
@@ -726,12 +872,26 @@ function dispatchWebhooks(eventRecord) {
     } catch (e) {
       console.error('Webhook 网址错误:', hook.url);
     }
-  });
+  }
 }
 
+const processingPackageFiles = new Set();
+
 async function processPackageFile(fileName, isRetry = false) {
+  if (!isSafeFileName(fileName)) throw new Error('非法的数据包文件名');
+  const lockKey = `${isRetry ? ERROR_DIR : getFtpInDir()}:${fileName}`;
+  if (processingPackageFiles.has(lockKey)) return { success: false, skipped: true, message: `包 ${fileName} 正在处理中` };
+  processingPackageFiles.add(lockKey);
+  try {
+    return await processPackageFileUnlocked(fileName, isRetry);
+  } finally {
+    processingPackageFiles.delete(lockKey);
+  }
+}
+
+async function processPackageFileUnlocked(fileName, isRetry = false) {
   const sourceDir = isRetry ? ERROR_DIR : getFtpInDir();
-  const zipPath = path.join(sourceDir, fileName);
+  const zipPath = resolveInside(sourceDir, fileName);
 
   if (!fs.existsSync(zipPath)) {
     throw new Error(`文件不存在: ${fileName}`);
@@ -742,8 +902,14 @@ async function processPackageFile(fileName, isRetry = false) {
 
   try {
     const { zipFileHash, extractDir, info } = await unpackAndVerifyPackage(zipPath, ASSETS_DIR);
+    if (!isSafeIdentifier(info.event_id) || !isSafeIdentifier(info.task_code || 'TASK_DEFAULT')) {
+      throw new Error('数据包中的事件或任务标识无效');
+    }
+    if (!Array.isArray(info.files) || info.files.length > 200) throw new Error('数据包附件清单无效');
     const db = readDb();
-    const exists = db.events.find(e => e.event_id === info.event_id || e.zip_hash === zipFileHash);
+    const sqliteEvents = await coreSqlite.getEvents(null, { limit: 5000 });
+    const exists = db.events.find(e => e.event_id === info.event_id || e.zip_hash === zipFileHash) ||
+      sqliteEvents.find(e => e.event_id === info.event_id || e.zip_hash === zipFileHash);
 
     if (exists) {
       addAuditLog('IDEMPOTENCY', `事件 ${info.event_id} 已存在，幂等归档`, 'WARN');
@@ -751,7 +917,7 @@ async function processPackageFile(fileName, isRetry = false) {
     } else {
       const taskCode = info.task_code || 'TASK_DEFAULT';
       const taskName = info.task_name || '厂区周界安防例行巡检';
-      const eventAssetsSubDir = path.join(ASSETS_DIR, 'tasks', taskCode, info.event_id);
+      const eventAssetsSubDir = resolveInside(ASSETS_DIR, 'tasks', taskCode, info.event_id);
       if (!fs.existsSync(eventAssetsSubDir)) fs.mkdirSync(eventAssetsSubDir, { recursive: true });
 
       const extractedImagesDir = path.join(extractDir, 'images');
@@ -760,8 +926,10 @@ async function processPackageFile(fileName, isRetry = false) {
       if (fs.existsSync(extractedImagesDir)) {
         const imgFiles = fs.readdirSync(extractedImagesDir);
         for (const imgName of imgFiles) {
-          const srcImg = path.join(extractedImagesDir, imgName);
-          const destImg = path.join(eventAssetsSubDir, imgName);
+          if (!isSafeFileName(imgName)) throw new Error(`非法图片文件名: ${imgName}`);
+          const srcImg = resolveInside(extractedImagesDir, imgName);
+          if (!fs.statSync(srcImg).isFile()) throw new Error(`图片条目不是普通文件: ${imgName}`);
+          const destImg = resolveInside(eventAssetsSubDir, imgName);
           fs.copyFileSync(srcImg, destImg);
           fileRecords.push({ filename: imgName, url: `/assets/tasks/${taskCode}/${info.event_id}/${imgName}` });
         }
@@ -789,11 +957,21 @@ async function processPackageFile(fileName, isRetry = false) {
         created_at: new Date().toISOString()
       };
 
+      // 如果数据包负荷中包含涉事人员信息，自动同步归档至内网人员库
+      const p = info.payload && typeof info.payload === 'object' ? info.payload : {};
+      const pointId = String(p.monitoring_point_id || '').trim();
+      if (pointId) {
+        const point = findMonitoringPoint(readMonitoringPoints(MONITORING_POINTS_FILE), pointId);
+        if (!point) throw new Error(`监控点位 [${pointId}] 不存在或已停用，请先同步点位主数据`);
+        applyMonitoringPoint(p, point);
+      } else {
+        const coordinates = normalizeCoordinates(p.longitude, p.latitude);
+        if (coordinates) Object.assign(p, coordinates);
+        if (p.location) p.location_source = 'MANUAL';
+      }
+      newRecord.payload = p;
       // 字段名 ai_tags 为历史数据库列名，保留以兼容既有数据
       newRecord.ai_tags = tagEvent(newRecord);
-
-      // 如果数据包负荷中包含涉事人员信息，自动同步归档至内网人员库
-      const p = info.payload || {};
       if (p.person_name || p.person_id_card) {
         if (!db.personnel) db.personnel = [];
         const existingIdx = db.personnel.findIndex(per => (p.person_id_card && per.id_card === p.person_id_card) || (p.person_name && per.name === p.person_name));
@@ -814,12 +992,12 @@ async function processPackageFile(fileName, isRetry = false) {
 
       db.events.unshift(newRecord);
       writeDb(db);
-      coreSqlite.saveEvent(newRecord);
+      await coreSqlite.saveEvent(newRecord);
 
       // 确保/更新内网端任务条目记录
       const existingTask = await coreSqlite.getTaskByCode(taskCode);
       if (!existingTask) {
-        coreSqlite.saveTask({
+        await coreSqlite.saveTask({
           task_code: taskCode,
           task_name: taskName,
           description: '单向摆渡自动接收归集的任务',
@@ -830,7 +1008,7 @@ async function processPackageFile(fileName, isRetry = false) {
           status: 'ACTIVE'
         });
       } else {
-        coreSqlite.saveTask({
+        await coreSqlite.saveTask({
           ...existingTask,
           task_name: taskName || existingTask.task_name,
           updated_at: new Date().toISOString()
@@ -841,7 +1019,7 @@ async function processPackageFile(fileName, isRetry = false) {
         addSystemAlert('[新单据通知]', `单据编号 ${info.event_id} 已成功摆渡入库 (${info.payload.location || '未知地点'})`, 'INFO');
       }
 
-      dispatchWebhooks(newRecord);
+      dispatchWebhooks(newRecord).catch(err => console.error('[VFusion Core] Webhook 分发失败:', err.message));
       addAuditLog('INGEST', `事件 ${info.event_id} 入库成功 (AI算法处理通过, 携带 ${fileRecords.length} 张照片及签名)`, 'SUCCESS');
     }
 
@@ -862,7 +1040,10 @@ async function processPackageFile(fileName, isRetry = false) {
   }
 }
 
+let scanRunning = false;
 async function scanLoop() {
+  if (scanRunning) return;
+  scanRunning = true;
   try {
     // 当远程 FTP 已启用时，数据只从 FTP 远程拉取，不扫描本地旧文件
     const sec = getFtpConfig();
@@ -878,13 +1059,16 @@ async function scanLoop() {
     }
   } catch (err) {
     console.error('[VFusion Core] 扫描 Loop 异常:', err);
+  } finally {
+    scanRunning = false;
   }
 }
 
-setInterval(scanLoop, 3000);
+const scanTimer = setInterval(scanLoop, 3000);
 
 // ========== FTP 远程自动轮询拉取引擎 ==========
 let ftpPollTimer = null;
+let ftpPullMutex = false;
 let ftpPollStatus = { running: false, lastPollTime: null, lastResult: null, downloadedTotal: 0, errorCount: 0 };
 
 function getFtpConfig() {
@@ -960,11 +1144,12 @@ function getFtpPollIntervalSec(sec) {
 }
 
 async function ftpPollLoop() {
-  if (ftpPollStatus.running) return;
+  if (ftpPollStatus.running || ftpPullMutex) return;
   const servers = getFtpServers();
   const activeServers = servers.filter(s => s.ftp_enabled !== false && s.ftp_host);
   if (activeServers.length === 0) return;
 
+  ftpPullMutex = true;
   ftpPollStatus.running = true;
   ftpPollStatus.lastPollTime = new Date().toISOString();
 
@@ -1018,6 +1203,7 @@ async function ftpPollLoop() {
     ftpPollStatus.lastResult = `多 FTP 轮询异常: ${err.message}`;
   } finally {
     ftpPollStatus.running = false;
+    ftpPullMutex = false;
   }
 }
 
@@ -1046,7 +1232,9 @@ function bootFtpPoll() {
 }
 
 // 手动触发 FTP 拉取 (支持单节点或全量节点)
-app.post('/api/ftp/pull', async (req, res) => {
+app.post('/api/ftp/pull', requireRole('admin'), async (req, res) => {
+  if (ftpPullMutex) return res.status(409).json({ success: false, error: 'FTP 拉取任务正在运行，请稍后重试' });
+  ftpPullMutex = true;
   try {
     const { server_id } = req.body || {};
     const servers = getFtpServers();
@@ -1103,6 +1291,8 @@ app.post('/api/ftp/pull', async (req, res) => {
   } catch (err) {
     addAuditLog('FTP_PULL', `手动 FTP 拉取失败: ${err.message}`, 'ERROR');
     res.status(500).json({ success: false, error: err.message });
+  } finally {
+    ftpPullMutex = false;
   }
 });
 
@@ -1127,7 +1317,11 @@ app.get('/api/ftp/poll-status', (req, res) => {
 
 // FTP 服务器节点 CRUD 接口
 app.get('/api/ftp/servers', (req, res) => {
-  res.json({ success: true, data: getFtpServers() });
+  const safeServers = getFtpServers().map(server => ({
+    ...server,
+    ftp_password: server.ftp_password ? FTP_PASSWORD_MASK : ''
+  }));
+  res.json({ success: true, data: safeServers });
 });
 
 app.post('/api/ftp/servers', requireRole('admin'), (req, res) => {
@@ -1153,7 +1347,7 @@ app.post('/api/ftp/servers', requireRole('admin'), (req, res) => {
   servers.push(newServer);
   saveFtpServers(servers);
   addAuditLog('FTP_CONFIG', `新增第三方 FTP 通道节点 [${newServer.name}] (${newServer.ftp_host}:${newServer.ftp_port})`, 'SUCCESS');
-  res.json({ success: true, message: 'FTP 通道节点添加成功', data: newServer });
+  res.json({ success: true, message: 'FTP 通道节点添加成功', data: { ...newServer, ftp_password: newServer.ftp_password ? FTP_PASSWORD_MASK : '' } });
 });
 
 app.put('/api/ftp/servers/:id', requireRole('admin'), (req, res) => {
@@ -1169,7 +1363,7 @@ app.put('/api/ftp/servers/:id', requireRole('admin'), (req, res) => {
   server.ftp_host = ftp_host.trim();
   server.ftp_port = parseInt(ftp_port, 10) || 21;
   server.ftp_user = ftp_user ? ftp_user.trim() : '';
-  if (ftp_password !== undefined) server.ftp_password = ftp_password;
+  if (ftp_password !== undefined && ftp_password !== FTP_PASSWORD_MASK) server.ftp_password = ftp_password;
   server.ftp_remote_dir = ftp_remote_dir ? ftp_remote_dir.trim() : '/vfusion_packages';
   server.pkg_prefix = pkg_prefix ? pkg_prefix.trim() : 'vfusion_';
   server.ftp_file_ext = ftp_file_ext || '.jpg';
@@ -1178,7 +1372,7 @@ app.put('/api/ftp/servers/:id', requireRole('admin'), (req, res) => {
 
   saveFtpServers(servers);
   addAuditLog('FTP_CONFIG', `更新第三方 FTP 通道节点 [${server.name}] (${server.ftp_host}:${server.ftp_port})`, 'SUCCESS');
-  res.json({ success: true, message: 'FTP 通道节点更新成功', data: server });
+  res.json({ success: true, message: 'FTP 通道节点更新成功', data: { ...server, ftp_password: server.ftp_password ? FTP_PASSWORD_MASK : '' } });
 });
 
 app.patch('/api/ftp/servers/:id/toggle', requireRole('admin'), (req, res) => {
@@ -1244,14 +1438,7 @@ app.get('/api/system/diagnose', (req, res) => {
 
 // 校验用户提供的文件名，禁止路径分隔符与 .. 穿越
 function isSafeFileName(name) {
-  return typeof name === 'string' &&
-    name.length > 0 &&
-    name.length <= 255 &&
-    !name.includes('/') &&
-    !name.includes('\\') &&
-    !name.includes('\0') &&
-    name !== '.' &&
-    name !== '..';
+  return isSafeFileNameUtil(name);
 }
 
 // 单件事件 Zip 离线包下载 API
@@ -1262,12 +1449,13 @@ app.get('/api/events/:event_id/download', (req, res) => {
   }
   try {
     const archiveFiles = fs.readdirSync(ARCHIVE_DIR);
-    const matched = archiveFiles.find(f => f.includes(event_id) && (f.endsWith('.zip') || f.endsWith('.jpg')));
+    const expectedNames = new Set([`vfusion_pkg_${event_id}.zip`, `vfusion_pkg_${event_id}.jpg`]);
+    const matched = archiveFiles.find(f => expectedNames.has(f));
     if (!matched) {
       // 不做任意兜底：返回其他事件的归档包会造成跨单据数据泄露
       return res.status(404).json({ success: false, error: '未找到该单据对应的 Zip 归档文件' });
     }
-    const filePath = path.join(ARCHIVE_DIR, matched);
+    const filePath = resolveInside(ARCHIVE_DIR, matched);
     addAuditLog('DOWNLOAD', `下载事件 [${event_id}] 的 Zip 归档存照包: ${matched}`, 'INFO');
     return res.download(filePath, matched);
   } catch (e) {
@@ -1338,18 +1526,21 @@ app.get('/api/audit-logs/export', (req, res) => {
 // API 路由
 app.get('/api/schema', (req, res) => {
   const { app_id } = req.query;
-  const targetFile = app_id ? path.join(STORAGE_ROOT, `schema_${app_id}.json`) : SCHEMA_FILE;
+  if (app_id !== undefined && !isSafeIdentifier(app_id)) return res.status(400).json({ success: false, error: '非法的应用标识' });
+   const targetFile = app_id ? resolveInside(STORAGE_ROOT, `schema_${app_id}.json`) : SCHEMA_FILE;
   try {
     const fileToRead = fs.existsSync(targetFile) ? targetFile : SCHEMA_FILE;
     res.json({ success: true, data: JSON.parse(fs.readFileSync(fileToRead, 'utf8')) });
   } catch (e) { res.json({ success: true, data: DEFAULT_FORM_SCHEMA }); }
 });
 
-app.post('/api/schema', (req, res) => {
+app.post('/api/schema', requireRole('admin'), (req, res) => {
   try {
-    const newSchema = req.body;
+    const newSchema = assertJsonObject(req.body, 'Schema');
     const appId = newSchema.app_id || 'sys_gate_security';
-    const targetFile = path.join(STORAGE_ROOT, `schema_${appId}.json`);
+    if (!isSafeIdentifier(appId)) return res.status(400).json({ success: false, error: '非法的应用标识' });
+    if (!Array.isArray(newSchema.fields) || newSchema.fields.length > 200) return res.status(400).json({ success: false, error: 'Schema 字段定义无效' });
+     const targetFile = resolveInside(STORAGE_ROOT, `schema_${appId}.json`);
     writeJsonAtomic(targetFile, newSchema);
     writeJsonAtomic(SCHEMA_FILE, newSchema);
     addAuditLog('SCHEMA_UPDATE', `表单 Schema 已更新 (App: ${appId}, 包含 ${newSchema.fields.length} 个字段)`, 'SUCCESS');
@@ -1357,61 +1548,78 @@ app.post('/api/schema', (req, res) => {
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.get('/api/events', (req, res) => {
-  const { app_id } = req.query;
-  const db = readDb();
-  let list = db.events;
-  if (app_id) list = list.filter(e => e.app_id === app_id);
-  res.json({ success: true, data: list });
-});
-
-app.get('/api/webhooks', (req, res) => {
+app.get('/api/webhooks', requireRole('admin'), (req, res) => {
   res.json({ success: true, data: readWebhooks() });
 });
 
-app.post('/api/webhooks', (req, res) => {
-  const { name, url } = req.body;
+app.post('/api/webhooks', requireRole('admin'), async (req, res) => {
+  const { name, url, enabled } = req.body;
   if (!name || !url) return res.status(400).json({ success: false, error: '名称与 URL 均不能为空' });
+  const urlValidation = await validateHttpUrlResolved(url);
+  if (!urlValidation.valid) return res.status(400).json({ success: false, error: urlValidation.error });
 
-  const list = readWebhooks();
-  const newHook = { id: Date.now(), name, url, created_at: new Date().toISOString() };
-  list.push(newHook);
-  writeWebhooks(list);
+  const newHook = { id: Date.now(), name: String(name).trim().slice(0, 128), url: urlValidation.url.toString(), enabled: enabled !== false, created_at: new Date().toISOString() };
+  updateJsonAtomic(WEBHOOKS_FILE, [], list => {
+    if (!Array.isArray(list)) list = [];
+    list.push(newHook);
+    return list;
+  });
   addAuditLog('WEBHOOK_ADD', `注册新消息订阅节点: ${name}`, 'SUCCESS');
   res.json({ success: true, message: '消息订阅节点注册成功', data: newHook });
 });
 
-app.delete('/api/webhooks/:id', (req, res) => {
+app.delete('/api/webhooks/:id', requireRole('admin'), (req, res) => {
   const id = parseInt(req.params.id);
-  let list = readWebhooks();
-  list = list.filter(h => h.id !== id);
-  writeWebhooks(list);
+  updateJsonAtomic(WEBHOOKS_FILE, [], list => Array.isArray(list) ? list.filter(h => h.id !== id) : []);
   addAuditLog('WEBHOOK_DEL', `移除消息订阅节点`, 'WARN');
   res.json({ success: true, message: '订阅节点已删除' });
 });
 
-app.put('/api/webhooks/:id', (req, res) => {
+app.put('/api/webhooks/:id', requireRole('admin'), async (req, res) => {
   const id = parseInt(req.params.id);
-  const { name, url } = req.body;
+  const { name, url, enabled } = req.body;
   if (!name || !url) return res.status(400).json({ success: false, error: '名称与 URL 均不能为空' });
+  const urlValidation = await validateHttpUrlResolved(url);
+  if (!urlValidation.valid) return res.status(400).json({ success: false, error: urlValidation.error });
 
   const list = readWebhooks();
   const hook = list.find(h => h.id === id);
   if (!hook) return res.status(404).json({ success: false, error: '未找到指定的 Webhook 节点' });
 
-  hook.name = name;
-  hook.url = url;
-  writeWebhooks(list);
+  hook.name = String(name).trim().slice(0, 128);
+  hook.url = urlValidation.url.toString();
+  if (enabled !== undefined) hook.enabled = Boolean(enabled);
+  updateJsonAtomic(WEBHOOKS_FILE, [], current => {
+    if (!Array.isArray(current)) return [hook];
+    const target = current.find(h => h.id === id);
+    if (target) Object.assign(target, hook);
+    return current;
+  });
   addAuditLog('WEBHOOK_UPDATE', `更新消息订阅节点: ${name}`, 'SUCCESS');
   res.json({ success: true, message: '订阅节点更新成功', data: hook });
 });
 
-app.post('/api/webhooks/:id/test', async (req, res) => {
+app.patch('/api/webhooks/:id/toggle', requireRole('admin'), (req, res) => {
+  const list = readWebhooks();
+  const hook = list.find(h => String(h.id) === String(req.params.id));
+  if (!hook) return res.status(404).json({ success: false, error: '未找到指定的 Webhook 节点' });
+  hook.enabled = req.body.enabled !== undefined ? Boolean(req.body.enabled) : hook.enabled === false;
+  updateJsonAtomic(WEBHOOKS_FILE, [], current => {
+    if (!Array.isArray(current)) return [hook];
+    const target = current.find(h => String(h.id) === String(req.params.id));
+    if (target) target.enabled = hook.enabled;
+    return current;
+  });
+  addAuditLog('WEBHOOK_UPDATE', `${hook.enabled ? '开启' : '关闭'} Webhook [${hook.name}]`, 'SUCCESS');
+  res.json({ success: true, message: `Webhook 已${hook.enabled ? '开启' : '关闭'}` });
+});
+
+app.post('/api/webhooks/:id/test', requireRole('admin'), async (req, res) => {
   const list = readWebhooks();
   const hook = list.find(h => String(h.id) === String(req.params.id));
   if (!hook) return res.status(404).json({ success: false, error: '未找到指定的 Webhook 订阅节点' });
 
-  let hmacSecret = 'vfusion_secret_key_2026';
+  let hmacSecret = getHmacSecret();
   try {
     if (fs.existsSync(SECURITY_CONFIG_FILE)) {
       const sec = JSON.parse(fs.readFileSync(SECURITY_CONFIG_FILE, 'utf8'));
@@ -1456,11 +1664,14 @@ app.post('/api/webhooks/:id/test', async (req, res) => {
   const signature = crypto.createHmac('sha256', hmacSecret).update(payloadStr).digest('hex');
 
   try {
-    const urlObj = new URL(hook.url);
+    const urlValidation = await validateHttpUrlResolved(hook.url);
+    if (!urlValidation.valid) return res.json({ success: false, error: urlValidation.error });
+    const urlObj = urlValidation.url;
     const reqModule = urlObj.protocol === 'https:' ? https : http;
 
     const testReq = reqModule.request(hook.url, {
       method: 'POST',
+      lookup: fixedDnsLookup(urlValidation.addresses || []),
       headers: {
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(payloadStr),
@@ -1499,6 +1710,11 @@ app.post('/api/webhooks/:id/test', async (req, res) => {
 });
 
 const FTP_PASSWORD_MASK = '********';
+function maskSecret(secret) {
+  if (!secret) return '未设置';
+  const value = String(secret);
+  return value.length <= 8 ? '********' : `${value.slice(0, 4)}...${value.slice(-4)}`;
+}
 
 app.get('/api/config/security', requireRole('admin'), (req, res) => {
   try {
@@ -1506,8 +1722,8 @@ app.get('/api/config/security', requireRole('admin'), (req, res) => {
     res.json({
       success: true,
       data: {
-        hmac_secret: sec.hmac_secret || '',
-        hmac_secret_masked: sec.hmac_secret || '未设置',
+        hmac_secret: '',
+        hmac_secret_masked: maskSecret(sec.hmac_secret),
         auto_diode_interval: sec.auto_diode_interval || 0,
         ftp_enabled: sec.ftp_enabled || false,
         ftp_host: sec.ftp_host || '',
@@ -1553,11 +1769,15 @@ app.post('/api/config/security', requireRole('admin'), (req, res) => {
   try {
     const sec = JSON.parse(fs.readFileSync(SECURITY_CONFIG_FILE, 'utf8'));
     if (hmac_secret) {
+      if (typeof hmac_secret !== 'string' || hmac_secret.trim().length < 32 || hmac_secret.length > 256) {
+        return res.status(400).json({ success: false, error: 'HMAC 密钥长度必须为 32-256 个字符' });
+      }
       sec.hmac_secret = hmac_secret;
       setHmacSecret(hmac_secret);
       addAuditLog('SECURITY', `HMAC 数字签名秘钥已在线轮换更新`, 'SUCCESS');
     }
-    if (typeof auto_diode_interval === 'number') {
+    if (typeof auto_diode_interval === 'number' && Number.isFinite(auto_diode_interval)) {
+      if (auto_diode_interval < 0 || auto_diode_interval > 86400) return res.status(400).json({ success: false, error: '摆渡轮询间隔必须在 0-86400 秒之间' });
       sec.auto_diode_interval = auto_diode_interval;
       setAutoDiodeInterval(auto_diode_interval);
       addAuditLog('DIODE_CONFIG', `网闸自动摆渡轮询频率设置为: ${auto_diode_interval}秒`, 'INFO');
@@ -1794,10 +2014,10 @@ function getLocalIps() {
   return ips;
 }
 
-app.listen(PORT, '0.0.0.0', () => {
+const httpServer = app.listen(PORT, '0.0.0.0', () => {
   const localIps = getLocalIps();
   console.log(`===================================================`);
-  console.log(` 内网数据汇聚与管理中台 (VFusion Core v0.10.0) 已启动`);
+  console.log(` 内网数据汇聚与管理中台 (VFusion Core v0.19.0) 已启动`);
   console.log(` 本机访问地址: http://localhost:${PORT}`);
   localIps.forEach(ip => {
     console.log(` 局域网/其他电脑访问地址: http://${ip}:${PORT}`);
@@ -1807,3 +2027,17 @@ app.listen(PORT, '0.0.0.0', () => {
   // 启动时自动检测并开启 FTP 远程轮询
   bootFtpPoll();
 });
+
+let shuttingDown = false;
+async function gracefulShutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`[VFusion Core] 收到 ${signal}，正在优雅关闭...`);
+  clearInterval(scanTimer);
+  if (autoDiodeTimer) clearInterval(autoDiodeTimer);
+  if (ftpPollTimer) clearInterval(ftpPollTimer);
+  await new Promise(resolve => httpServer.close(() => resolve()));
+  try { await coreSqlite.close(); } catch (e) { console.error('[VFusion Core] 关闭数据库失败:', e.message); }
+}
+process.once('SIGINT', () => gracefulShutdown('SIGINT').finally(() => process.exit(0)));
+process.once('SIGTERM', () => gracefulShutdown('SIGTERM').finally(() => process.exit(0)));

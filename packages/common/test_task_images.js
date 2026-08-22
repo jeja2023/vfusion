@@ -26,7 +26,7 @@ async function runTaskImagesTest() {
 
   // 1. 创建任务与查询
   console.log('\n[1/5] 任务创建与更新测试');
-  const t1 = storage.saveTask({
+  const t1 = await storage.saveTask({
     task_code: 'TASK_TEST_001',
     task_name: '厂区智能安防巡检',
     description: '巡检测试任务描述',

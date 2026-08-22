@@ -24,7 +24,8 @@ async function runSmokeTest() {
   });
 
   // 加载共享 HMAC 密钥
-  let hmacSecret = 'vfusion_secret_key_2026';
+  const { getHmacSecret } = require('../packages/common/protocol');
+  let hmacSecret = getHmacSecret();
   if (fs.existsSync(SECURITY_CONFIG_FILE)) {
     try {
       const sec = JSON.parse(fs.readFileSync(SECURITY_CONFIG_FILE, 'utf8'));

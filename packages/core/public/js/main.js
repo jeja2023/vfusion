@@ -62,6 +62,13 @@ function getAuthToken() {
   return localStorage.getItem('vfusion_token') || '';
 }
 
+function assetUrl(url) {
+  const value = String(url || '');
+  if (!/^\/(?:assets|collector-assets)\//.test(value)) return value;
+  const token = getAuthToken();
+  return token ? `${value}${value.includes('?') ? '&' : '?'}access_token=${encodeURIComponent(token)}` : value;
+}
+
 // 保留原生实现，供 apiFetch 与静态资源请求使用，避免下方全局拦截造成递归
 const nativeFetch = window.fetch.bind(window);
 
@@ -173,7 +180,7 @@ function openImageLightbox(url, captionData) {
   const overlay = document.getElementById('imageLightboxOverlay');
   const img = document.getElementById('lightboxImg');
   const captionEl = document.getElementById('lightboxCaption');
-  if (img) img.src = url;
+  if (img) img.src = assetUrl(url);
 
   if (captionEl) {
     if (typeof captionData === 'object' && captionData !== null) {
@@ -408,9 +415,9 @@ function openEventDrawer(eventId) {
   const files = evt.files || [];
   const imgsHtml = files.length > 0
     ? files.map(f => `
-        <div style="display:flex; flex-direction:column; gap:0.35rem; background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:0.5rem; cursor:pointer;" onclick="openImageLightbox('${escapeJsString(f.url)}', { description:'${escapeJsString(f.description || '')}', timestamp:'${escapeJsString(f.timestamp || '')}', location:'${escapeJsString(f.location || '')}', uploader:'${escapeJsString((f.uploader_name || f.uploader_username || '').split('(')[0].trim())}' })">
+        <div style="display:flex; flex-direction:column; gap:0.35rem; background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:0.5rem; cursor:pointer;" onclick="openImageLightbox('${escapeJsString(assetUrl(f.url))}', { description:'${escapeJsString(f.description || '')}', timestamp:'${escapeJsString(f.timestamp || '')}', location:'${escapeJsString(f.location || '')}', uploader:'${escapeJsString((f.uploader_name || f.uploader_username || '').split('(')[0].trim())}' })">
           <div style="width:100%; height:110px; background:#0f172a; border-radius:6px; overflow:hidden;">
-            <img src="${escapeHtml(f.url)}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none'">
+            <img src="${escapeHtml(assetUrl(f.url))}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none'">
           </div>
           <div style="font-size:0.7rem; color:#64748b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(f.filename || '')}">${escapeHtml(f.filename || '图片')}</div>
         </div>`).join('')

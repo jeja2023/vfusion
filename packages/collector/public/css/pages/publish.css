@@ -4,6 +4,20 @@
 .radio-label:hover { background: #f1f5f9; }
 .radio-label input { accent-color: var(--primary); }
 
+.monitoring-point-picker { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 0.7rem 0.85rem; border-radius: 8px; }
+.monitoring-point-picker input[type="search"] { border-color: #86efac; }
+.monitoring-point-picker #locationPickerStatus { color: #64748b; font-size: 0.72rem; min-height: 1.1em; margin-top: 0.35rem; }
+.monitoring-point-results { display: flex; flex-direction: column; gap: 0.25rem; max-height: 180px; overflow-y: auto; margin-top: 0.4rem; }
+.monitoring-point-result { display:flex; align-items:center; justify-content:space-between; gap:0.6rem; width:100%; border:1px solid #d1fae5; background:#fff; border-radius:6px; padding:0.42rem 0.55rem; text-align:left; cursor:pointer; color:#334155; }
+.monitoring-point-result:hover { border-color:#22c55e; background:#f0fdf4; }
+.monitoring-point-result span { display:flex; flex-direction:column; min-width:0; }
+.monitoring-point-result small { color:#64748b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.monitoring-point-result code { flex-shrink:0; color:#047857; font-size:0.7rem; }
+.monitoring-point-empty, .monitoring-point-selected { color:#64748b; font-size:0.74rem; padding:0.35rem 0; }
+.new-monitoring-point-panel { margin-top:0.55rem; padding-top:0.55rem; border-top:1px dashed #86efac; }
+.new-monitoring-point-grid { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:0.4rem; }
+@media (max-width: 700px) { .new-monitoring-point-grid { grid-template-columns:1fr 1fr; } }
+
 .upload-zone {
   border: 2px dashed #93c5fd;
   border-radius: 12px;

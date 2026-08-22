@@ -1,4 +1,4 @@
-# 视汇 (VFusion) - 通用跨隔离网数据交换与汇聚平台架构方案 (v0.11.0)
+# 视汇 (VFusion) - 通用跨隔离网数据交换与汇聚平台架构方案 (v0.19.0)
 
 > **文档性质说明**
 >
@@ -18,15 +18,17 @@
 > - MinIO 对象存储（当前为本地文件系统）
 > - Kafka / RabbitMQ 消息广播（当前仅 HTTP Webhook）
 > - 机器学习视觉识别（人脸/车牌）；当前 `event_tags.js` 为**基于规则的字段标注**，不含模型推理
-> - HTTPS/TLS 传输加密（`ssl_cert.js` 模块存在但未启用）
+> - HTTPS/TLS 终止由生产反向代理或部署环境负责；服务端默认不生成或下发私钥
 > - Schema 跨网自动摆渡同步（当前为手动导入导出）
 >
 > 文中出现 `JSONB`、`PostgreSQL`、`MinIO`、`Kafka` 等术语处，除非另有标注，均指目标架构而非当前实现。
 
 ## 一、 平台定位与设计理念 (Platform Positioning)
 
+当前发布版本为 **v0.19.0**。本版本已完成资源鉴权、路径与上传校验、任务共享服务端授权、敏感配置脱敏、SQLite 写入队列及 CI 测试加固，并提供离线监控点位主数据能力。
+
 ### 1.1 从“单一应用”到“零代码通用中台”
-**视汇 (VFusion v0.18.0)** 定位为 **零代码/低代码通用型跨隔离网数据交换与汇聚中台 (Zero-Code Universal Cross-Network Data Platform)**。包含按页面模块化拆分的 HTML/CSS/JS 架构、视频网采集端已提交历史存照控制台（`GET /api/published-history`）、全量双端数据表格通用客户端分页器、任务上下文管理（任务名称、关联任务编号）、层级化任务归属存储（`storage/assets/tasks/{task_code}/{event_id}/`）、默认事件字段集（事件时间、交通方式、地点、经纬度、描述、涉事人员姓名/身份证/户籍）、**高密度数据表格**、**涉事人员档案弹窗**、**涉事人员历史档案一键提取与单向摆渡跨网自动归档**，以及**第三方外部 FTP 服务器双端可视化通道自动推送与抓取入库管道**功能。
+**视汇 (VFusion v0.19.0)** 定位为 **零代码/低代码通用型跨隔离网数据交换与汇聚中台 (Zero-Code Universal Cross-Network Data Platform)**。包含按页面模块化拆分的 HTML/CSS/JS 架构、视频网采集端已提交历史存照控制台（`GET /api/published-history`）、全量双端数据表格通用客户端分页器、任务上下文管理（任务名称、关联任务编号）、层级化任务归属存储（`storage/assets/tasks/{task_code}/{event_id}/`）、默认事件字段集（事件时间、交通方式、地点、经纬度、描述、涉事人员姓名/身份证/户籍）、**高密度数据表格**、**涉事人员档案弹窗**、**涉事人员历史档案一键提取与单向摆渡跨网自动归档**，以及**第三方外部 FTP 服务器双端可视化通道自动推送与抓取入库管道**功能。
 
 平台致力于解决“业务扩展需要反复修改前端页面、后端接口和数据库”的痛点。无论是从当前的 5 个图片介绍字段扩展到 15 个字段，还是未来接入全新的业务类型，**管理员只需在平台可视化界面配置即可完成扩展，无需编写代码**。
 
@@ -233,7 +235,7 @@
 * [x] **Phase 2（零代码表单配置）**：上线可视化表单设计器 (Form Builder) 与双端动态渲染（当前为表格表单式配置，拖拽式设计器为后续增强）。
 * [ ] **Phase 3（动态检索与看板）**：迁移 PostgreSQL JSONB，实现服务端 JSONB 动态索引查询与可视化看板聚合。
 * [ ] **Phase 4（Schema 隔离摆渡同步）**：实现配置变更自动打包摆渡同步机制。
-* [ ] **Phase 5（安全增强）**：启用 HTTPS/TLS（`ssl_cert.js` 已就绪）、实现令牌黑名单与刷新机制、接入真实视觉识别推理（当前为规则标注）。
+* [ ] **Phase 5（安全增强）**：令牌黑名单与刷新机制、接入真实视觉识别推理（当前为规则标注）；HTTPS/TLS 由生产反向代理终止。
 * [ ] **Phase 6（存储与消息扩展）**：接入 MinIO 对象存储与 Kafka/RabbitMQ 消息广播。
 
 ---
@@ -251,18 +253,26 @@ npm run start:collector   # 视频网采集端，默认 5001
 首次启动时系统会自动完成两件事，**请留意控制台输出**：
 
 1. **生成随机密钥**：在 `storage/security.json` 中写入随机 `hmac_secret` 与 `token_secret`。若检测到历史遗留的默认密钥 `vfusion_secret_key_2026`，会自动轮换并告警。
-2. **生成初始账号密码**：admin / operator / auditor 三个内置账号的初始密码为随机值，**仅在首次启动的控制台打印一次**，请立即登录修改。也可通过环境变量预设：
+2. **生成初始账号密码**：仅自动创建超级管理员账号，初始密码为随机值，**仅在首次启动的控制台打印一次**，请立即登录修改。其他业务/审计账号由管理员在控制台创建。也可通过环境变量预设：
 
 ```bash
 VFUSION_ADMIN_PASSWORD=<your-password>
-VFUSION_OPERATOR_PASSWORD=<your-password>
-VFUSION_AUDITOR_PASSWORD=<your-password>
-# 视频网端对应 VFUSION_COLLECTOR_ADMIN_PASSWORD 等
+# 视频网端对应 VFUSION_COLLECTOR_ADMIN_PASSWORD
 ```
 
 ### 7.2 双端密钥必须一致
 
 视频网端签发数据包、内网端验签，二者的 `hmac_secret` **必须相同**，否则内网将拒收所有数据包（签名校验失败）。部署时请将内网 `storage/security.json` 中的 `hmac_secret` 同步至视频网端。
+
+### 7.2.1 离线监控点位与经纬度对应表
+
+系统不调用互联网地图、地理编码服务或采集端当前位置。管理员在视频网端与内网端分别维护同一份“监控点位与经纬度对应表”，坐标来源应为现场测绘、设备台账或业务核准结果。采集人员发布时选择点位编号，表单自动带出地点、经度和纬度；服务端会再次按点位编号查表并覆盖客户端坐标，防止地点与坐标错配。
+
+点位表通过系统配置页面维护，数据保存在 `storage/monitoring_points.json`。点位编号建议使用稳定的设备/杆件编号（如 `GATE_NORTH_01`），历史数据引用的点位不要删除，停用即可。两端网络隔离时，通过受控的配置介质将点位表内容同步到另一端，并在变更后记录版本或测绘批次。
+
+点位较多时，发布页按编号、名称、地点关键词分页搜索，不把全部点位加载进下拉框。登录用户可以在发布页新增本次点位；系统自动生成点位编号，地点和经纬度可留空，后续管理员可补录坐标。管理员可在系统配置页面编辑、启停，并导入/导出 CSV、JSON 表格。
+
+相关接口：`GET /api/monitoring-points?query=...&page=1&limit=30`（登录用户分页搜索启用点位），`POST /api/monitoring-points`（登录用户新增点位），`PUT /api/monitoring-points/:point_id`、`PATCH /api/monitoring-points/:point_id/toggle`、`POST /api/monitoring-points/import`、`GET /api/monitoring-points/export`（管理员维护、导入导出和启停）。经纬度填写时仍会在服务端进行范围校验（经度 `-180..180`，纬度 `-90..90`），不填写则保留为空。
 
 ### 7.3 安全基线
 
@@ -279,5 +289,5 @@ VFUSION_AUDITOR_PASSWORD=<your-password>
 
 * **限制监听范围**：服务默认监听 `0.0.0.0` 以便局域网访问。若无需跨机访问，建议改为 `127.0.0.1` 或以防火墙限制来源网段。
 * **CORS 白名单**：如需跨域访问，通过 `VFUSION_ALLOWED_ORIGINS=https://a.example.com,https://b.example.com` 显式配置；未配置时仅允许同源。
-* **启用 HTTPS**：当前默认 HTTP 传输，涉事人员身份证等敏感信息在链路上为明文。生产部署建议置于反向代理（Nginx/Caddy）之后启用 TLS。
+* **启用 HTTPS**：服务默认监听 HTTP，生产必须置于 Nginx/Caddy 等反向代理之后启用 TLS，并将 `VFUSION_ALLOWED_ORIGINS` 配置为 HTTPS 来源。
 * **备份 `storage/`**：该目录包含全部业务数据与密钥，且已排除出 Git，需纳入独立备份策略。

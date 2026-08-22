@@ -64,7 +64,7 @@ async function runTest() {
   fs.mkdirSync(testDir, { recursive: true });
 
   const sampleImgPath = path.join(testDir, 'test_sample.jpg');
-  fs.writeFileSync(sampleImgPath, 'FAKE_IMAGE_BINARY_DATA_FOR_VFUSION_TEST');
+  fs.writeFileSync(sampleImgPath, Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00]));
 
   console.log('\n[1/4] 打包与签名回填');
   const packResult = await packEventPackage({

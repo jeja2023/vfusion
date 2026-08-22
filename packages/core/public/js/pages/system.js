@@ -55,6 +55,173 @@ async function loadSystemHealth() {
   } catch (e) {
     console.error('加载系统健康度失败:', e);
   }
+  await loadCoreMonitoringPointTable();
+}
+
+let coreMonitoringPoints = [];
+let coreMonitoringPointPage = 1;
+let coreMonitoringPointPages = 1;
+let coreMonitoringPointSearchTimer = null;
+
+async function loadCoreMonitoringPointTable(page = coreMonitoringPointPage) {
+  const body = document.getElementById('coreMonitoringPointsTableBody');
+  if (!body) return;
+  try {
+    const query = document.getElementById('coreMonitoringPointAdminQuery')?.value.trim() || '';
+    const res = await fetch(`/api/monitoring-points?include_disabled=1&page=${page}&limit=50&query=${encodeURIComponent(query)}`);
+    const json = await res.json();
+    if (!res.ok || !json.success) throw new Error(json.error || '点位表加载失败');
+    coreMonitoringPoints = Array.isArray(json.data) ? json.data : [];
+    coreMonitoringPointPage = json.pagination?.page || page;
+    coreMonitoringPointPages = json.pagination?.pages || 1;
+    if (!coreMonitoringPoints.length) {
+      body.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#64748b;">尚未维护监控点位</td></tr>';
+      renderCoreMonitoringPointPagination(0);
+      return;
+    }
+    body.innerHTML = coreMonitoringPoints.map((point, index) => `
+      <tr>
+        <td><code>${escapeHtml(point.point_id)}</code></td>
+        <td>${escapeHtml(point.name)}</td>
+        <td>${escapeHtml(point.location)}</td>
+        <td>${escapeHtml(point.longitude)}</td>
+        <td>${escapeHtml(point.latitude)}</td>
+        <td>${escapeHtml(point.description || '-')}</td>
+        <td><span class="status-badge ${point.enabled === false ? 'status-disabled' : 'status-active'}">${point.enabled === false ? '已停用' : '启用'}</span></td>
+        <td style="white-space:nowrap;">
+          <button class="btn btn-sm" type="button" onclick="editCoreMonitoringPoint(${index})">编辑</button>
+          <button class="btn btn-sm" type="button" onclick="toggleCoreMonitoringPoint(${index})">${point.enabled === false ? '启用' : '停用'}</button>
+        </td>
+      </tr>
+    `).join('');
+    renderCoreMonitoringPointPagination(json.pagination?.total || coreMonitoringPoints.length);
+  } catch (e) {
+    body.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#b91c1c;">${escapeHtml(e.message)}</td></tr>`;
+  }
+}
+
+function renderCoreMonitoringPointPagination(total) {
+  const box = document.getElementById('coreMonitoringPointPagination');
+  if (!box) return;
+  box.innerHTML = `<span>共 ${total} 条，第 ${coreMonitoringPointPage}/${coreMonitoringPointPages} 页</span>
+    <button class="btn btn-sm" ${coreMonitoringPointPage <= 1 ? 'disabled' : ''} onclick="loadCoreMonitoringPointTable(${coreMonitoringPointPage - 1})">上一页</button>
+    <button class="btn btn-sm" ${coreMonitoringPointPage >= coreMonitoringPointPages ? 'disabled' : ''} onclick="loadCoreMonitoringPointTable(${coreMonitoringPointPage + 1})">下一页</button>`;
+}
+
+function scheduleCoreMonitoringPointSearch() {
+  clearTimeout(coreMonitoringPointSearchTimer);
+  coreMonitoringPointSearchTimer = setTimeout(() => loadCoreMonitoringPointTable(1), 250);
+}
+
+async function exportCoreMonitoringPoints(format) {
+  try {
+    const res = await fetch(`/api/monitoring-points/export?format=${encodeURIComponent(format)}`);
+    if (!res.ok) throw new Error('点位表导出失败');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = format === 'json' ? 'monitoring_points.json' : 'monitoring_points.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function importCoreMonitoringPoints(input) {
+  const file = input?.files?.[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const parsed = file.name.toLowerCase().endsWith('.json') ? JSON.parse(text) : parseCoreMonitoringPointCsv(text.replace(/^\ufeff/, ''));
+    const points = Array.isArray(parsed) ? parsed : parsed.points;
+    if (!Array.isArray(points) || !points.length) throw new Error('文件中没有有效点位数据');
+    const res = await fetch('/api/monitoring-points/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ points, mode: 'merge' }) });
+    const json = await res.json();
+    if (!res.ok || !json.success) throw new Error(json.error || '点位表导入失败');
+    showToast(`已导入 ${json.data.imported} 条点位`);
+    input.value = '';
+    await loadCoreMonitoringPointTable(1);
+  } catch (e) { showToast(e.message, 'error'); input.value = ''; }
+}
+
+function parseCoreMonitoringPointCsv(text) {
+  const rows = [];
+  let row = [], cell = '', quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (quoted && ch === '"' && text[i + 1] === '"') { cell += '"'; i++; continue; }
+    if (ch === '"') { quoted = !quoted; continue; }
+    if (!quoted && ch === ',') { row.push(cell); cell = ''; continue; }
+    if (!quoted && (ch === '\n' || ch === '\r')) { if (ch === '\r' && text[i + 1] === '\n') i++; row.push(cell); if (row.some(value => value.trim())) rows.push(row); row = []; cell = ''; continue; }
+    cell += ch;
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  if (!rows.length) return [];
+  const headers = rows.shift().map(value => value.trim().toLowerCase());
+  return rows.map(values => Object.fromEntries(headers.map((header, index) => [header, (values[index] || '').trim()]))).map(point => ({ ...point, enabled: point.enabled === '' || !['false', '0', 'no', '停用', '禁用'].includes(String(point.enabled).toLowerCase()) }));
+}
+
+function resetCoreMonitoringPointForm() {
+  const form = document.getElementById('coreMonitoringPointForm');
+  if (form) form.reset();
+  const editing = document.getElementById('coreMonitoringPointEditingId');
+  const idInput = document.getElementById('coreMonitoringPointId');
+  if (editing) editing.value = '';
+  if (idInput) idInput.disabled = false;
+}
+
+function editCoreMonitoringPoint(index) {
+  const point = coreMonitoringPoints[index];
+  if (!point) return;
+  document.getElementById('coreMonitoringPointEditingId').value = point.point_id;
+  document.getElementById('coreMonitoringPointId').value = point.point_id;
+  document.getElementById('coreMonitoringPointId').disabled = true;
+  document.getElementById('coreMonitoringPointName').value = point.name || '';
+  document.getElementById('coreMonitoringPointLocation').value = point.location || '';
+  document.getElementById('coreMonitoringPointLongitude').value = point.longitude ?? '';
+  document.getElementById('coreMonitoringPointLatitude').value = point.latitude ?? '';
+  document.getElementById('coreMonitoringPointDescription').value = point.description || '';
+  document.getElementById('coreMonitoringPointForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+async function saveCoreMonitoringPoint(event) {
+  event.preventDefault();
+  const pointId = document.getElementById('coreMonitoringPointId').value.trim();
+  const editingId = document.getElementById('coreMonitoringPointEditingId').value.trim();
+  const payload = {
+    point_id: pointId,
+    name: document.getElementById('coreMonitoringPointName').value.trim(),
+    location: document.getElementById('coreMonitoringPointLocation').value.trim(),
+    longitude: document.getElementById('coreMonitoringPointLongitude').value.trim(),
+    latitude: document.getElementById('coreMonitoringPointLatitude').value.trim(),
+    description: document.getElementById('coreMonitoringPointDescription').value.trim()
+  };
+  try {
+    const url = editingId ? `/api/monitoring-points/${encodeURIComponent(editingId)}` : '/api/monitoring-points';
+    const res = await fetch(url, { method: editingId ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const json = await res.json();
+    if (!res.ok || !json.success) throw new Error(json.error || '保存点位失败');
+    showToast(editingId ? '监控点位已更新' : '监控点位已新增');
+    resetCoreMonitoringPointForm();
+    await loadCoreMonitoringPointTable();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+async function toggleCoreMonitoringPoint(index) {
+  const point = coreMonitoringPoints[index];
+  if (!point) return;
+  try {
+    const res = await fetch(`/api/monitoring-points/${encodeURIComponent(point.point_id)}/toggle`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: point.enabled === false })
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) throw new Error(json.error || '更新点位状态失败');
+    await loadCoreMonitoringPointTable();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
 }
 
 function updateDiodeStatusUi(seconds) {

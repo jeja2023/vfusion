@@ -63,6 +63,159 @@ function publishToTask(taskCode) {
   if (typeof switchTab === 'function') switchTab('tab-publish');
 }
 
+let monitoringPoints = [];
+let selectedMonitoringPointId = '';
+let monitoringPointSearchTimer = null;
+
+function getLocationCoordinateInput(key) {
+  return document.querySelector(`#dynamicFormGrid [name="${key}"]`);
+}
+
+function setLocationInputState(locked, message) {
+  ['location', 'longitude', 'latitude'].forEach(key => {
+    const input = getLocationCoordinateInput(key);
+    if (input) input.readOnly = locked;
+  });
+  const status = document.getElementById('locationPickerStatus');
+  if (status) {
+    status.textContent = message || '';
+    status.style.color = locked ? '#047857' : '#64748b';
+  }
+}
+
+function applyMonitoringPoint(pointId) {
+  selectedMonitoringPointId = pointId || '';
+  const pointSelect = document.getElementById('monitoringPointSelect');
+  if (pointSelect) pointSelect.value = selectedMonitoringPointId;
+  const point = monitoringPoints.find(item => item.point_id === pointId);
+  const locationInput = getLocationCoordinateInput('location');
+  const longitudeInput = getLocationCoordinateInput('longitude');
+  const latitudeInput = getLocationCoordinateInput('latitude');
+  if (!point) {
+    setLocationInputState(false, '未绑定点位，可按现场记录手工填写地点和坐标');
+    return;
+  }
+  if (locationInput) locationInput.value = point.location || point.name || '';
+  if (longitudeInput) longitudeInput.value = point.longitude ?? '';
+  if (latitudeInput) latitudeInput.value = point.latitude ?? '';
+  const coordinateText = point.longitude === null || point.latitude === null ? '该点位尚未维护经纬度' : '坐标来自点位台账';
+  setLocationInputState(true, `${coordinateText}：${point.name}（${point.point_id}），如需手工填写请先清除选择`);
+}
+
+function renderMonitoringPointResults(points) {
+  const box = document.getElementById('monitoringPointResults');
+  if (!box) return;
+  monitoringPoints = Array.isArray(points) ? points : [];
+  if (!monitoringPoints.length) {
+    box.innerHTML = '<div class="monitoring-point-empty">未找到匹配点位，可点击“新增本次点位”。</div>';
+    return;
+  }
+  box.innerHTML = monitoringPoints.map((point, index) => `
+    <button type="button" class="monitoring-point-result" onclick="chooseMonitoringPoint(${index})">
+      <span><strong>${escapeHtml(point.name)}</strong><small>${escapeHtml(point.location || '')} · ${escapeHtml(point.point_id)}</small></span>
+      <code>${point.longitude === null ? '暂无坐标' : `${escapeHtml(point.longitude)}, ${escapeHtml(point.latitude)}`}</code>
+    </button>
+  `).join('');
+}
+
+function chooseMonitoringPoint(index) {
+  const point = monitoringPoints[index];
+  if (!point) return;
+  selectedMonitoringPointId = point.point_id;
+  applyMonitoringPoint(point.point_id);
+  const input = document.getElementById('monitoringPointSearch');
+  if (input) input.value = `${point.name} [${point.point_id}]`;
+  const box = document.getElementById('monitoringPointResults');
+  if (box) box.innerHTML = `<div class="monitoring-point-selected">已选择：${escapeHtml(point.name)}（${escapeHtml(point.point_id)}）</div>`;
+}
+
+function clearMonitoringPointSelection() {
+  selectedMonitoringPointId = '';
+  const pointSelect = document.getElementById('monitoringPointSelect');
+  if (pointSelect) pointSelect.value = '';
+  const search = document.getElementById('monitoringPointSearch');
+  if (search) search.value = '';
+  setLocationInputState(false, '未绑定点位，可手工填写地点；经纬度可留空');
+  const box = document.getElementById('monitoringPointResults');
+  if (box) box.innerHTML = '';
+}
+
+async function searchMonitoringPoints() {
+  const input = document.getElementById('monitoringPointSearch');
+  const query = input ? input.value.trim() : '';
+  try {
+    const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
+    const response = await fetchFn(`/api/monitoring-points?query=${encodeURIComponent(query)}&limit=30`);
+    const result = await response.json();
+    if (!response.ok || !result.success) throw new Error(result.error || '点位表加载失败');
+    renderMonitoringPointResults(result.data);
+  } catch (error) {
+    const status = document.getElementById('locationPickerStatus');
+    if (status) { status.textContent = `点位表加载失败：${error.message}`; status.style.color = '#b91c1c'; }
+  }
+}
+
+function scheduleMonitoringPointSearch() {
+  clearTimeout(monitoringPointSearchTimer);
+  monitoringPointSearchTimer = setTimeout(searchMonitoringPoints, 220);
+}
+
+function openNewMonitoringPointForm() {
+  const panel = document.getElementById('newMonitoringPointPanel');
+  if (panel) panel.hidden = false;
+  const nameInput = document.getElementById('newMonitoringPointName');
+  if (nameInput) nameInput.focus();
+}
+
+function closeNewMonitoringPointForm() {
+  const panel = document.getElementById('newMonitoringPointPanel');
+  if (panel) panel.hidden = true;
+}
+
+async function saveNewMonitoringPoint() {
+  const name = document.getElementById('newMonitoringPointName')?.value.trim();
+  const location = document.getElementById('newMonitoringPointLocation')?.value.trim();
+  const longitude = document.getElementById('newMonitoringPointLongitude')?.value.trim();
+  const latitude = document.getElementById('newMonitoringPointLatitude')?.value.trim();
+  if (!name) return showToast('请输入点位名称', 'error');
+  if ((longitude && !latitude) || (!longitude && latitude)) return showToast('经度和纬度必须同时填写', 'error');
+  try {
+    const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
+    const res = await fetchFn('/api/monitoring-points', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, location: location || name, longitude, latitude, description: '用户发布时新增' })
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) throw new Error(json.error || '新增点位失败');
+    monitoringPoints = [json.data];
+    chooseMonitoringPoint(0);
+    closeNewMonitoringPointForm();
+    showToast(`点位已保存：${json.data.point_id}`);
+  } catch (error) {
+    showToast(error.message, 'error');
+  }
+}
+
+async function loadMonitoringPoints() {
+  const input = document.getElementById('monitoringPointSearch');
+  if (input) input.value = '';
+  await searchMonitoringPoints();
+}
+
+function validateCoordinateInputs() {
+  const longitude = (getLocationCoordinateInput('longitude') || {}).value || '';
+  const latitude = (getLocationCoordinateInput('latitude') || {}).value || '';
+  if (!longitude.trim() && !latitude.trim()) return true;
+  const longitudeNumber = Number(longitude);
+  const latitudeNumber = Number(latitude);
+  if (!Number.isFinite(longitudeNumber) || longitudeNumber < -180 || longitudeNumber > 180 ||
+      !Number.isFinite(latitudeNumber) || latitudeNumber < -90 || latitudeNumber > 90) {
+    showToast('经度范围为 -180 至 180，纬度范围为 -90 至 90，且必须成对填写', 'error');
+    return false;
+  }
+  return true;
+}
+
 function renderDynamicForm(fields) {
   const grid = document.getElementById('dynamicFormGrid');
   if (!grid) return;
@@ -122,8 +275,33 @@ function renderDynamicForm(fields) {
   `;
   grid.appendChild(pGroup);
 
+  const pointGroup = document.createElement('div');
+  pointGroup.className = 'form-group full-width monitoring-point-picker';
+  pointGroup.innerHTML = `
+    <label>监控点位 <span style="font-size:0.72rem; font-weight:normal; color:#64748b;">优先选择点位表中的标准坐标</span></label>
+    <input id="monitoringPointSearch" type="search" placeholder="输入点位编号、名称或地点关键词" autocomplete="off" oninput="scheduleMonitoringPointSearch()" onkeydown="if(event.key==='Enter'){event.preventDefault();searchMonitoringPoints();}">
+    <input type="hidden" id="monitoringPointSelect" name="monitoring_point_id" value="">
+    <div id="monitoringPointResults" class="monitoring-point-results"></div>
+    <div style="display:flex; gap:0.4rem; align-items:center; margin-top:0.4rem;">
+      <button type="button" class="btn" onclick="openNewMonitoringPointForm()">新增本次点位</button>
+      <button type="button" class="btn" onclick="clearMonitoringPointSelection()">清除选择，手工填写</button>
+      <span id="locationPickerStatus" aria-live="polite">点位和经纬度均可不填写。</span>
+    </div>
+    <div id="newMonitoringPointPanel" class="new-monitoring-point-panel" hidden>
+      <div class="new-monitoring-point-grid">
+        <input id="newMonitoringPointName" placeholder="点位名称 *" maxlength="128">
+        <input id="newMonitoringPointLocation" placeholder="地点名称（可选）" maxlength="256">
+        <input id="newMonitoringPointLongitude" placeholder="经度（可选）" inputmode="decimal">
+        <input id="newMonitoringPointLatitude" placeholder="纬度（可选）" inputmode="decimal">
+      </div>
+      <div style="display:flex; gap:0.4rem; margin-top:0.4rem;"><button type="button" class="btn btn-primary" onclick="saveNewMonitoringPoint()">保存并使用</button><button type="button" class="btn" onclick="closeNewMonitoringPointForm()">取消</button></div>
+    </div>
+    <div id="locationPickerStatus" aria-live="polite">点位表由管理员维护；不调用互联网地图或设备当前位置。</div>
+  `;
+  grid.appendChild(pointGroup);
+
   (fields || []).forEach(field => {
-    if (['person_name', 'person_id_card', 'person_domicile'].includes(field.key)) return;
+    if (['person_name', 'person_id_card', 'person_domicile', 'monitoring_point_id', 'monitoring_point_name', 'location_source'].includes(field.key)) return;
 
     const group = document.createElement('div');
     const isFullWidth = field.type === 'textarea' || field.key === 'location';
@@ -150,7 +328,8 @@ function renderDynamicForm(fields) {
     } else if (field.type === 'textarea') {
       inputHtml = `<textarea name="${safeKey}" placeholder="请输入${safeLabel}" style="height:60px; min-height:54px;" ${field.required ? 'required' : ''}>${safeVal}</textarea>`;
     } else {
-      inputHtml = `<input type="text" name="${safeKey}" value="${safeVal}" placeholder="请输入${safeLabel}" autocomplete="off" ${field.required ? 'required' : ''}>`;
+      const coordinateHint = field.key === 'longitude' ? '例如 116.397128' : (field.key === 'latitude' ? '例如 39.916527' : `请输入${safeLabel}`);
+      inputHtml = `<input id="field-${safeKey}" type="text" name="${safeKey}" value="${safeVal}" placeholder="${coordinateHint}" autocomplete="off" inputmode="decimal" ${field.required ? 'required' : ''}>`;
     }
 
     group.innerHTML = `
@@ -160,7 +339,19 @@ function renderDynamicForm(fields) {
     grid.appendChild(group);
   });
 
+  ['location', 'longitude', 'latitude'].forEach(key => {
+    if (!grid.querySelector(`[name="${key}"]`)) {
+      const hidden = document.createElement('input');
+      hidden.type = 'hidden';
+      hidden.name = key;
+      grid.appendChild(hidden);
+    }
+  });
+
+  selectedMonitoringPointId = existingValues.monitoring_point_id || '';
+  if (selectedMonitoringPointId) applyMonitoringPoint(selectedMonitoringPointId);
   loadTaskOptions();
+  loadMonitoringPoints();
 }
 
 function handleFileSelect(e) {
@@ -286,6 +477,7 @@ function bindPublishFormSubmit() {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (selectedFiles.length === 0) { showToast('请至少上传一张抓拍照片！', 'error'); return; }
+    if (!validateCoordinateInputs()) return;
 
     const btn = document.getElementById('btnSubmit');
     btn.disabled = true;

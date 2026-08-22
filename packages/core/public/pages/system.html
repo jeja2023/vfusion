@@ -58,4 +58,43 @@
       <div id="webUpgradeStatusBox" style="display:none; margin-top:0.45rem; font-size:0.75rem; padding:0.45rem 0.6rem; border-radius:6px; font-family:monospace;"></div>
     </div>
   </div>
+
+  <div style="margin-top:0.85rem; background:#ffffff; border:1px solid var(--border-color); border-radius:8px; padding:0.85rem;">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.75rem; margin-bottom:0.65rem;">
+      <div>
+        <h4 style="font-size:0.85rem; font-weight:700; color:var(--text-main); margin:0 0 0.25rem;">监控点位与经纬度对应表</h4>
+        <div style="font-size:0.74rem; color:var(--text-sub); line-height:1.45;">点位坐标以现场测绘、设备台账或管理员核准结果为准。采集端发布时从点位表选择，核心端按点位编号复核，不使用互联网地图或采集端当前位置。</div>
+      </div>
+      <div style="display:flex; gap:0.35rem; flex-wrap:wrap; justify-content:flex-end;">
+        <button class="btn" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" onclick="exportCoreMonitoringPoints('csv')">导出 CSV</button>
+        <button class="btn" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" onclick="exportCoreMonitoringPoints('json')">导出 JSON</button>
+        <label class="btn" style="padding:0.38rem 0.65rem; font-size:0.75rem; cursor:pointer;">导入文件<input type="file" id="coreMonitoringPointImportFile" accept=".csv,.json,text/csv,application/json" hidden onchange="importCoreMonitoringPoints(this)"></label>
+        <button class="btn" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" onclick="resetCoreMonitoringPointForm();">新建点位</button>
+      </div>
+    </div>
+    <form id="coreMonitoringPointForm" onsubmit="saveCoreMonitoringPoint(event)" style="display:grid; grid-template-columns:repeat(6, minmax(0, 1fr)); gap:0.5rem; align-items:end; margin-bottom:0.75rem;">
+      <input type="hidden" id="coreMonitoringPointEditingId">
+      <div class="form-group"><label>点位编号 *</label><input id="coreMonitoringPointId" required maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,63}" placeholder="如 GATE_NORTH_01"></div>
+      <div class="form-group"><label>点位名称 *</label><input id="coreMonitoringPointName" required maxlength="128" placeholder="如 厂区北门1号机"></div>
+      <div class="form-group"><label>地点名称 *</label><input id="coreMonitoringPointLocation" required maxlength="256" placeholder="如 厂区北门"></div>
+      <div class="form-group"><label>经度（可选）</label><input id="coreMonitoringPointLongitude" inputmode="decimal" placeholder="-180 至 180"></div>
+      <div class="form-group"><label>纬度（可选）</label><input id="coreMonitoringPointLatitude" inputmode="decimal" placeholder="-90 至 90"></div>
+      <div class="form-group"><label>点位说明</label><input id="coreMonitoringPointDescription" maxlength="500" placeholder="测绘批次、设备编号等"></div>
+      <div style="grid-column:1/-1; display:flex; gap:0.5rem; justify-content:flex-end;">
+        <button class="btn btn-primary" type="submit" style="padding:0.4rem 0.8rem; font-size:0.75rem;">保存点位</button>
+        <button class="btn" type="button" style="padding:0.4rem 0.8rem; font-size:0.75rem;" onclick="resetCoreMonitoringPointForm();">取消</button>
+      </div>
+    </form>
+    <div style="display:flex; gap:0.4rem; margin-bottom:0.45rem;">
+      <input id="coreMonitoringPointAdminQuery" type="search" placeholder="搜索编号、名称或地点" oninput="scheduleCoreMonitoringPointSearch()" style="max-width:320px;">
+      <button class="btn" type="button" onclick="loadCoreMonitoringPointTable(1)">查询</button>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="data-table" style="min-width:780px; font-size:0.75rem;">
+        <thead><tr><th>编号</th><th>名称</th><th>地点</th><th>经度</th><th>纬度</th><th>说明</th><th>状态</th><th>操作</th></tr></thead>
+        <tbody id="coreMonitoringPointsTableBody"><tr><td colspan="8" style="text-align:center; color:#64748b;">加载中...</td></tr></tbody>
+      </table>
+    </div>
+    <div id="coreMonitoringPointPagination" style="display:flex; justify-content:flex-end; gap:0.5rem; align-items:center; margin-top:0.45rem; font-size:0.75rem; color:#64748b;"></div>
+  </div>
 </div>

@@ -5,7 +5,7 @@ const iconv = require('iconv-lite');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
 const pkg = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, 'package.json'), 'utf8'));
-const VERSION = pkg.version || '0.18.0';
+const VERSION = pkg.version || '0.19.0';
 
 const RELEASE_DIR = path.join(ROOT_DIR, 'release');
 
@@ -42,17 +42,7 @@ function copyDirSync(src, dest, ignoreDirs = []) {
 // Helper: 复制 node_modules (尝试 xcopy/cp，失败退回到 copyDirSync)
 function copyNodeModulesSync(destDir) {
   const destModules = path.join(destDir, 'node_modules');
-  try {
-    if (process.platform === 'win32') {
-      execSync(`robocopy "${path.join(ROOT_DIR, 'node_modules')}" "${destModules}" /E /MT:16 /NFL /NDL /NJH /NJS /nc /ns /np`);
-    } else {
-      execSync(`cp -R "${path.join(ROOT_DIR, 'node_modules')}" "${destModules}"`);
-    }
-  } catch (e) {
-    if (e.status > 7) {
-      copyDirSync(path.join(ROOT_DIR, 'node_modules'), destModules);
-    }
-  }
+  copyDirSync(path.join(ROOT_DIR, 'node_modules'), destModules);
 }
 
 // Helper: 仅复制 Storage 下的 Schema 模板文件
@@ -80,12 +70,17 @@ function writeBatFileSync(filePath, content) {
 
 function createZipArchive(sourceDir, zipPath) {
   try {
-    if (fs.existsSync(zipPath)) fs.unlinkSync(zipPath);
+    if (fs.existsSync(zipPath)) {
+      try { fs.unlinkSync(zipPath); } catch (e) {}
+    }
     const parentDir = path.dirname(sourceDir);
     const dirName = path.basename(sourceDir);
     execSync(`tar -a -c -f "${zipPath}" -C "${parentDir}" "${dirName}"`, { stdio: 'ignore' });
-    const stat = fs.statSync(zipPath);
-    return (stat.size / (1024 * 1024)).toFixed(2);
+    if (fs.existsSync(zipPath)) {
+      const stat = fs.statSync(zipPath);
+      return (stat.size / (1024 * 1024)).toFixed(2);
+    }
+    return '0';
   } catch (e) {
     console.error(`压缩 ${zipPath} 失败:`, e.message);
     return '0';

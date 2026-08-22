@@ -8,7 +8,7 @@ const { unpackAndVerifyPackage } = require('../packages/common/unpacker');
 const { uploadToRemoteFtp, downloadFromRemoteFtp } = require('../packages/common/ftp_client');
 
 console.log('================================================================');
-console.log('   视汇 (VFusion v0.11.0) 端到端 (E2E) 全流程真实性检测脚本');
+console.log('   视汇 (VFusion v0.19.0) 端到端 (E2E) 全流程真实性检测脚本');
 console.log('================================================================\n');
 
 const STORAGE_ROOT = path.resolve(__dirname, '../storage');
@@ -40,7 +40,7 @@ async function runE2ETest() {
   console.log('\n[步骤 2/6] 模拟视频网发布终端生成并打包单据 (.jpg 伪装模式)...');
   const eventId = `EVT_${Date.now()}`;
   const dummyPhotoPath = path.join(STORAGE_ROOT, `temp_test_${eventId}.jpg`);
-  fs.writeFileSync(dummyPhotoPath, Buffer.from('FAKE_JPEG_IMAGE_BINARY_DATA_FOR_E2E_TESTING'));
+  fs.writeFileSync(dummyPhotoPath, Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00]));
 
   const packResult = await packEventPackage({
     outputDir: FTP_OUT_DIR,
@@ -152,10 +152,13 @@ async function runE2ETest() {
   console.log(`   实测结果: ${passedCount} / ${totalSteps} 通过！`);
   if (passedCount === totalSteps) {
     console.log('   🎉 视汇 (VFusion) 端到端打包、摆渡、验签与对接全流程 100% 验证成功！');
+  } else {
+    throw new Error(`E2E 仅通过 ${passedCount}/${totalSteps} 步`);
   }
   console.log('================================================================');
 }
 
 runE2ETest().catch(err => {
   console.error('E2E 实测抛出未捕获异常:', err);
+  process.exitCode = 1;
 });

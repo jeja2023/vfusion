@@ -223,7 +223,7 @@ async function openTaskDetailDrawer(taskCode) {
         return `
           <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:0.5rem; display:flex; flex-direction:column; gap:0.35rem; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
             <div style="width:100%; height:110px; background:#0f172a; border-radius:6px; overflow:hidden; cursor:pointer;" onclick="viewCorePhotoLightbox('${escapeJsString(p.id)}')">
-              <img src="${escapeHtml(p.url)}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none'">
+              <img src="${escapeHtml(assetUrl(p.url))}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none'">
             </div>
             <div style="font-size:0.7rem; color:#64748b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(formattedTime)}">
               <span style="background:#0284c7; color:#fff; padding:0.05rem 0.3rem; border-radius:3px; font-weight:700; margin-right:0.25rem;">#${idx + 1}</span>${formattedTime}
@@ -404,7 +404,7 @@ function renderEvents() {
     const p = item.payload || {};
 
     const imgsHtml = (item.files || []).map(f =>
-      `<img src="${escapeHtml(f.url)}" style="width:24px; height:24px; object-fit:cover; border-radius:4px; border:1px solid var(--border-color); cursor:pointer; transition:transform 0.15s;" onclick="event.stopPropagation(); openImageLightbox('${escapeJsString(f.url)}', '现场照片放大预览 (${escapeJsString(f.filename || '001.jpg')})')" title="点击在弹窗中放大查看">`
+      `<img src="${escapeHtml(assetUrl(f.url))}" style="width:24px; height:24px; object-fit:cover; border-radius:4px; border:1px solid var(--border-color); cursor:pointer; transition:transform 0.15s;" onclick="event.stopPropagation(); openImageLightbox('${escapeJsString(assetUrl(f.url))}', '现场照片放大预览 (${escapeJsString(f.filename || '001.jpg')})')" title="点击在弹窗中放大查看">`
     ).join(' ');
 
     const personStr = p.person_name

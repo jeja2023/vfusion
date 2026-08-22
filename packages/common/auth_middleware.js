@@ -10,14 +10,14 @@ const crypto = require('crypto');
 
 const TOKEN_TTL_MS = 12 * 60 * 60 * 1000; // 12 小时
 
-let tokenSecret = null;
+let tokenSecret = crypto.randomBytes(32).toString('hex');
 
 function setTokenSecret(secret) {
-  tokenSecret = secret;
+  if (typeof secret === 'string' && secret.length >= 32) tokenSecret = secret;
 }
 
 function getTokenSecret() {
-  return tokenSecret || 'vfusion_token_fallback_secret_change_me';
+  return tokenSecret;
 }
 
 /**
@@ -41,7 +41,8 @@ function generateToken(user) {
  */
 function verifyToken(tokenStr) {
   if (typeof tokenStr !== 'string' || !tokenStr.includes('.')) return null;
-  const [body, sig] = tokenStr.split('.');
+  const [body, sig, extra] = tokenStr.split('.');
+  if (!body || !sig || extra) return null;
   const expectedSig = crypto.createHmac('sha256', getTokenSecret()).update(body).digest('base64url');
 
   const sigBuf = Buffer.from(sig);
@@ -52,7 +53,7 @@ function verifyToken(tokenStr) {
 
   try {
     const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
-    if (typeof payload.exp !== 'number' || Date.now() > payload.exp) return null;
+    if (typeof payload.iat !== 'number' || typeof payload.exp !== 'number' || payload.iat > Date.now() + 5000 || Date.now() > payload.exp) return null;
     return payload;
   } catch (e) {
     return null;
@@ -83,7 +84,8 @@ function authMiddleware(opts = {}) {
     if (urlPath === '/api/auth/login' || urlPath === '/auth/login' || exempt.has(urlPath)) return next();
 
     const header = req.headers.authorization || '';
-    const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+    const queryToken = req.query && (req.query.access_token || req.query.token);
+    const token = header.startsWith('Bearer ') ? header.slice(7) : (typeof queryToken === 'string' ? queryToken : null);
     const decoded = verifyToken(token);
 
     if (!decoded) {
@@ -109,6 +111,10 @@ function authMiddleware(opts = {}) {
   };
 }
 
+function assetAuthMiddleware(opts = {}) {
+  return authMiddleware(opts);
+}
+
 /**
  * 角色校验中间件工厂
  */
@@ -126,6 +132,7 @@ module.exports = {
   setTokenSecret,
   getTokenSecret,
   authMiddleware,
+  assetAuthMiddleware,
   requireRole,
   TOKEN_TTL_MS
 };

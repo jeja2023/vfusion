@@ -53,6 +53,13 @@ function getAuthToken() {
   return localStorage.getItem('vfusion_collector_token') || '';
 }
 
+function assetUrl(url) {
+  const value = String(url || '');
+  if (!/^\/(?:assets|collector-assets)\//.test(value)) return value;
+  const token = getAuthToken();
+  return token ? `${value}${value.includes('?') ? '&' : '?'}access_token=${encodeURIComponent(token)}` : value;
+}
+
 const nativeFetch = window.fetch.bind(window);
 
 async function apiFetch(url, options = {}) {
@@ -122,7 +129,7 @@ async function loadPageTemplates() {
 function openImageLightbox(url, captionData) {
   const imgEl = document.getElementById('lightboxImg');
   const captionEl = document.getElementById('lightboxCaption');
-  if (imgEl) imgEl.src = url;
+  if (imgEl) imgEl.src = assetUrl(url);
 
   if (captionEl) {
     if (typeof captionData === 'object' && captionData !== null) {

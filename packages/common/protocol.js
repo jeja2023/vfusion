@@ -1,10 +1,10 @@
 const crypto = require('crypto');
 
 // 默认 HMAC-SHA256 摘要签名秘钥
-let DEFAULT_HMAC_SECRET = 'vfusion_secret_key_2026';
+let DEFAULT_HMAC_SECRET = crypto.randomBytes(32).toString('hex');
 
 function setHmacSecret(newSecret) {
-  if (newSecret && typeof newSecret === 'string') {
+  if (newSecret && typeof newSecret === 'string' && newSecret.length >= 32) {
     DEFAULT_HMAC_SECRET = newSecret;
   }
 }

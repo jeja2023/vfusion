@@ -1,10 +1,20 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const { initEnv } = require('../packages/common/env_loader');
+
+initEnv();
+const CORE_USERNAME = process.env.VFUSION_ADMIN_USERNAME || 'admin';
+const CORE_PASSWORD = process.env.VFUSION_ADMIN_PASSWORD;
+const COLLECTOR_USERNAME = process.env.VFUSION_COLLECTOR_ADMIN_USERNAME || 'admin';
+const COLLECTOR_PASSWORD = process.env.VFUSION_COLLECTOR_ADMIN_PASSWORD;
 
 function login(port) {
   return new Promise((resolve) => {
-    const postData = JSON.stringify({ username: 'admin', password: 'admin123' });
+    const credentials = port === 5001
+      ? { username: COLLECTOR_USERNAME, password: COLLECTOR_PASSWORD }
+      : { username: CORE_USERNAME, password: CORE_PASSWORD };
+    const postData = JSON.stringify(credentials);
     const req = http.request({
       hostname: 'localhost',
       port: port,
@@ -33,8 +43,13 @@ function login(port) {
 async function testE2E() {
   console.log('=== VFusion 端到端 (E2E) 自动化链路验证 ===');
 
+  if (!CORE_PASSWORD || !COLLECTOR_PASSWORD) {
+    throw new Error('E2E 测试需要设置 VFUSION_ADMIN_PASSWORD 与 VFUSION_COLLECTOR_ADMIN_PASSWORD');
+  }
+
   const collToken = await login(5001);
   const coreToken = await login(5002);
+  if (!collToken || !coreToken) throw new Error('无法登录 Collector/Core，请确认双端服务已启动且测试账号已配置');
 
   // 1. 创建临时的真实测试样本文件
   const testImgPath = path.join(__dirname, 'sample_snap.jpg');
@@ -155,6 +170,7 @@ async function testE2E() {
   });
 
   const eventsList = (eventsRes && eventsRes.data) || [];
+  if (eventsList.length === 0) throw new Error('Core 未查询到已入库事件');
   console.log(`\n=== E2E 测试结果 ===`);
   console.log(`内网中台已成功解析并入库的事件数量: ${eventsList.length}`);
   if (eventsList.length > 0) {
@@ -175,4 +191,5 @@ async function testE2E() {
 
 testE2E().catch(err => {
   console.error('E2E 测试异常:', err);
+  process.exitCode = 1;
 });

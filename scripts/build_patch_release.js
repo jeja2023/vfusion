@@ -4,7 +4,7 @@ const { execSync } = require('child_process');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
 const pkg = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, 'package.json'), 'utf8'));
-const VERSION = pkg.version || '0.18.0';
+const VERSION = pkg.version || '0.19.0';
 
 const RELEASE_DIR = path.join(ROOT_DIR, 'release');
 const PATCH_DIR_NAME = `vfusion-patch-v${VERSION}`;
@@ -57,4 +57,5 @@ try {
   console.log(`\n使用方式: 登录视频网发布终端或内网数据中台的 Web 控制台，在【系统设置与维护】页面上传此文件即可实现一键无损热升级！`);
 } catch (e) {
   console.error('构建补丁包失败:', e.message);
+  process.exitCode = 1;
 }

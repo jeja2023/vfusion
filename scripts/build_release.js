@@ -2,11 +2,11 @@ const fs = require('fs');
 const path = require('path');
 
 console.log('===================================================');
-console.log(' 视汇 (VFusion) 离线物理隔离网部署包编译工具 (v0.9.0)');
+console.log(' 视汇 (VFusion) 离线物理隔离网部署包编译工具 (v0.19.0)');
 console.log('===================================================');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
-const DIST_DIR = path.join(ROOT_DIR, 'dist_vfusion_v0.9.0');
+const DIST_DIR = path.join(ROOT_DIR, 'dist_vfusion_v0.19.0');
 
 if (fs.existsSync(DIST_DIR)) {
   fs.rmSync(DIST_DIR, { recursive: true, force: true });

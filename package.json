@@ -1,6 +1,6 @@
 {
   "name": "vfusion-monorepo",
-  "version": "0.18.0",
+  "version": "0.19.0",
   "private": true,
   "description": "VFusion (视汇) - 通用跨隔离网数据交换与汇聚平台",
   "workspaces": [
@@ -10,6 +10,9 @@
     "start:collector": "node packages/collector/server.js",
     "start:core": "node packages/core/server.js",
     "test:pack": "node packages/common/test.js",
+    "test:tasks": "node packages/common/test_task_images.js",
+    "test:security": "node packages/common/test_security.js",
+    "test": "npm run test:pack && npm run test:tasks && npm run test:security",
     "pack:release": "node scripts/build_portable_release.js",
     "pack:patch": "node scripts/build_patch_release.js",
     "pack:exe": "node scripts/build_exe_binaries.js"

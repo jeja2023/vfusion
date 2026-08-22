@@ -1,6 +1,11 @@
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
+const { initEnv } = require('../packages/common/env_loader');
+
+initEnv();
+const COLLECTOR_USERNAME = process.env.VFUSION_COLLECTOR_ADMIN_USERNAME || 'admin';
+const COLLECTOR_PASSWORD = process.env.VFUSION_COLLECTOR_ADMIN_PASSWORD;
 
 const STORAGE_ROOT = path.resolve(__dirname, '../storage');
 const testPhoto = path.join(STORAGE_ROOT, 'test_live_snap.jpg');
@@ -43,9 +48,10 @@ const bodyBuffer = Buffer.concat([
 ]);
 
 async function runTest() {
+  if (!COLLECTOR_PASSWORD) throw new Error('联调测试需要设置 VFUSION_COLLECTOR_ADMIN_PASSWORD');
   console.log('1. 登录视频网端 (5001)...');
   const token = await new Promise((resolve) => {
-    const loginData = JSON.stringify({ username: 'admin', password: 'admin123' });
+    const loginData = JSON.stringify({ username: COLLECTOR_USERNAME, password: COLLECTOR_PASSWORD });
     const loginReq = http.request('http://localhost:5001/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(loginData) }
@@ -96,9 +102,11 @@ async function runTest() {
               console.log('     照片路径:', found.files ? found.files.map(f => f.url).join(', ') : '无');
             } else {
               console.log('   ✕ 未在内网中台查询到事件');
+              process.exitCode = 1;
             }
           } catch (e) {
             console.error('   解析响应异常:', e.message);
+            process.exitCode = 1;
           }
           if (fs.existsSync(testPhoto)) fs.unlinkSync(testPhoto);
         });
@@ -112,4 +120,7 @@ req.write(bodyBuffer);
 req.end();
 }
 
-runTest().catch(console.error);
+runTest().catch(err => {
+  console.error('实时链路测试失败:', err);
+  process.exitCode = 1;
+});

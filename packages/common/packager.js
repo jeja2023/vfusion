@@ -3,6 +3,7 @@ const path = require('path');
 const archiver = require('archiver');
 const { md5String, md5File } = require('./checksum');
 const { createInfoJson, signInfoObject } = require('./protocol');
+const { isSafeIdentifier, isSafeFileName, resolveInside, getImageExtension, validateImageMagic } = require('./security_utils');
 
 /**
  * 通用单据打包引擎 (.tmp 原子写入模式 + HMAC 签名 + 动态 Schema 嵌入)
@@ -28,14 +29,25 @@ async function packEventPackage(options) {
     fs.mkdirSync(outputDir, { recursive: true });
   }
 
+  if (!isSafeIdentifier(appId) || !isSafeIdentifier(bizType) || !isSafeIdentifier(eventId) || !isSafeIdentifier(taskCode || 'TASK_DEFAULT')) {
+    throw new Error('事件编号或任务编号格式无效');
+  }
+  if (!Array.isArray(files) || files.length > 200) throw new Error('附件数量超过限制');
+
   const pkgName = `vfusion_pkg_${eventId}`;
-  const finalZipPath = path.join(outputDir, `${pkgName}.zip`);
-  const tmpZipPath = path.join(outputDir, `${pkgName}.zip.tmp`);
+  const finalZipPath = resolveInside(outputDir, `${pkgName}.zip`);
+  const tmpZipPath = `${finalZipPath}.tmp_${process.pid}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  if (fs.existsSync(finalZipPath)) throw new Error(`数据包已存在: ${pkgName}`);
 
   const processedFiles = [];
   const fileChecksumMap = {};
 
   for (const f of files) {
+    if (!f || !isSafeFileName(f.filename) || !fs.existsSync(f.path) || !fs.statSync(f.path).isFile()) {
+      throw new Error(`附件文件无效: ${f && f.filename ? f.filename : 'unknown'}`);
+    }
+    const ext = getImageExtension(f.filename);
+    if (!ext || !validateImageMagic(f.path, ext)) throw new Error(`附件图片内容无效: ${f.filename}`);
     const fileMd5 = await md5File(f.path);
     processedFiles.push({
       filename: f.filename,
@@ -96,6 +108,7 @@ async function packEventPackage(options) {
       });
     });
 
+    output.on('error', reject);
     archive.on('error', (err) => reject(err));
     archive.pipe(output);
 

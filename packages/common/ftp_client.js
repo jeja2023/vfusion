@@ -1,6 +1,7 @@
 const ftp = require('basic-ftp');
 const path = require('path');
 const fs = require('fs');
+const { isSafeFileName, resolveInside } = require('./security_utils');
 
 /**
  * 创建并建立 FTP 客户端连接
@@ -97,14 +98,29 @@ async function downloadFromRemoteFtp(localDownloadDir, config, prefix = 'vfusion
     );
 
     for (const item of targetFiles) {
+      if (!isSafeFileName(item.name)) {
+        console.warn(`[VFusion FTP] 忽略非法远程文件名: ${item.name}`);
+        continue;
+      }
       const remoteFilePath = path.posix.join(remoteDir, item.name);
-      const localFilePath = path.join(localDownloadDir, item.name);
+      const localFilePath = resolveInside(localDownloadDir, item.name);
+      if (fs.existsSync(localFilePath)) {
+        if (config.ftp_delete_after_download !== false) {
+          try { await client.remove(remoteFilePath); } catch (e) {}
+        }
+        continue;
+      }
       const localTmpPath = `${localFilePath}.tmp_${Date.now()}`;
 
       // 下载到本地临时 .tmp 文件
-      await client.downloadTo(localTmpPath, remoteFilePath);
-      // 原子重命名为本地 .zip
-      fs.renameSync(localTmpPath, localFilePath);
+      try {
+        await client.downloadTo(localTmpPath, remoteFilePath);
+        // 原子重命名为本地 .zip
+        fs.renameSync(localTmpPath, localFilePath);
+      } catch (downloadErr) {
+        try { if (fs.existsSync(localTmpPath)) fs.unlinkSync(localTmpPath); } catch (e) {}
+        throw downloadErr;
+      }
 
       // 下载完成后删除远程 FTP 上的文件，避免重复拉取
       if (config.ftp_delete_after_download !== false) {

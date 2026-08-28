@@ -1,6 +1,6 @@
 {
   "name": "vfusion-monorepo",
-  "version": "0.27.1",
+  "version": "0.27.2",
   "private": true,
   "description": "VFusion (视汇) - 通用跨隔离网数据交换与汇聚平台",
   "workspaces": [

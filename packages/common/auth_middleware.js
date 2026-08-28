@@ -88,21 +88,34 @@ function authMiddleware(opts = {}) {
   const exempt = new Set([...skipPaths, ...publicPaths]);
 
   return async (req, res, next) => {
-    // 静态资源与离线地图瓦片放行
     const urlPath = req.path;
+    const isGetOrHead = req.method === 'GET' || req.method === 'HEAD';
+
+    // 静态资源与离线地图瓦片放行
     if (urlPath.startsWith('/assets/') ||
         urlPath.startsWith('/collector-assets/') ||
         urlPath.startsWith('/api/map/tiles/') ||
         urlPath.startsWith('/map/tiles/') ||
         urlPath.startsWith('/storage/tiles/') ||
-        urlPath === '/api/config/map' ||
-        urlPath === '/config/map' ||
         urlPath.startsWith('/favicon') ||
         urlPath === '/') {
       return next();
     }
-    // 登录接口与显式白名单放行
-    if (urlPath === '/api/auth/login' || urlPath === '/auth/login' || exempt.has(urlPath)) return next();
+
+    // 仅 GET/HEAD 读取地图配置允许免 Token 放行；POST/PUT 保存地图配置必须进行鉴权
+    if (isGetOrHead && (urlPath === '/api/config/map' || urlPath === '/config/map')) {
+      return next();
+    }
+
+    // 登录接口放行
+    if (urlPath === '/api/auth/login' || urlPath === '/auth/login') {
+      return next();
+    }
+
+    // 显式白名单仅在 GET/HEAD 时放行（写操作严格鉴权）
+    if (isGetOrHead && exempt.has(urlPath)) {
+      return next();
+    }
 
     const header = req.headers.authorization || '';
     let token = null;

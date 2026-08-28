@@ -33,6 +33,25 @@ async function loadCollectorSystemConfig() {
         document.getElementById('collectorMapDefaultCenter').value = Array.isArray(center) ? center.join(', ') : center;
       }
       if (document.getElementById('collectorMapDefaultZoom')) document.getElementById('collectorMapDefaultZoom').value = d.default_zoom || 12;
+
+      const badge = document.getElementById('collectorTileStatusBadge');
+      if (badge && d.tile_stats) {
+        const stats = d.tile_stats;
+        if (stats.total_found) {
+          const minZ = Math.min(...stats.zoom_levels);
+          const maxZ = Math.max(...stats.zoom_levels);
+          const subInfo = stats.subdirs && stats.subdirs.length > 0 ? ` (已兼容识别子目录: ${stats.subdirs.join(', ')})` : '';
+          badge.style.background = '#f0fdf4';
+          badge.style.color = '#15803d';
+          badge.style.border = '1px solid #bbf7d0';
+          badge.innerHTML = `<span>[瓦片就绪] 瓦片库就绪：已检测到 <strong>${minZ} ~ ${maxZ} 级</strong> 切片${subInfo}</span>`;
+        } else {
+          badge.style.background = '#fef2f2';
+          badge.style.color = '#b91c1c';
+          badge.style.border = '1px solid #fecaca';
+          badge.innerHTML = `<span>[未检测到] 未在 <code>storage/tiles/</code> 检测到瓦片切片，请确认已将切片目录放入（标准结构: <code>storage/tiles/{z}/{x}/{y}.png</code>）</span>`;
+        }
+      }
     }
   } catch (e) {
     console.error('加载视频网系统配置失败:', e);

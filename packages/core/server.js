@@ -225,7 +225,7 @@ app.use((req, res, next) => {
 
 // 统一身份认证：登录接口与静态资源之外的所有 API 均需有效 Token
 app.use(authMiddleware({
-  publicPaths: ['/api/auth/login', '/api/config/map'],
+  publicPaths: ['/api/auth/login'],
   loadUser: (id) => readUsers().find(u => u.id === id) || null
 }));
 
@@ -496,6 +496,65 @@ function getMapConfig() {
   };
 }
 
+let cachedTileSubdirs = null;
+let lastTileSubdirsCheck = 0;
+
+function getTileBaseDirs() {
+  const now = Date.now();
+  if (cachedTileSubdirs && now - lastTileSubdirsCheck < 15000) {
+    return cachedTileSubdirs;
+  }
+  const dirs = [MAP_TILES_DIR];
+  try {
+    if (fs.existsSync(MAP_TILES_DIR)) {
+      const topEntries = fs.readdirSync(MAP_TILES_DIR, { withFileTypes: true });
+      for (const ent of topEntries) {
+        if (ent.isDirectory() && isNaN(Number(ent.name))) {
+          dirs.push(path.join(MAP_TILES_DIR, ent.name));
+        }
+      }
+    }
+  } catch (_) {}
+  cachedTileSubdirs = dirs;
+  lastTileSubdirsCheck = now;
+  return dirs;
+}
+
+function getTileStats() {
+  const result = {
+    exists: fs.existsSync(MAP_TILES_DIR),
+    path: MAP_TILES_DIR,
+    zoom_levels: [],
+    subdirs: [],
+    total_found: false
+  };
+  if (!result.exists) return result;
+  try {
+    const entries = fs.readdirSync(MAP_TILES_DIR, { withFileTypes: true });
+    for (const ent of entries) {
+      if (ent.isDirectory()) {
+        if (!isNaN(Number(ent.name))) {
+          result.zoom_levels.push(parseInt(ent.name, 10));
+        } else {
+          result.subdirs.push(ent.name);
+          try {
+            const nested = fs.readdirSync(path.join(MAP_TILES_DIR, ent.name), { withFileTypes: true });
+            for (const n of nested) {
+              if (n.isDirectory() && !isNaN(Number(n.name))) {
+                result.zoom_levels.push(parseInt(n.name, 10));
+              }
+            }
+          } catch (_) {}
+        }
+      }
+    }
+    result.zoom_levels.sort((a, b) => a - b);
+    result.zoom_levels = [...new Set(result.zoom_levels)];
+    result.total_found = result.zoom_levels.length > 0;
+  } catch (_) {}
+  return result;
+}
+
 function getGridTileSvg(z, x, y) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
   <rect width="256" height="256" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
@@ -519,22 +578,43 @@ app.get('/api/map/tiles/:z/:x/:y', (req, res) => {
     return res.send(getGridTileSvg(z || 0, x || 0, y || 0));
   }
 
-  const candidatePaths = [
-    path.join(MAP_TILES_DIR, z, x, `${y}.${ext}`),
-    path.join(MAP_TILES_DIR, z, x, `${y}.png`),
-    path.join(MAP_TILES_DIR, z, x, `${y}.jpg`),
-    path.join(MAP_TILES_DIR, z, x, y)
-  ];
+  const zNum = parseInt(z, 10);
+  const yNum = parseInt(y, 10);
+  const tmsY = (Number.isFinite(zNum) && Number.isFinite(yNum)) ? String(((1 << zNum) - 1) - yNum) : null;
+  const baseDirs = getTileBaseDirs();
 
-  for (const candidate of candidatePaths) {
-    try {
-      const stat = fs.statSync(candidate);
-      if (stat.isFile()) {
-        res.setHeader('Cache-Control', 'public, max-age=86400');
-        res.setHeader('Content-Type', ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'image/png');
-        return fs.createReadStream(candidate).pipe(res);
-      }
-    } catch (_) { /* 不存在或无权限，继续下一候选 */ }
+  for (const baseDir of baseDirs) {
+    const candidatePaths = [
+      path.join(baseDir, z, x, `${y}.${ext}`),
+      path.join(baseDir, z, x, `${y}.png`),
+      path.join(baseDir, z, x, `${y}.jpg`),
+      path.join(baseDir, z, x, `${y}.jpeg`),
+      path.join(baseDir, z, x, `${y}.webp`),
+      path.join(baseDir, z, x, y),
+      path.join(baseDir, `L${z}`, x, `${y}.${ext}`),
+      path.join(baseDir, `L${z.padStart(2, '0')}`, x, `${y}.${ext}`)
+    ];
+
+    if (tmsY !== null && tmsY !== y) {
+      candidatePaths.push(
+        path.join(baseDir, z, x, `${tmsY}.${ext}`),
+        path.join(baseDir, z, x, `${tmsY}.png`),
+        path.join(baseDir, z, x, `${tmsY}.jpg`),
+        path.join(baseDir, z, x, tmsY)
+      );
+    }
+
+    for (const candidate of candidatePaths) {
+      try {
+        const stat = fs.statSync(candidate);
+        if (stat.isFile()) {
+          res.setHeader('Cache-Control', 'public, max-age=86400');
+          const isJpg = candidate.endsWith('.jpg') || candidate.endsWith('.jpeg');
+          res.setHeader('Content-Type', isJpg ? 'image/jpeg' : 'image/png');
+          return fs.createReadStream(candidate).pipe(res);
+        }
+      } catch (_) { /* 不存在或无权限，继续下一候选 */ }
+    }
   }
 
   res.setHeader('Content-Type', 'image/svg+xml');
@@ -543,7 +623,7 @@ app.get('/api/map/tiles/:z/:x/:y', (req, res) => {
 });
 
 app.get('/api/config/map', (req, res) => {
-  res.json({ success: true, data: getMapConfig() });
+  res.json({ success: true, data: { ...getMapConfig(), tile_stats: getTileStats() } });
 });
 
 app.post('/api/config/map', requireRole('admin'), (req, res) => {

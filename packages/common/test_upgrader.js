@@ -9,7 +9,8 @@ async function runTests() {
   console.log('=== VFusion 系统在线升级验签与多候选密钥测试 ===\n');
 
   const testStorage = path.resolve(__dirname, '../../storage');
-  const patchZip = path.resolve(__dirname, '../../release/vfusion-patch-v0.27.1.zip');
+  const pkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../package.json'), 'utf8'));
+  const patchZip = path.resolve(__dirname, `../../release/vfusion-patch-v${pkg.version}.zip`);
 
   // 1. 验证候选密钥获取
   const keys = getUpgradeCandidateSigningKeys(testStorage);
@@ -27,7 +28,7 @@ async function runTests() {
   const upgradeKey = sec.upgrade_signing_key || '12345678901234567890123456789012';
   const hmacKey = sec.hmac_secret || 'abcdefabcdefabcdefabcdefabcdefab';
 
-  const manifestLF = JSON.stringify({ version: '0.27.1', test: true }, null, 2);
+  const manifestLF = JSON.stringify({ version: pkg.version, test: true }, null, 2);
   const manifestCRLF = manifestLF.replace(/\n/g, '\r\n');
 
   // 用 upgradeKey 签名 LF

@@ -41,52 +41,55 @@
 
     const modalHtml = `
       <div id="vfusionMapPickerModal" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.6); z-index:9999; justify-content:center; align-items:center; backdrop-filter:blur(3px);">
-        <div class="card" style="width:92vw; max-width:960px; height:88vh; max-height:740px; display:flex; flex-direction:column; background:#ffffff; border-radius:12px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); overflow:hidden; border:1px solid #cbd5e1;">
+        <div class="modal-map-dialog">
           
           <!-- 弹窗顶栏 -->
-          <div style="padding:0.75rem 1.25rem; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; background:#f8fafc; flex-shrink:0;">
-            <div style="display:flex; align-items:center; gap:0.6rem;">
-              <svg class="icon-svg" viewBox="0 0 24 24" style="color:var(--primary); width:20px; height:20px;"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+          <div style="padding:0.85rem 1.4rem; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; background:#f8fafc; flex-shrink:0;">
+            <div style="display:flex; align-items:center; gap:0.75rem;">
+              <div style="width:36px; height:36px; border-radius:8px; background:rgba(37,99,235,0.08); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <svg class="icon-svg" viewBox="0 0 24 24" style="color:var(--primary); width:20px; height:20px;"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+              </div>
               <div>
-                <h3 id="mapPickerModalTitle" style="font-size:0.95rem; font-weight:700; color:#1e293b; margin:0;">高德离线地图选点拾取</h3>
-                <div style="font-size:0.75rem; color:#64748b;">点击地图任意位置放置选点图钉，支持拖拽图钉微调位置</div>
+                <h3 id="mapPickerModalTitle" style="font-size:1rem; font-weight:700; color:#1e293b; margin:0 0 0.15rem;">高德离线地图选点拾取</h3>
+                <div style="font-size:0.78rem; color:#64748b;">点击地图任意位置放置选点图钉，支持拖拽图钉微调位置，或从已有监控点位图层中一键采纳</div>
               </div>
             </div>
-            <div style="display:flex; align-items:center; gap:0.5rem;">
-              <div style="display:flex; align-items:center; background:#eff6ff; border:1px solid #bfdbfe; padding:0.25rem 0.65rem; border-radius:6px; font-size:0.75rem; color:#1e40af; gap:0.4rem;">
-                <strong>当前坐标:</strong>
-                <span id="mapPickerLngDisplay" style="font-family:monospace; font-weight:600;">-</span> , 
-                <span id="mapPickerLatDisplay" style="font-family:monospace; font-weight:600;">-</span>
+            <div style="display:flex; align-items:center; gap:0.75rem;">
+              <div style="display:flex; align-items:center; background:#eff6ff; border:1px solid #bfdbfe; padding:0.35rem 0.85rem; border-radius:6px; font-size:0.8rem; color:#1e40af; gap:0.6rem; white-space:nowrap;">
+                <span style="font-weight:600; color:#1e3a8a;">当前选定:</span>
+                <span style="font-family:monospace; font-weight:700;">经度 <span id="mapPickerLngDisplay">-</span></span>
+                <span style="color:#93c5fd;">|</span>
+                <span style="font-family:monospace; font-weight:700;">纬度 <span id="mapPickerLatDisplay">-</span></span>
               </div>
-              <button type="button" class="btn btn-secondary" style="padding:0.25rem 0.55rem; font-size:0.8rem; border-radius:6px;" data-action="closeMapPicker()">关闭</button>
+              <button type="button" class="btn btn-secondary" style="padding:0.35rem 0.75rem; font-size:0.8rem; border-radius:6px;" data-action="closeMapPicker()">关闭</button>
             </div>
           </div>
 
           <!-- 地图操作与快捷定位工具栏 -->
-          <div style="padding:0.45rem 1.25rem; background:#ffffff; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center; gap:0.75rem; flex-shrink:0; flex-wrap:wrap;">
-            <div style="display:flex; align-items:center; gap:0.4rem; flex:1; max-width:480px;">
-              <input id="mapPickerManualInput" type="text" placeholder="输入经纬度快速定位 (如 116.3974, 39.9092)" style="font-size:0.75rem; padding:0.3rem 0.55rem; width:100%; border:1px solid #cbd5e1; border-radius:6px;" data-action-keydown="if(event.key==='Enter'){event.preventDefault();jumpToManualCoordinates();}">
-              <button type="button" class="btn btn-secondary" style="padding:0.3rem 0.6rem; font-size:0.75rem;" data-action="jumpToManualCoordinates()">定位</button>
+          <div style="padding:0.6rem 1.4rem; background:#ffffff; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-shrink:0;">
+            <div style="display:flex; align-items:center; gap:0.5rem; flex:1; max-width:560px;">
+              <input id="mapPickerManualInput" type="text" placeholder="输入经纬度快速定位 (如 116.397428, 39.909230)" style="font-size:0.8rem; padding:0.4rem 0.65rem; width:100%; border:1px solid #cbd5e1; border-radius:6px;" data-action-keydown="if(event.key==='Enter'){event.preventDefault();jumpToManualCoordinates();}">
+              <button type="button" class="btn btn-secondary" style="padding:0.4rem 0.85rem; font-size:0.8rem; white-space:nowrap;" data-action="jumpToManualCoordinates()">快速定位</button>
             </div>
-            <div style="display:flex; align-items:center; gap:0.4rem;">
-              <button type="button" class="btn btn-secondary" style="padding:0.3rem 0.6rem; font-size:0.75rem;" data-action="resetMapPickerCenter()">默认中心</button>
-              <button type="button" class="btn btn-secondary" style="padding:0.3rem 0.6rem; font-size:0.75rem;" data-action="clearMapPickerPin()">清除选点</button>
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <button type="button" class="btn btn-secondary" style="padding:0.4rem 0.85rem; font-size:0.8rem;" data-action="resetMapPickerCenter()">默认中心</button>
+              <button type="button" class="btn btn-secondary" style="padding:0.4rem 0.85rem; font-size:0.8rem;" data-action="clearMapPickerPin()">清除选点</button>
             </div>
           </div>
 
           <!-- 地图展示主体容器 -->
-          <div style="flex:1; position:relative; background:#f8fafc; min-height:0;">
+          <div style="flex:1; width:100%; min-height:480px; position:relative; background:#f1f5f9; overflow:hidden;">
             <div id="vfusionLeafletMapContainer" style="width:100%; height:100%; position:absolute; inset:0; z-index:1;"></div>
           </div>
 
           <!-- 弹窗底栏操作 -->
-          <div style="padding:0.65rem 1.25rem; border-top:1px solid #e2e8f0; background:#f8fafc; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
-            <div style="font-size:0.74rem; color:#64748b; display:flex; align-items:center; gap:0.4rem;">
-              <span>离线瓦片托管于本地 <code style="background:#e2e8f0; padding:0.1rem 0.3rem; border-radius:4px;">storage/tiles/</code> 目录</span>
+          <div style="padding:0.75rem 1.4rem; border-top:1px solid #e2e8f0; background:#f8fafc; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
+            <div style="font-size:0.78rem; color:#64748b; display:flex; align-items:center; gap:0.4rem;">
+              <span>离线瓦片托管于本地 <code style="background:#e2e8f0; padding:0.15rem 0.4rem; border-radius:4px; font-family:monospace; color:#334155;">storage/tiles/{z}/{x}/{y}.png</code> 目录</span>
             </div>
-            <div style="display:flex; gap:0.5rem;">
-              <button type="button" class="btn btn-secondary" style="padding:0.4rem 0.85rem; font-size:0.8rem;" data-action="closeMapPicker()">取消</button>
-              <button type="button" class="btn btn-primary" style="padding:0.4rem 1.1rem; font-size:0.8rem; font-weight:700;" data-action="confirmMapPickerSelection()">确认选定坐标并填入</button>
+            <div style="display:flex; gap:0.65rem;">
+              <button type="button" class="btn btn-secondary" style="padding:0.45rem 1rem; font-size:0.82rem;" data-action="closeMapPicker()">取消</button>
+              <button type="button" class="btn btn-primary" style="padding:0.45rem 1.3rem; font-size:0.82rem; font-weight:700;" data-action="confirmMapPickerSelection()">确认选定坐标并填入</button>
             </div>
           </div>
 
@@ -287,9 +290,9 @@
       mapInstance.setView([Number(center[1]), Number(center[0])], config.default_zoom || 12);
     }
 
-    setTimeout(() => {
-      if (mapInstance) mapInstance.invalidateSize();
-    }, 200);
+    setTimeout(() => { if (mapInstance) mapInstance.invalidateSize(); }, 50);
+    setTimeout(() => { if (mapInstance) mapInstance.invalidateSize(); }, 150);
+    setTimeout(() => { if (mapInstance) mapInstance.invalidateSize(); }, 350);
   }
 
   function closeMapPicker() {

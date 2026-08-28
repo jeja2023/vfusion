@@ -211,6 +211,24 @@ body { background-color: var(--bg-main); color: var(--text-main); padding: 0; ma
 .modal-overlay .card.modal-sm { width: 420px !important; }
 .modal-overlay .card.modal-lg { width: 540px !important; }
 
+/* 地图全景/选点专用超宽弹窗规范 */
+.modal-overlay .modal-map-dialog {
+  flex: none !important;
+  width: 94vw !important;
+  max-width: 1320px !important;
+  height: 88vh !important;
+  max-height: 860px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  margin: auto !important;
+  background: #ffffff !important;
+  border-radius: 12px !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35) !important;
+  overflow: hidden !important;
+  border: 1px solid #cbd5e1 !important;
+  box-sizing: border-box !important;
+}
+
 .split-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; flex: 1; }
 @media (max-width: 960px) { .split-layout { grid-template-columns: 1fr; } }
 

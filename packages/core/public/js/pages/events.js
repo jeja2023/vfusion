@@ -165,11 +165,11 @@ function renderTaskMatrix() {
         </td>
         <td style="font-size:0.8rem; color:#334155;">${escapeHtml(contributors)}</td>
         <td style="font-size:0.775rem; color:#64748b;">${escapeHtml(latestTime)}</td>
-        <td style="text-align:left;">
-          <button class="btn btn-primary" style="padding:0.3rem 0.55rem; font-size:0.75rem; font-weight:600; display:inline-flex; align-items:center; gap:0.25rem;" data-action="event.stopPropagation(); openTaskDetailDrawer('${escapeJsString(t.task_code)}')">
-            <svg class="icon-svg" viewBox="0 0 24 24" style="width:13px; height:13px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            详情
-          </button>
+        <td style="text-align:center; white-space:nowrap;">
+          <div style="display:flex; gap:0.35rem; justify-content:center; align-items:center;">
+            <button class="btn" style="background:#fef3c7; border:1px solid #fde68a; color:#b45309; font-weight:600; padding:0.2rem 0.55rem; font-size:0.75rem; border-radius:4px; min-width:44px; white-space:nowrap;" data-action="event.stopPropagation(); openCoreTaskTrackMap('${escapeJsString(t.task_code)}')">轨迹</button>
+            <button class="btn btn-primary" style="padding:0.2rem 0.55rem; font-size:0.75rem; font-weight:600; border-radius:4px; min-width:44px; white-space:nowrap;" data-action="event.stopPropagation(); openTaskDetailDrawer('${escapeJsString(t.task_code)}')">详情</button>
+          </div>
         </td>
       </tr>
     `;

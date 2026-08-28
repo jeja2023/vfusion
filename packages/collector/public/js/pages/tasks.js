@@ -109,11 +109,11 @@ function renderTaskCards() {
         <td style="white-space:nowrap;">${escapeHtml(formatUserForTable(t.creator_name || t.creator_username, t.creator_name))}</td>
         <td style="font-size:0.775rem; color:#64748b; white-space:nowrap;">${escapeHtml(latestTime)}</td>
         <td style="text-align:center; white-space:nowrap;">
-          <div style="display:flex; gap:0.25rem; justify-content:center; align-items:center; flex-wrap:nowrap; white-space:nowrap;">
-            <button class="btn btn-primary" style="padding:0.15rem 0.35rem; font-size:0.7rem; font-weight:600; white-space:nowrap; flex-shrink:0;" data-action="publishToTask('${escapeJsString(t.task_code)}')">上传图片</button>
-            <button class="btn" style="background:#f0f9ff; border:1px solid #bae6fd; color:#0284c7; font-weight:600; padding:0.15rem 0.35rem; font-size:0.7rem; white-space:nowrap; flex-shrink:0;" data-action="selectTaskForGallery('${escapeJsString(t.task_code)}')">图片库</button>
-            <button class="btn" style="background:#fef3c7; border:1px solid #fde68a; color:#b45309; font-weight:600; padding:0.15rem 0.35rem; font-size:0.7rem; white-space:nowrap; flex-shrink:0;" data-action="openTaskTrackMap('${escapeJsString(t.task_code)}')">轨迹</button>
-            <button class="btn" style="background:#f8fafc; border:1px solid #cbd5e1; color:#334155; font-weight:600; padding:0.15rem 0.35rem; font-size:0.7rem; white-space:nowrap; flex-shrink:0;" data-action="openTaskDetailModal('${escapeJsString(t.task_code)}')">任务详情</button>
+          <div style="display:flex; gap:0.35rem; justify-content:center; align-items:center; flex-wrap:nowrap; white-space:nowrap;">
+            <button class="btn btn-primary" style="padding:0.2rem 0.55rem; font-size:0.75rem; font-weight:600; border-radius:4px; min-width:44px; white-space:nowrap; flex-shrink:0;" data-action="publishToTask('${escapeJsString(t.task_code)}')">上传</button>
+            <button class="btn" style="background:#f0f9ff; border:1px solid #bae6fd; color:#0284c7; font-weight:600; padding:0.2rem 0.55rem; font-size:0.75rem; border-radius:4px; min-width:44px; white-space:nowrap; flex-shrink:0;" data-action="selectTaskForGallery('${escapeJsString(t.task_code)}')">图库</button>
+            <button class="btn" style="background:#fef3c7; border:1px solid #fde68a; color:#b45309; font-weight:600; padding:0.2rem 0.55rem; font-size:0.75rem; border-radius:4px; min-width:44px; white-space:nowrap; flex-shrink:0;" data-action="openTaskTrackMap('${escapeJsString(t.task_code)}')">轨迹</button>
+            <button class="btn" style="background:#f8fafc; border:1px solid #cbd5e1; color:#334155; font-weight:600; padding:0.2rem 0.55rem; font-size:0.75rem; border-radius:4px; min-width:44px; white-space:nowrap; flex-shrink:0;" data-action="openTaskDetailModal('${escapeJsString(t.task_code)}')">详情</button>
           </div>
         </td>
       </tr>

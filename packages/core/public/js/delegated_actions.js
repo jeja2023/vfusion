@@ -35,7 +35,8 @@
     'viewGalleryImageLightbox','handleDeleteTaskPersonnel','openShareTaskModal','openTaskPersonnelModal',
     'openCollectorPointMapPicker','openCorePointMapPicker','openPublishMapPicker','openNewPointModalMapPicker',
     'saveCollectorMapConfig','saveCoreMapConfig','openMapPicker','closeMapPicker','confirmMapPickerSelection',
-    'clearMapPickerPin','clearMapPin','jumpToManualCoordinates','resetMapPickerCenter','selectExistingPointCoord'
+    'clearMapPickerPin','clearMapPin','jumpToManualCoordinates','resetMapPickerCenter','selectExistingPointCoord',
+    'openTaskTrackMap','openTrackMapViewer','prevTrackPoint','nextTrackPoint','fitTrackBounds'
   ];
   knownFunctions.forEach(register);
 

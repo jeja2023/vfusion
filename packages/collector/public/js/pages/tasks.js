@@ -112,6 +112,7 @@ function renderTaskCards() {
           <div style="display:flex; gap:0.25rem; justify-content:center; align-items:center; flex-wrap:nowrap; white-space:nowrap;">
             <button class="btn btn-primary" style="padding:0.15rem 0.35rem; font-size:0.7rem; font-weight:600; white-space:nowrap; flex-shrink:0;" data-action="publishToTask('${escapeJsString(t.task_code)}')">上传图片</button>
             <button class="btn" style="background:#f0f9ff; border:1px solid #bae6fd; color:#0284c7; font-weight:600; padding:0.15rem 0.35rem; font-size:0.7rem; white-space:nowrap; flex-shrink:0;" data-action="selectTaskForGallery('${escapeJsString(t.task_code)}')">图片库</button>
+            <button class="btn" style="background:#fef3c7; border:1px solid #fde68a; color:#b45309; font-weight:600; padding:0.15rem 0.35rem; font-size:0.7rem; white-space:nowrap; flex-shrink:0;" data-action="openTaskTrackMap('${escapeJsString(t.task_code)}')">轨迹</button>
             <button class="btn" style="background:#f8fafc; border:1px solid #cbd5e1; color:#334155; font-weight:600; padding:0.15rem 0.35rem; font-size:0.7rem; white-space:nowrap; flex-shrink:0;" data-action="openTaskDetailModal('${escapeJsString(t.task_code)}')">任务详情</button>
           </div>
         </td>
@@ -303,7 +304,7 @@ Object.assign(window.VFusionActions = window.VFusionActions || {}, {
   openEditTaskModal, closeEditTaskModal, handleSaveTaskEdit, handleDeleteTask, openTaskPersonnelModal,
   closeTaskPersonnelModal, loadTaskPersonnelTable, changeTpPageSize, prevTpPage, nextTpPage,
   handleAddTaskPersonnel, handleDeleteTaskPersonnel, openShareTaskModal, closeShareTaskModal,
-  handleSaveTaskShare, openTaskDetailModal
+  handleSaveTaskShare, openTaskDetailModal, openTaskTrackMap
 });
 
 function openEditTaskModal(taskCode) {
@@ -626,6 +627,10 @@ async function openTaskDetailModal(taskCode) {
       <div style="display:flex; gap:0.5rem; flex-wrap:wrap; background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:0.75rem;">
         <button class="btn btn-primary" style="padding:0.4rem 0.85rem; font-size:0.8rem; font-weight:600; border-radius:6px; cursor:pointer;" data-action="closeTaskDetailModal(); publishToTask('${escapeJsString(task.task_code)}');">上传图片</button>
         <button class="btn" style="background:#f0f9ff; border:1px solid #bae6fd; color:#0284c7; font-weight:600; padding:0.4rem 0.85rem; font-size:0.8rem; border-radius:6px; cursor:pointer;" data-action="closeTaskDetailModal(); selectTaskForGallery('${escapeJsString(task.task_code)}');">图片库</button>
+        <button class="btn" style="background:#fef3c7; border:1px solid #fde68a; color:#b45309; font-weight:700; padding:0.4rem 0.85rem; font-size:0.8rem; border-radius:6px; cursor:pointer; display:flex; align-items:center; gap:0.3rem;" data-action="openTaskTrackMap('${escapeJsString(task.task_code)}');">
+          <svg class="icon-svg" viewBox="0 0 24 24" style="width:14px; height:14px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          行动轨迹
+        </button>
         <button class="btn" style="background:#f0fdf4; border:1px solid #bbf7d0; color:#15803d; font-weight:600; padding:0.4rem 0.85rem; font-size:0.8rem; border-radius:6px; cursor:pointer;" data-action="openTaskPersonnelModal('${escapeJsString(task.task_code)}');">涉事人员</button>
         ${shareManageBtnHtml}
         ${editTaskBtnHtml}
@@ -672,3 +677,68 @@ async function openTaskDetailModal(taskCode) {
 function closeTaskDetailModal() {
   document.getElementById('taskDetailModal').style.display = 'none';
 }
+
+async function openTaskTrackMap(taskCode) {
+  try {
+    const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
+    const res = await fetchFn(`/api/tasks/${encodeURIComponent(taskCode)}`);
+    const json = await res.json();
+    if (!res.ok || !json.success || !json.data) {
+      showToast(json.error || '获取任务轨迹数据失败', 'error');
+      return;
+    }
+
+    const task = json.data;
+    const events = Array.isArray(task.events) ? task.events : [];
+
+    const trackPoints = [];
+    events.forEach(evt => {
+      const p = evt.payload || {};
+      const lng = parseFloat(p.longitude);
+      const lat = parseFloat(p.latitude);
+      if (!isNaN(lng) && !isNaN(lat) && lng >= -180 && lng <= 180 && lat >= -90 && lat <= 90) {
+        let imgUrl = null;
+        if (Array.isArray(evt.files) && evt.files.length > 0) {
+          const f = evt.files[0];
+          imgUrl = f.url || (typeof f === 'string' ? f : null);
+          if (imgUrl && typeof assetUrl === 'function') imgUrl = assetUrl(imgUrl);
+        }
+
+        trackPoints.push({
+          eventId: evt.event_id,
+          longitude: lng,
+          latitude: lat,
+          time: p.event_time || evt.timestamp || evt.created_at || '',
+          location: p.location || task.task_name || '现场巡检点',
+          personName: p.person_name || '',
+          personIdCard: p.person_id_card || '',
+          imageUrl: imgUrl
+        });
+      }
+    });
+
+    // 按时间先后顺序排列
+    trackPoints.sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+
+    if (trackPoints.length === 0) {
+      showToast('该任务暂无包含经纬度坐标的现场记录，可在发布单据时在地图上选点标记', 'warn');
+      return;
+    }
+
+    if (typeof window.openTrackMapViewer === 'function') {
+      window.openTrackMapViewer({
+        title: `行动轨迹全景 - ${task.task_name}`,
+        taskName: task.task_name,
+        taskCode: task.task_code,
+        trackPoints: trackPoints
+      });
+    } else {
+      showToast('地图组件正在初始化，请稍后再试', 'warn');
+    }
+  } catch (err) {
+    showToast(`加载轨迹失败: ${err.message}`, 'error');
+  }
+}
+
+window.openTaskTrackMap = openTaskTrackMap;
+

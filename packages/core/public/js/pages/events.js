@@ -265,7 +265,13 @@ async function openTaskDetailDrawer(taskCode) {
 
           <!-- 任务基础信息 -->
           <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:0.85rem 1rem;">
-            <div style="font-size:0.775rem; font-weight:700; color:#1e40af; margin-bottom:0.6rem; text-transform:uppercase; letter-spacing:0.5px;">任务基础信息</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem;">
+              <span style="font-size:0.775rem; font-weight:700; color:#1e40af; text-transform:uppercase; letter-spacing:0.5px;">任务基础信息</span>
+              <button class="btn" style="background:#fef3c7; border:1px solid #fde68a; color:#b45309; font-weight:700; padding:0.25rem 0.65rem; font-size:0.75rem; border-radius:6px; cursor:pointer; display:flex; align-items:center; gap:0.3rem;" data-action="openCoreTaskTrackMap('${escapeJsString(taskCode)}');">
+                <svg class="icon-svg" viewBox="0 0 24 24" style="width:13px; height:13px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                查看行动轨迹
+              </button>
+            </div>
             ${field('任务名称', `<strong style="color:#1e40af;">${escapeHtml(t.task_name)}</strong>`)}
             ${field('任务编号', escapeHtml(t.task_code || '-'), true)}
             ${field('任务状态', `<span style="background:${sBg}; color:${sColor}; padding:0.1rem 0.5rem; border-radius:4px; font-weight:600; font-size:0.775rem;">${sLabel}</span>`)}
@@ -432,10 +438,77 @@ function renderEvents() {
 
 function changeEvtPageSize(val) { evtPageSize = parseInt(val); evtCurrentPage = 1; renderEvents(); }
 function prevEvtPage() { if (evtCurrentPage > 1) { evtCurrentPage--; renderEvents(); } }
-function nextEvtPage() { evtCurrentPage++; renderEvents(); }
+async function openCoreTaskTrackMap(taskCode) {
+  try {
+    const [taskRes, imgRes] = await Promise.all([
+      fetch(`/api/tasks/${encodeURIComponent(taskCode)}`),
+      fetch(`/api/tasks/${encodeURIComponent(taskCode)}/images?order=ASC`)
+    ]);
+    const taskJson = await taskRes.json();
+    const imgJson = await imgRes.json();
+
+    if (!taskRes.ok || !taskJson.success || !taskJson.data) {
+      showToast(taskJson.error || '获取任务轨迹数据失败', 'error');
+      return;
+    }
+
+    const task = taskJson.data;
+    const events = Array.isArray(task.events) ? task.events : [];
+    const images = Array.isArray(imgJson.data) ? imgJson.data : [];
+
+    const trackPoints = [];
+    events.forEach(evt => {
+      const p = evt.payload || {};
+      const lng = parseFloat(p.longitude);
+      const lat = parseFloat(p.latitude);
+      if (!isNaN(lng) && !isNaN(lat) && lng >= -180 && lng <= 180 && lat >= -90 && lat <= 90) {
+        let imgUrl = null;
+        if (Array.isArray(evt.files) && evt.files.length > 0) {
+          const f = evt.files[0];
+          imgUrl = f.url || (typeof f === 'string' ? f : null);
+          if (imgUrl && typeof assetUrl === 'function') imgUrl = assetUrl(imgUrl);
+        }
+
+        trackPoints.push({
+          eventId: evt.event_id,
+          longitude: lng,
+          latitude: lat,
+          time: p.event_time || evt.timestamp || evt.created_at || '',
+          location: p.location || task.task_name || '现场巡检点',
+          personName: p.person_name || '',
+          personIdCard: p.person_id_card || '',
+          imageUrl: imgUrl
+        });
+      }
+    });
+
+    trackPoints.sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+
+    if (trackPoints.length === 0) {
+      showToast('该任务暂无包含经纬度坐标的现场记录', 'warn');
+      return;
+    }
+
+    if (typeof window.openTrackMapViewer === 'function') {
+      window.openTrackMapViewer({
+        title: `行动轨迹全景 - ${task.task_name}`,
+        taskName: task.task_name,
+        taskCode: task.task_code,
+        trackPoints: trackPoints
+      });
+    } else {
+      showToast('地图组件正在初始化，请稍后再试', 'warn');
+    }
+  } catch (err) {
+    showToast(`加载轨迹失败: ${err.message}`, 'error');
+  }
+}
+
+window.openCoreTaskTrackMap = openCoreTaskTrackMap;
+window.openTaskTrackMap = openCoreTaskTrackMap;
 
 Object.assign(window.VFusionActions = window.VFusionActions || {}, {
   fetchData, viewCorePhotoLightbox, switchCoreView, renderCoreDashboard, renderTaskMatrix,
   changeTaskPageSize, prevTaskPage, nextTaskPage, openTaskDetailDrawer, coreEditImage,
-  coreDeleteImage, renderEvents, changeEvtPageSize, prevEvtPage, nextEvtPage
+  coreDeleteImage, renderEvents, changeEvtPageSize, prevEvtPage, nextEvtPage, openCoreTaskTrackMap
 });

@@ -23,6 +23,8 @@ const STORAGE_ROOT = path.resolve(__dirname, '../../storage');
 const SECURITY_CONFIG_FILE = path.join(STORAGE_ROOT, 'security.json');
 const COLLECTOR_SCHEMA_FILE = path.join(STORAGE_ROOT, 'collector_schema.json');
 const COLLECTOR_DB_FILE = path.join(STORAGE_ROOT, 'collector_db.json');
+const MAP_TILES_DIR = path.join(STORAGE_ROOT, 'tiles');
+if (!fs.existsSync(MAP_TILES_DIR)) fs.mkdirSync(MAP_TILES_DIR, { recursive: true });
 
 function getFtpOutDir() {
   if (process.env.FTP_OUT_DIR) return process.env.FTP_OUT_DIR;
@@ -377,8 +379,6 @@ app.patch('/api/monitoring-points/:point_id/toggle', requireRole('admin'), (req,
 // ==========================================
 // 离线高德地图瓦片托管与地图参数配置 API
 // ==========================================
-const MAP_TILES_DIR = path.join(STORAGE_ROOT, 'tiles');
-if (!fs.existsSync(MAP_TILES_DIR)) fs.mkdirSync(MAP_TILES_DIR, { recursive: true });
 
 function getMapConfig() {
   try {

@@ -29,6 +29,8 @@ const PORT = process.env.CORE_PORT || process.env.PORT || 5002;
 
 const STORAGE_ROOT = path.resolve(__dirname, '../../storage');
 const SECURITY_CONFIG_FILE = path.join(STORAGE_ROOT, 'security.json');
+const MAP_TILES_DIR = path.join(STORAGE_ROOT, 'tiles');
+if (!fs.existsSync(MAP_TILES_DIR)) fs.mkdirSync(MAP_TILES_DIR, { recursive: true });
 
 function getFtpInDir() {
   if (process.env.FTP_IN_DIR) return process.env.FTP_IN_DIR;
@@ -476,8 +478,6 @@ app.patch('/api/monitoring-points/:point_id/toggle', requireRole('admin'), (req,
 // ==========================================
 // 离线高德地图瓦片托管与地图参数配置 API
 // ==========================================
-const MAP_TILES_DIR = path.join(STORAGE_ROOT, 'tiles');
-if (!fs.existsSync(MAP_TILES_DIR)) fs.mkdirSync(MAP_TILES_DIR, { recursive: true });
 
 function getMapConfig() {
   try {

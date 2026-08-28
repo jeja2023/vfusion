@@ -575,13 +575,13 @@ function getGridTileSvg(z, x, y) {
 </svg>`;
 }
 
-app.get('/api/map/tiles/:z/:x/:y', (req, res) => {
-  const z = String(req.params.z).replace(/[^0-9]/g, '');
-  const x = String(req.params.x).replace(/[^0-9]/g, '');
-  let rawY = String(req.params.y);
-  const extMatch = rawY.match(/\.(png|jpg|jpeg|webp)$/i);
+function handleTileRequest(req, res) {
+  const z = String(req.params.z || '').replace(/[^0-9]/g, '');
+  const x = String(req.params.x || '').replace(/[^0-9]/g, '');
+  let rawY = String(req.params.y || '');
+  const extMatch = rawY.match(/\.(png|jpg|jpeg|webp|tile)$/i);
   const ext = extMatch ? extMatch[1].toLowerCase() : 'png';
-  const y = rawY.replace(/\.(png|jpg|jpeg|webp)$/i, '').replace(/[^0-9]/g, '');
+  const y = rawY.replace(/\.(png|jpg|jpeg|webp|tile)$/i, '').replace(/[^0-9]/g, '');
 
   if (!z || !x || !y) {
     res.setHeader('Content-Type', 'image/svg+xml');
@@ -600,6 +600,7 @@ app.get('/api/map/tiles/:z/:x/:y', (req, res) => {
       path.join(baseDir, z, x, `${y}.jpg`),
       path.join(baseDir, z, x, `${y}.jpeg`),
       path.join(baseDir, z, x, `${y}.webp`),
+      path.join(baseDir, z, x, `${y}.tile`),
       path.join(baseDir, z, x, y),
       path.join(baseDir, `L${z}`, x, `${y}.${ext}`),
       path.join(baseDir, `L${z.padStart(2, '0')}`, x, `${y}.${ext}`),
@@ -616,6 +617,8 @@ app.get('/api/map/tiles/:z/:x/:y', (req, res) => {
         path.join(baseDir, z, x, `${tmsY}.${ext}`),
         path.join(baseDir, z, x, `${tmsY}.png`),
         path.join(baseDir, z, x, `${tmsY}.jpg`),
+        path.join(baseDir, z, x, `${tmsY}.webp`),
+        path.join(baseDir, z, x, `${tmsY}.tile`),
         path.join(baseDir, z, x, tmsY),
         path.join(baseDir, z, tmsY, `${x}.png`),
         path.join(baseDir, z, tmsY, `${x}.jpg`),
@@ -629,7 +632,10 @@ app.get('/api/map/tiles/:z/:x/:y', (req, res) => {
         if (stat.isFile()) {
           res.setHeader('Cache-Control', 'public, max-age=86400');
           const isJpg = candidate.endsWith('.jpg') || candidate.endsWith('.jpeg');
-          res.setHeader('Content-Type', isJpg ? 'image/jpeg' : 'image/png');
+          const isWebp = candidate.endsWith('.webp');
+          if (isJpg) res.setHeader('Content-Type', 'image/jpeg');
+          else if (isWebp) res.setHeader('Content-Type', 'image/webp');
+          else res.setHeader('Content-Type', 'image/png');
           return fs.createReadStream(candidate).pipe(res);
         }
       } catch (_) { /* 不存在或无权限，继续下一候选 */ }
@@ -639,7 +645,12 @@ app.get('/api/map/tiles/:z/:x/:y', (req, res) => {
   res.setHeader('Content-Type', 'image/svg+xml');
   res.setHeader('Cache-Control', 'public, max-age=3600');
   res.send(getGridTileSvg(z, x, y));
-});
+}
+
+app.get('/api/map/tiles/:z/:x/:y', handleTileRequest);
+app.get('/storage/tiles/:z/:x/:y', handleTileRequest);
+app.get('/tiles/:z/:x/:y', handleTileRequest);
+app.get('/map/tiles/:z/:x/:y', handleTileRequest);
 
 app.get('/api/config/map', (req, res) => {
   res.json({ success: true, data: { ...getMapConfig(), tile_stats: getTileStats() } });

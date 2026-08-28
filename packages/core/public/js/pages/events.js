@@ -438,6 +438,7 @@ function renderEvents() {
 
 function changeEvtPageSize(val) { evtPageSize = parseInt(val); evtCurrentPage = 1; renderEvents(); }
 function prevEvtPage() { if (evtCurrentPage > 1) { evtCurrentPage--; renderEvents(); } }
+function nextEvtPage() { evtCurrentPage++; renderEvents(); }
 async function openCoreTaskTrackMap(taskCode) {
   try {
     const [taskRes, imgRes] = await Promise.all([

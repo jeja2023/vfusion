@@ -51,17 +51,16 @@
               </div>
               <div>
                 <h3 id="mapPickerModalTitle" style="font-size:1rem; font-weight:700; color:#1e293b; margin:0 0 0.15rem;">高德离线地图选点拾取</h3>
-                <div style="font-size:0.78rem; color:#64748b;">点击地图任意位置放置选点图钉，支持拖拽图钉微调位置，或从已有监控点位图层中一键采纳</div>
+                <div style="font-size:0.78rem; color:#64748b;">点击地图任意位置放置选点图钉，支持拖拽图钉微调位置或输入经纬度快速定位</div>
               </div>
             </div>
             <div style="display:flex; align-items:center; gap:0.75rem;">
-              <div style="display:flex; align-items:center; background:#eff6ff; border:1px solid #bfdbfe; padding:0.35rem 0.85rem; border-radius:6px; font-size:0.8rem; color:#1e40af; gap:0.6rem; white-space:nowrap;">
+              <div style="display:flex; align-items:center; background:#eff6ff; border:1px solid #bfdbfe; padding:0.4rem 1rem; border-radius:6px; font-size:0.8rem; color:#1e40af; gap:0.6rem; white-space:nowrap;">
                 <span style="font-weight:600; color:#1e3a8a;">当前选定:</span>
                 <span style="font-family:monospace; font-weight:700;">经度 <span id="mapPickerLngDisplay">-</span></span>
                 <span style="color:#93c5fd;">|</span>
                 <span style="font-family:monospace; font-weight:700;">纬度 <span id="mapPickerLatDisplay">-</span></span>
               </div>
-              <button type="button" class="btn btn-secondary" style="padding:0.35rem 0.75rem; font-size:0.8rem; border-radius:6px;" data-action="closeMapPicker()">关闭</button>
             </div>
           </div>
 

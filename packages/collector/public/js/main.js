@@ -109,15 +109,69 @@ window.fetch = function (input, init) {
 };
 
 const auditTypeMap = {
-  'AUTH_SUCCESS': '用户登录',
-  'AUTH_FAIL': '登录失败',
-  'USER_ADD': '新增用户',
-  'USER_PWD_RESET': '重置密码',
-  'USER_DEL': '删除用户',
+  // 身份与用户管理
+  'AUTH_SUCCESS': '用户登录成功',
+  'AUTH_FAIL': '用户登录失败',
+  'USER_ADD': '新增用户账号',
+  'USER_UPDATE': '修改用户信息',
+  'USER_DEL': '删除用户账号',
+  'USER_PWD_RESET': '重置用户密码',
+  'USER_PWD_UPGRADE': '升级密码安全加密',
+
+  // 数据发布与单据处理
   'INGEST': '单据发布打包',
-  'SCHEMA_UPDATE': 'Schema更新',
-  'EXPORT_AUDIT': '导出日志',
-  'ERROR': '错误'
+  'SCANNER': '摆渡目录自动扫描',
+  'IDEMPOTENCY': '幂等去重归档',
+  'DIODE_SIM': '网闸模拟摆渡',
+  'DIODE_CONFIG': '摆渡频率配置',
+  'DOWNLOAD': '现场存照附件下载',
+
+  // 任务管理与图片维护
+  'TASK_CREATE': '创建巡检任务',
+  'TASK_EDIT': '修改任务信息',
+  'TASK_DELETE': '删除任务与单据',
+  'TASK_STATUS': '变更任务执行状态',
+  'TASK_SHARE_UPDATE': '更新任务共享码',
+  'TASK_IMAGE_EDIT': '编辑照片描述与坐标',
+  'TASK_IMAGE_DELETE': '删除任务现场照片',
+
+  // 监控点位主数据
+  'MONITORING_POINT_ADD': '新增监控点位',
+  'MONITORING_POINT_UPDATE': '修改监控点位',
+  'MONITORING_POINT_TOGGLE': '启停监控点位',
+  'MONITORING_POINT_IMPORT': '批量导入监控点位',
+
+  // 涉事人员档案
+  'PERSONNEL_EDIT': '修改人员档案',
+  'PERSONNEL_DELETE': '删除人员档案',
+
+  // 表单设计器
+  'SCHEMA_UPDATE': '动态表单Schema更新',
+
+  // FTP 传输通道
+  'FTP_CONFIG': 'FTP通道参数配置',
+  'FTP_POLL': 'FTP远程自动轮询',
+  'FTP_PULL': 'FTP手动拉取数据',
+  'FTP_UPLOAD': 'FTP数据包自动推送',
+  'FTP_TEST': 'FTP通道连通性测试',
+
+  // Webhook 消息分发 (内网中台)
+  'WEBHOOK': 'Webhook消息推送',
+  'WEBHOOK_ADD': '新增Webhook订阅',
+  'WEBHOOK_UPDATE': '修改Webhook配置',
+  'WEBHOOK_DEL': '移除Webhook订阅',
+  'WEBHOOK_TEST': 'Webhook连通性测试',
+  'WEBHOOK_SECRET_ROTATE': 'Webhook签名密钥轮换',
+
+  // 系统安全与地图运维
+  'MAP_CONFIG': '离线地图参数配置',
+  'SECURITY': '安全秘钥在线轮换',
+  'SYSTEM_UPGRADE': '系统在线无损热升级',
+  'CLEANUP': '清理历史归档数据',
+  'DIAGNOSE': '系统运行状态诊断',
+  'EXPORT_AUDIT': '导出系统审计日志',
+  'SYSTEM': '系统核心服务就绪',
+  'ERROR': '系统异常与错误'
 };
 
 const auditStatusMap = {

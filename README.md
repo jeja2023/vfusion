@@ -292,4 +292,4 @@ VFUSION_ADMIN_PASSWORD=<your-password>
 * **启用 HTTPS**：服务默认监听 HTTP，生产必须置于 Nginx/Caddy 等反向代理之后启用 TLS，并将 `VFUSION_ALLOWED_ORIGINS` 配置为 HTTPS 来源。
 * **备份 `storage/`**：该目录包含全部业务数据与密钥，且已排除出 Git，需纳入独立备份策略。
 * **资产访问**：登录后调用 `/api/auth/asset-token` 获取 10 分钟、仅限图片资源的 Token；不要把 12 小时 API Token 放入图片 URL。
-* **在线升级**：补丁必须使用 `VFUSION_UPGRADE_SIGNING_KEY` 生成签名清单，且目标端 `storage/security.json` 中的 `upgrade_signing_key` 必须与构建密钥一致；未签名补丁会被拒绝。
+* **在线升级与防篡改验签**：补丁使用 `VFUSION_UPGRADE_SIGNING_KEY` 或 `storage/security.json` 秘钥生成 HMAC-SHA256 签名清单，中台验签引擎支持多候选密钥聚合匹配（`upgrade_signing_key` / `hmac_secret` / 环境变量）及 CRLF/LF 换行符容错；管理员可在 Web 控制台【系统配置与维护】中一键同步或轮换升级秘钥，未授权或被篡改的补丁将被严格拦截。

@@ -9,9 +9,25 @@ async function loadSystemHealth() {
     const secJson = await secRes.json();
     const mapJson = await mapRes.json();
 
-    if (secJson.success) {
+    if (secJson.success && secJson.data) {
       const currentKeyEl = document.getElementById('currentKeyMasked');
       if (currentKeyEl) currentKeyEl.innerText = secJson.data.hmac_secret || secJson.data.hmac_secret_masked || '未设置';
+      
+      const currentUpgradeKeyEl = document.getElementById('currentUpgradeKeyMasked');
+      if (currentUpgradeKeyEl) currentUpgradeKeyEl.innerText = secJson.data.upgrade_signing_key_masked || '未设置';
+
+      const syncBadgeEl = document.getElementById('syncUpgradeKeyBadge');
+      if (syncBadgeEl) {
+        if (secJson.data.upgrade_signing_key_synced) {
+          syncBadgeEl.innerText = '与升级密钥已对齐';
+          syncBadgeEl.style.color = '#0284c7';
+          syncBadgeEl.style.background = '#e0f2fe';
+        } else {
+          syncBadgeEl.innerText = '与升级密钥独立';
+          syncBadgeEl.style.color = '#d97706';
+          syncBadgeEl.style.background = '#fef3c7';
+        }
+      }
     }
 
     if (mapJson.success && mapJson.data) {
@@ -65,17 +81,28 @@ async function loadSystemHealth() {
 async function rotateHmacSecret() {
   const newSec = document.getElementById('newHmacSecretInput')?.value.trim();
   if (!newSec) { showToast('请输入新秘钥！', 'error'); return; }
+  if (newSec.length < 32 || newSec.length > 256) {
+    showToast('签名秘钥长度必须在 32 ~ 256 个字符之间！', 'error');
+    return;
+  }
+
+  const syncUpgrade = !!document.getElementById('syncUpgradeKeyCheckbox')?.checked;
 
   const res = await fetch('/api/config/security', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ hmac_secret: newSec })
+    body: JSON.stringify({
+      hmac_secret: newSec,
+      sync_upgrade_signing_key: syncUpgrade
+    })
   });
   const json = await res.json();
   if (json.success) {
-    showToast('HMAC 签名秘钥在线轮换更新成功！');
+    showToast(syncUpgrade ? 'HMAC 与升级签名秘钥已同步轮换成功！' : 'HMAC 签名秘钥在线轮换更新成功！');
     if (document.getElementById('newHmacSecretInput')) document.getElementById('newHmacSecretInput').value = '';
     loadSystemHealth();
+  } else {
+    showToast(json.error || '秘钥轮换失败', 'error');
   }
 }
 

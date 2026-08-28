@@ -7,15 +7,36 @@ const { resolveInside, isSafeFileName } = require('./security_utils');
 const MAX_UPGRADE_BYTES = 200 * 1024 * 1024;
 const MAX_UPGRADE_ENTRIES = 2000;
 
-function getUpgradeSigningKey(storageRoot) {
-  if (process.env.VFUSION_UPGRADE_SIGNING_KEY) return process.env.VFUSION_UPGRADE_SIGNING_KEY;
+function getUpgradeCandidateSigningKeys(storageRoot) {
+  const keys = new Set();
+  if (process.env.VFUSION_UPGRADE_SIGNING_KEY && process.env.VFUSION_UPGRADE_SIGNING_KEY.trim()) {
+    keys.add(process.env.VFUSION_UPGRADE_SIGNING_KEY.trim());
+  }
+  if (process.env.HMAC_SECRET && process.env.HMAC_SECRET.trim()) {
+    keys.add(process.env.HMAC_SECRET.trim());
+  }
+  if (process.env.VFUSION_HMAC_SECRET && process.env.VFUSION_HMAC_SECRET.trim()) {
+    keys.add(process.env.VFUSION_HMAC_SECRET.trim());
+  }
   try {
     const securityPath = path.join(storageRoot, 'security.json');
-    const security = JSON.parse(fs.readFileSync(securityPath, 'utf8'));
-    return security.upgrade_signing_key || security.hmac_secret || '';
-  } catch (e) {
-    return '';
-  }
+    if (fs.existsSync(securityPath)) {
+      const security = JSON.parse(fs.readFileSync(securityPath, 'utf8'));
+      if (security.upgrade_signing_key && typeof security.upgrade_signing_key === 'string' && security.upgrade_signing_key.trim()) {
+        keys.add(security.upgrade_signing_key.trim());
+      }
+      if (security.hmac_secret && typeof security.hmac_secret === 'string' && security.hmac_secret.trim()) {
+        keys.add(security.hmac_secret.trim());
+      }
+    }
+  } catch (e) {}
+
+  return Array.from(keys);
+}
+
+function getUpgradeSigningKey(storageRoot) {
+  const candidateKeys = getUpgradeCandidateSigningKeys(storageRoot);
+  return candidateKeys.length > 0 ? candidateKeys[0] : '';
 }
 
 async function validateUpgradeArchive(zipFilePath) {
@@ -107,11 +128,38 @@ async function performOnlineUpgrade(zipFilePath, storageRoot, appRootDir) {
     {
       if (!fs.existsSync(manifestPath) || !fs.existsSync(signaturePath)) throw new Error('升级补丁签名清单不完整');
       const manifestRaw = fs.readFileSync(manifestPath, 'utf8');
-      const key = getUpgradeSigningKey(storageRoot);
-      if (!key) throw new Error('未配置升级补丁签名密钥');
-      const expected = crypto.createHmac('sha256', key).update(manifestRaw).digest('hex');
+      const candidateKeys = getUpgradeCandidateSigningKeys(storageRoot);
+      if (!candidateKeys.length) throw new Error('未配置升级补丁签名密钥');
+
       const actual = fs.readFileSync(signaturePath, 'utf8').trim();
-      if (!/^[a-f0-9]{64}$/i.test(actual) || !crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(actual))) throw new Error('升级补丁签名校验失败');
+      if (!/^[a-f0-9]{64}$/i.test(actual)) {
+        throw new Error('升级补丁签名格式非法（期望 64 位 SHA-256 HMAC 摘要）');
+      }
+
+      // 针对 Windows/Linux 换行符（CRLF vs LF）以及首尾空白进行鲁棒匹配
+      const manifestVariants = [
+        manifestRaw,
+        manifestRaw.replace(/\r\n/g, '\n'),
+        manifestRaw.replace(/\r?\n/g, '\r\n'),
+        manifestRaw.trim(),
+        manifestRaw.replace(/\r\n/g, '\n').trim()
+      ];
+
+      let verified = false;
+      for (const key of candidateKeys) {
+        for (const variant of manifestVariants) {
+          const expected = crypto.createHmac('sha256', key).update(variant).digest('hex');
+          if (crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(actual))) {
+            verified = true;
+            break;
+          }
+        }
+        if (verified) break;
+      }
+
+      if (!verified) {
+        throw new Error('升级补丁签名校验失败: 补丁签名与当前节点配置的升级签名密钥及 HMAC 密钥均不匹配。请在【系统配置与维护】中同步升级签名密钥，或在 .env 中设置 VFUSION_UPGRADE_SIGNING_KEY 与补丁构建密钥一致');
+      }
     }
 
     // 尝试寻找 packages 目录（可能是压缩在根路径下，或者在子目录中）
@@ -183,5 +231,7 @@ async function performOnlineUpgrade(zipFilePath, storageRoot, appRootDir) {
 
 module.exports = {
   performOnlineUpgrade,
-  validateUpgradeArchive
+  validateUpgradeArchive,
+  getUpgradeCandidateSigningKeys,
+  getUpgradeSigningKey
 };

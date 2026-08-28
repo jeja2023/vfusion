@@ -428,11 +428,14 @@ app.get('/api/map/tiles/:z/:x/:y', (req, res) => {
   ];
 
   for (const candidate of candidatePaths) {
-    if (fs.existsSync(candidate)) {
-      res.setHeader('Cache-Control', 'public, max-age=86400');
-      res.setHeader('Content-Type', ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'image/png');
-      return fs.createReadStream(candidate).pipe(res);
-    }
+    try {
+      const stat = fs.statSync(candidate);
+      if (stat.isFile()) {
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        res.setHeader('Content-Type', ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'image/png');
+        return fs.createReadStream(candidate).pipe(res);
+      }
+    } catch (_) { /* 不存在或无权限，继续下一候选 */ }
   }
 
   res.setHeader('Content-Type', 'image/svg+xml');
@@ -1486,14 +1489,16 @@ app.get('/api/config/ftp', (req, res) => {
           pkg_prefix: sec.pkg_prefix || 'vfusion_',
           ftp_file_ext: sec.ftp_file_ext || '.jpg',
           hmac_secret: '',
-          hmac_secret_masked: maskSecret(sec.hmac_secret)
+          hmac_secret_masked: maskSecret(sec.hmac_secret),
+          upgrade_signing_key_masked: maskSecret(sec.upgrade_signing_key || sec.hmac_secret || ''),
+          upgrade_signing_key_synced: !!(sec.upgrade_signing_key && sec.hmac_secret && sec.upgrade_signing_key === sec.hmac_secret)
         }
       });
     }
   } catch (e) {}
   res.json({
     success: true,
-    data: { ftp_enabled: false, ftp_host: '', ftp_port: 21, ftp_user: '', ftp_password: '', ftp_remote_dir: '/vfusion_packages', pkg_prefix: 'vfusion_', ftp_file_ext: '.jpg', hmac_secret: '', hmac_secret_masked: '' }
+    data: { ftp_enabled: false, ftp_host: '', ftp_port: 21, ftp_user: '', ftp_password: '', ftp_remote_dir: '/vfusion_packages', pkg_prefix: 'vfusion_', ftp_file_ext: '.jpg', hmac_secret: '', hmac_secret_masked: '', upgrade_signing_key_masked: '未设置', upgrade_signing_key_synced: true }
   });
 });
 
@@ -1503,7 +1508,7 @@ app.post('/api/config/ftp', requireRole('admin'), (req, res) => {
     if (fs.existsSync(SECURITY_CONFIG_FILE)) {
       sec = JSON.parse(fs.readFileSync(SECURITY_CONFIG_FILE, 'utf8'));
     }
-    const { ftp_enabled, ftp_host, ftp_port, ftp_user, ftp_password, ftp_remote_dir, pkg_prefix, ftp_file_ext, hmac_secret } = req.body;
+    const { ftp_enabled, ftp_host, ftp_port, ftp_user, ftp_password, ftp_remote_dir, pkg_prefix, ftp_file_ext, hmac_secret, upgrade_signing_key, sync_upgrade_signing_key } = req.body;
     if (typeof ftp_enabled === 'boolean') sec.ftp_enabled = ftp_enabled;
     if (typeof ftp_host === 'string') sec.ftp_host = ftp_host;
     if (typeof ftp_port === 'number' || typeof ftp_port === 'string') sec.ftp_port = parseInt(ftp_port) || 21;
@@ -1521,11 +1526,22 @@ app.post('/api/config/ftp', requireRole('admin'), (req, res) => {
     if (typeof hmac_secret === 'string' && hmac_secret.trim().length > 0) {
       sec.hmac_secret = hmac_secret.trim();
       setHmacSecret(sec.hmac_secret);
+      if (sync_upgrade_signing_key) {
+        sec.upgrade_signing_key = sec.hmac_secret;
+      }
+    }
+    if (upgrade_signing_key !== undefined && (typeof upgrade_signing_key !== 'string' || upgrade_signing_key.trim().length < 32 || upgrade_signing_key.trim().length > 256)) {
+      return res.status(400).json({ success: false, error: '升级签名密钥长度必须为 32-256 个字符' });
+    }
+    if (typeof upgrade_signing_key === 'string' && upgrade_signing_key.trim().length > 0) {
+      sec.upgrade_signing_key = upgrade_signing_key.trim();
+    } else if (sync_upgrade_signing_key && sec.hmac_secret) {
+      sec.upgrade_signing_key = sec.hmac_secret;
     }
 
     writeJsonAtomic(SECURITY_CONFIG_FILE, sec);
-    addCollectorAuditLog('FTP_CONFIG', `视频网端更新传输与 HMAC 签名配置 (Host: ${sec.ftp_host || '无'}:${sec.ftp_port || 21})`, 'SUCCESS');
-    res.json({ success: true, message: '视频网端配置与 HMAC 签名秘钥保存成功' });
+    addCollectorAuditLog('FTP_CONFIG', `视频网端更新传输与签名密钥配置 (Host: ${sec.ftp_host || '无'}:${sec.ftp_port || 21})`, 'SUCCESS');
+    res.json({ success: true, message: '视频网端配置与数字签名密钥保存成功' });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }

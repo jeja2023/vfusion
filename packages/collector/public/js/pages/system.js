@@ -8,6 +8,22 @@ async function loadCollectorSystemConfig() {
       if (keyEl) {
         keyEl.innerText = json.data.hmac_secret_masked || '未设置';
       }
+      const upgradeKeyEl = document.getElementById('collectorCurrentUpgradeKeyStr');
+      if (upgradeKeyEl) {
+        upgradeKeyEl.innerText = json.data.upgrade_signing_key_masked || '未设置';
+      }
+      const syncBadgeEl = document.getElementById('collectorSyncUpgradeKeyBadge');
+      if (syncBadgeEl) {
+        if (json.data.upgrade_signing_key_synced) {
+          syncBadgeEl.innerText = '与升级密钥已对齐';
+          syncBadgeEl.style.color = '#0284c7';
+          syncBadgeEl.style.background = '#e0f2fe';
+        } else {
+          syncBadgeEl.innerText = '与升级密钥独立';
+          syncBadgeEl.style.color = '#d97706';
+          syncBadgeEl.style.background = '#fef3c7';
+        }
+      }
     }
     if (mapJson.success && mapJson.data) {
       const d = mapJson.data;
@@ -63,16 +79,25 @@ async function saveCollectorHmacSecret() {
     showToast('请输入新的 HMAC 签名秘钥！', 'error');
     return;
   }
+  if (secret.length < 32 || secret.length > 256) {
+    showToast('签名秘钥长度必须在 32 ~ 256 个字符之间！', 'error');
+    return;
+  }
+
+  const syncUpgrade = !!document.getElementById('collectorSyncUpgradeKeyCheckbox')?.checked;
 
   try {
     const res = await fetch('/api/config/ftp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ hmac_secret: secret })
+      body: JSON.stringify({
+        hmac_secret: secret,
+        sync_upgrade_signing_key: syncUpgrade
+      })
     });
     const json = await res.json();
     if (json.success) {
-      showToast('HMAC 签名秘钥更新成功！');
+      showToast(syncUpgrade ? 'HMAC 与升级签名秘钥已同步保存！' : 'HMAC 签名秘钥更新成功！');
       if (inputEl) inputEl.value = '';
       loadCollectorSystemConfig();
     } else {

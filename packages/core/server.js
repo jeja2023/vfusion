@@ -527,11 +527,14 @@ app.get('/api/map/tiles/:z/:x/:y', (req, res) => {
   ];
 
   for (const candidate of candidatePaths) {
-    if (fs.existsSync(candidate)) {
-      res.setHeader('Cache-Control', 'public, max-age=86400');
-      res.setHeader('Content-Type', ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'image/png');
-      return fs.createReadStream(candidate).pipe(res);
-    }
+    try {
+      const stat = fs.statSync(candidate);
+      if (stat.isFile()) {
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        res.setHeader('Content-Type', ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'image/png');
+        return fs.createReadStream(candidate).pipe(res);
+      }
+    } catch (_) { /* 不存在或无权限，继续下一候选 */ }
   }
 
   res.setHeader('Content-Type', 'image/svg+xml');
@@ -1919,6 +1922,8 @@ app.get('/api/config/security', requireRole('admin'), (req, res) => {
       data: {
         hmac_secret: '',
         hmac_secret_masked: maskSecret(sec.hmac_secret),
+        upgrade_signing_key_masked: maskSecret(sec.upgrade_signing_key || sec.hmac_secret || ''),
+        upgrade_signing_key_synced: !!(sec.upgrade_signing_key && sec.hmac_secret && sec.upgrade_signing_key === sec.hmac_secret),
         auto_diode_interval: sec.auto_diode_interval || 0,
         ftp_enabled: sec.ftp_enabled || false,
         ftp_host: sec.ftp_host || '',
@@ -1939,6 +1944,8 @@ app.get('/api/config/security', requireRole('admin'), (req, res) => {
       success: true,
       data: {
         hmac_secret_masked: '未设置',
+        upgrade_signing_key_masked: '未设置',
+        upgrade_signing_key_synced: true,
         auto_diode_interval: 0,
         ftp_enabled: false,
         ftp_host: '',
@@ -1958,7 +1965,7 @@ app.get('/api/config/security', requireRole('admin'), (req, res) => {
 
 app.post('/api/config/security', requireRole('admin'), (req, res) => {
   const {
-    hmac_secret, auto_diode_interval, ftp_in_dir, ftp_out_dir, pkg_prefix, ftp_file_ext,
+    hmac_secret, upgrade_signing_key, sync_upgrade_signing_key, auto_diode_interval, ftp_in_dir, ftp_out_dir, pkg_prefix, ftp_file_ext,
     ftp_enabled, ftp_host, ftp_port, ftp_user, ftp_password, ftp_remote_dir, ftp_delete_after_download
   } = req.body;
   try {
@@ -1967,9 +1974,22 @@ app.post('/api/config/security', requireRole('admin'), (req, res) => {
       if (typeof hmac_secret !== 'string' || hmac_secret.trim().length < 32 || hmac_secret.length > 256) {
         return res.status(400).json({ success: false, error: 'HMAC 密钥长度必须为 32-256 个字符' });
       }
-      sec.hmac_secret = hmac_secret;
-      setHmacSecret(hmac_secret);
-      addAuditLog('SECURITY', `HMAC 数字签名秘钥已在线轮换更新`, 'SUCCESS');
+      sec.hmac_secret = hmac_secret.trim();
+      setHmacSecret(sec.hmac_secret);
+      if (sync_upgrade_signing_key) {
+        sec.upgrade_signing_key = sec.hmac_secret;
+      }
+      addAuditLog('SECURITY', `HMAC 数字签名秘钥已在线轮换更新${sync_upgrade_signing_key ? '（已同步更新升级签名密钥）' : ''}`, 'SUCCESS');
+    }
+    if (upgrade_signing_key) {
+      if (typeof upgrade_signing_key !== 'string' || upgrade_signing_key.trim().length < 32 || upgrade_signing_key.length > 256) {
+        return res.status(400).json({ success: false, error: '升级签名密钥长度必须为 32-256 个字符' });
+      }
+      sec.upgrade_signing_key = upgrade_signing_key.trim();
+      addAuditLog('SECURITY', `在线升级补丁签名密钥已更新`, 'SUCCESS');
+    } else if (sync_upgrade_signing_key && sec.hmac_secret) {
+      sec.upgrade_signing_key = sec.hmac_secret;
+      addAuditLog('SECURITY', `在线升级补丁签名密钥已同步为 HMAC 秘钥`, 'SUCCESS');
     }
     if (typeof auto_diode_interval === 'number' && Number.isFinite(auto_diode_interval)) {
       if (auto_diode_interval < 0 || auto_diode_interval > 86400) return res.status(400).json({ success: false, error: '摆渡轮询间隔必须在 0-86400 秒之间' });

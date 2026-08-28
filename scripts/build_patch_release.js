@@ -1,3 +1,4 @@
+require('../packages/common/env_loader').initEnv();
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
@@ -39,10 +40,12 @@ fs.copyFileSync(path.join(ROOT_DIR, 'README.md'), path.join(PATCH_DIR, 'README.m
 fs.copyFileSync(path.join(ROOT_DIR, '更新日志.md'), path.join(PATCH_DIR, '更新日志.md'));
 
 let upgradeKey = process.env.VFUSION_UPGRADE_SIGNING_KEY;
+let keySource = '环境变量 VFUSION_UPGRADE_SIGNING_KEY';
 if (!upgradeKey) {
   try {
     const sec = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, 'storage', 'security.json'), 'utf8'));
     upgradeKey = sec.upgrade_signing_key || sec.hmac_secret;
+    keySource = sec.upgrade_signing_key ? 'storage/security.json (upgrade_signing_key)' : 'storage/security.json (hmac_secret)';
   } catch (e) {}
 }
 if (!upgradeKey || upgradeKey.length < 32) {
@@ -51,8 +54,14 @@ if (!upgradeKey || upgradeKey.length < 32) {
   process.exit(1);
 }
 const manifest = JSON.stringify({ version: VERSION, generated_at: new Date().toISOString(), format: 1 }, null, 2);
+const signature = crypto.createHmac('sha256', upgradeKey).update(manifest).digest('hex');
 fs.writeFileSync(path.join(PATCH_DIR, 'upgrade_manifest.json'), manifest, 'utf8');
-fs.writeFileSync(path.join(PATCH_DIR, 'upgrade_manifest.sig'), crypto.createHmac('sha256', upgradeKey).update(manifest).digest('hex') + '\n', 'utf8');
+fs.writeFileSync(path.join(PATCH_DIR, 'upgrade_manifest.sig'), signature + '\n', 'utf8');
+
+const keyMasked = upgradeKey.length <= 8 ? '********' : `${upgradeKey.slice(0, 4)}...${upgradeKey.slice(-4)}`;
+console.log(`- 补丁签名密钥来源: ${keySource}`);
+console.log(`- 补丁签名密钥指纹: ${keyMasked}`);
+console.log(`- 补丁数字签名摘要: ${signature}`);
 
 // 2. 打包成轻量 Zip 补丁
 try {

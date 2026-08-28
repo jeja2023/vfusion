@@ -98,53 +98,5 @@
     </div>
 
   </div>
-
-  <!-- 下部：监控点位台账与经纬度管理表 -->
-  <div style="margin-top:0.85rem; background:#ffffff; border:1px solid var(--border-color); border-radius:8px; padding:0.85rem;">
-    <div style="display:flex; justify-content:space-between; align-items:center; gap:0.75rem; margin-bottom:0.75rem; flex-wrap:wrap;">
-      <div>
-        <h4 style="font-size:0.85rem; font-weight:700; color:var(--text-main); margin:0 0 0.2rem; display:flex; align-items:center; gap:0.35rem;">
-          <svg class="icon-svg" viewBox="0 0 24 24" style="color:var(--primary); width:16px; height:16px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-          监控点位与经纬度对应表
-        </h4>
-        <div style="font-size:0.74rem; color:var(--text-sub);">点位坐标以现场测绘、设备台账为准。发布人员从点位表选择或在地图上拾取，系统自动带出坐标。</div>
-      </div>
-      <div style="display:flex; gap:0.35rem; flex-wrap:wrap; justify-content:flex-end;">
-        <button class="btn btn-secondary" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" data-action="openCollectorPointMapPicker()">打开点位全景地图</button>
-        <button class="btn btn-secondary" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" data-action="exportMonitoringPoints('csv')">导出 CSV</button>
-        <button class="btn btn-secondary" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" data-action="exportMonitoringPoints('json')">导出 JSON</button>
-        <label class="btn btn-secondary" style="padding:0.38rem 0.65rem; font-size:0.75rem; cursor:pointer;">导入文件<input type="file" id="monitoringPointImportFile" accept=".csv,.json,text/csv,application/json" hidden data-action-change="importMonitoringPoints(this)"></label>
-        <button class="btn btn-primary" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" data-action="resetMonitoringPointForm();">新建点位</button>
-      </div>
-    </div>
-
-    <!-- 点位编辑/录入表单 -->
-    <form id="monitoringPointForm" data-action-submit="saveMonitoringPoint(event)" style="display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:0.5rem; align-items:end; margin-bottom:0.75rem; background:#f8fafc; padding:0.75rem; border-radius:6px; border:1px solid #e2e8f0;" autocomplete="off">
-      <input type="hidden" id="monitoringPointEditingId">
-      <div class="form-group"><label>点位编号 *</label><input id="monitoringPointId" required maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,63}" placeholder="如 GATE_NORTH_01" autocomplete="off"></div>
-      <div class="form-group"><label>点位名称 *</label><input id="monitoringPointName" required maxlength="128" placeholder="如 厂区北门1号机" autocomplete="off"></div>
-      <div class="form-group"><label>经度（可选）</label><input id="monitoringPointLongitude" inputmode="decimal" placeholder="-180 至 180 (如 116.3974)" autocomplete="off"></div>
-      <div class="form-group"><label>纬度（可选）</label><input id="monitoringPointLatitude" inputmode="decimal" placeholder="-90 至 90 (如 39.9092)" autocomplete="off"></div>
-      <div class="form-group"><label>点位说明</label><input id="monitoringPointDescription" maxlength="500" placeholder="测绘批次、设备编号等" autocomplete="off"></div>
-      <div style="grid-column:1/-1; display:flex; gap:0.5rem; justify-content:flex-end;">
-        <button class="btn btn-secondary" type="button" style="padding:0.4rem 0.85rem; font-size:0.75rem;" data-action="openCollectorPointMapPicker()">打开地图拾取坐标</button>
-        <button class="btn btn-primary" type="submit" style="padding:0.4rem 0.85rem; font-size:0.75rem;">保存点位</button>
-        <button class="btn" type="button" style="padding:0.4rem 0.85rem; font-size:0.75rem;" data-action="resetMonitoringPointForm();">取消</button>
-      </div>
-    </form>
-
-    <!-- 查询与表格 -->
-    <div style="display:flex; gap:0.4rem; margin-bottom:0.45rem;">
-      <input id="monitoringPointAdminQuery" type="search" placeholder="搜索编号、名称或说明" data-action-input="scheduleMonitoringPointAdminSearch()" style="max-width:320px;">
-      <button class="btn" type="button" data-action="loadMonitoringPointAdminTable(1)">查询</button>
-    </div>
-    <div style="overflow-x:auto;">
-      <table class="data-table" style="min-width:780px; font-size:0.75rem;">
-        <thead><tr><th>编号</th><th>名称</th><th>经度</th><th>纬度</th><th>说明</th><th>状态</th><th>操作</th></tr></thead>
-        <tbody id="monitoringPointsTableBody"><tr><td colspan="7" style="text-align:center; color:#64748b;">加载中...</td></tr></tbody>
-      </table>
-    </div>
-    <div id="monitoringPointAdminPagination" style="display:flex; justify-content:flex-end; gap:0.5rem; align-items:center; margin-top:0.45rem; font-size:0.75rem; color:#64748b;"></div>
-  </div>
 </div>
 

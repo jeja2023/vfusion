@@ -63,155 +63,9 @@ function publishToTask(taskCode) {
   if (typeof switchTab === 'function') switchTab('tab-publish');
 }
 
-Object.assign(window.VFusionActions = window.VFusionActions || {}, {
-  loadPersonnelList, autoFillPersonnel, loadTaskOptions, selectTaskForPublish, publishToTask,
-  chooseMonitoringPoint, clearMonitoringPointSelection, searchMonitoringPoints, scheduleMonitoringPointSearch,
-  openNewMonitoringPointForm, closeNewMonitoringPointForm, saveNewMonitoringPoint, loadMonitoringPoints,
-  handleFileSelect, clearAllSelectedFiles
-});
-
-let monitoringPoints = [];
-let selectedMonitoringPointId = '';
-let monitoringPointSearchTimer = null;
-
-function getLocationCoordinateInput(key) {
-  return document.querySelector(`#dynamicFormGrid [name="${key}"]`);
-}
-
-function setLocationInputState(locked, message) {
-  ['location', 'longitude', 'latitude'].forEach(key => {
-    const input = getLocationCoordinateInput(key);
-    if (input) input.readOnly = locked;
-  });
-  const status = document.getElementById('locationPickerStatus');
-  if (status) {
-    status.textContent = message || '';
-    status.style.color = locked ? '#047857' : '#64748b';
-  }
-}
-
-function applyMonitoringPoint(pointId) {
-  selectedMonitoringPointId = pointId || '';
-  const pointSelect = document.getElementById('monitoringPointSelect');
-  if (pointSelect) pointSelect.value = selectedMonitoringPointId;
-  const point = monitoringPoints.find(item => item.point_id === pointId);
-  const locationInput = getLocationCoordinateInput('location');
-  const longitudeInput = getLocationCoordinateInput('longitude');
-  const latitudeInput = getLocationCoordinateInput('latitude');
-  if (!point) {
-    setLocationInputState(false, '未绑定点位，可按现场记录手工填写地点和坐标');
-    return;
-  }
-  if (locationInput) locationInput.value = point.location || point.name || '';
-  if (longitudeInput) longitudeInput.value = point.longitude ?? '';
-  if (latitudeInput) latitudeInput.value = point.latitude ?? '';
-  const coordinateText = point.longitude === null || point.latitude === null ? '该点位尚未维护经纬度' : '坐标来自点位台账';
-  setLocationInputState(true, `${coordinateText}：${point.name}（${point.point_id}），如需手工填写请先清除选择`);
-}
-
-function renderMonitoringPointResults(points) {
-  const box = document.getElementById('monitoringPointResults');
-  if (!box) return;
-  monitoringPoints = Array.isArray(points) ? points : [];
-  if (!monitoringPoints.length) {
-    box.innerHTML = '<div class="monitoring-point-empty">未找到匹配点位，可点击“新增本次点位”。</div>';
-    return;
-  }
-  box.innerHTML = monitoringPoints.map((point, index) => `
-    <button type="button" class="monitoring-point-result" data-action="chooseMonitoringPoint(${index})">
-      <span><strong>${escapeHtml(point.name)}</strong><small>${escapeHtml(point.point_id)}</small></span>
-      <code>${point.longitude === null ? '暂无坐标' : `${escapeHtml(point.longitude)}, ${escapeHtml(point.latitude)}`}</code>
-    </button>
-  `).join('');
-}
-
-function chooseMonitoringPoint(index) {
-  const point = monitoringPoints[index];
-  if (!point) return;
-  selectedMonitoringPointId = point.point_id;
-  applyMonitoringPoint(point.point_id);
-  const input = document.getElementById('monitoringPointSearch');
-  if (input) input.value = `${point.name} [${point.point_id}]`;
-  const box = document.getElementById('monitoringPointResults');
-  if (box) box.innerHTML = `<div class="monitoring-point-selected">已选择：${escapeHtml(point.name)}（${escapeHtml(point.point_id)}）</div>`;
-}
-
-function clearMonitoringPointSelection() {
-  selectedMonitoringPointId = '';
-  const pointSelect = document.getElementById('monitoringPointSelect');
-  if (pointSelect) pointSelect.value = '';
-  const search = document.getElementById('monitoringPointSearch');
-  if (search) search.value = '';
-  setLocationInputState(false, '未绑定点位，可手工填写地点；经纬度可留空');
-  const box = document.getElementById('monitoringPointResults');
-  if (box) box.innerHTML = '';
-}
-
-async function searchMonitoringPoints() {
-  const input = document.getElementById('monitoringPointSearch');
-  const query = input ? input.value.trim() : '';
-  try {
-    const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
-    const response = await fetchFn(`/api/monitoring-points?query=${encodeURIComponent(query)}&limit=30`);
-    const result = await response.json();
-    if (!response.ok || !result.success) throw new Error(result.error || '点位表加载失败');
-    renderMonitoringPointResults(result.data);
-  } catch (error) {
-    const status = document.getElementById('locationPickerStatus');
-    if (status) { status.textContent = `点位表加载失败：${error.message}`; status.style.color = '#b91c1c'; }
-  }
-}
-
-function scheduleMonitoringPointSearch() {
-  clearTimeout(monitoringPointSearchTimer);
-  monitoringPointSearchTimer = setTimeout(searchMonitoringPoints, 220);
-}
-
-function openNewMonitoringPointForm() {
-  const panel = document.getElementById('newMonitoringPointPanel');
-  if (panel) panel.hidden = false;
-  const nameInput = document.getElementById('newMonitoringPointName');
-  if (nameInput) nameInput.focus();
-}
-
-function closeNewMonitoringPointForm() {
-  const panel = document.getElementById('newMonitoringPointPanel');
-  if (panel) panel.hidden = true;
-}
-
-async function saveNewMonitoringPoint() {
-  const name = document.getElementById('newMonitoringPointName')?.value.trim();
-  const location = document.getElementById('newMonitoringPointLocation')?.value.trim();
-  const longitude = document.getElementById('newMonitoringPointLongitude')?.value.trim();
-  const latitude = document.getElementById('newMonitoringPointLatitude')?.value.trim();
-  if (!name) return showToast('请输入点位名称', 'error');
-  if ((longitude && !latitude) || (!longitude && latitude)) return showToast('经度和纬度必须同时填写', 'error');
-  try {
-    const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
-    const res = await fetchFn('/api/monitoring-points', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, location: location || name, longitude, latitude, description: '用户发布时新增' })
-    });
-    const json = await res.json();
-    if (!res.ok || !json.success) throw new Error(json.error || '新增点位失败');
-    monitoringPoints = [json.data];
-    chooseMonitoringPoint(0);
-    closeNewMonitoringPointForm();
-    showToast(`点位已保存：${json.data.point_id}`);
-  } catch (error) {
-    showToast(error.message, 'error');
-  }
-}
-
-async function loadMonitoringPoints() {
-  const input = document.getElementById('monitoringPointSearch');
-  if (input) input.value = '';
-  await searchMonitoringPoints();
-}
-
 function validateCoordinateInputs() {
-  const longitude = (getLocationCoordinateInput('longitude') || {}).value || '';
-  const latitude = (getLocationCoordinateInput('latitude') || {}).value || '';
+  const longitude = (document.querySelector('#dynamicFormGrid [name="longitude"]') || {}).value || '';
+  const latitude = (document.querySelector('#dynamicFormGrid [name="latitude"]') || {}).value || '';
   if (!longitude.trim() && !latitude.trim()) return true;
   const longitudeNumber = Number(longitude);
   const latitudeNumber = Number(latitude);
@@ -242,30 +96,39 @@ function renderDynamicForm(fields) {
   const taskName = currentTask ? currentTask.task_name : '未指定任务';
   const taskCode = currentTask ? currentTask.task_code : (storedCode || '');
 
-  // 顶部当前发布任务状态只读提示卡片 (不含切换按钮，需通过任务中心进行任务切换)
+  // 1. 顶部当前发布任务状态只读提示卡片
   const taskGroup = document.createElement('div');
   taskGroup.className = 'form-group full-width';
   taskGroup.style.cssText = 'background:#f0f9ff; border:1px solid #bae6fd; padding:0.65rem 0.85rem; border-radius:8px; display:flex; align-items:center; justify-content:center;';
 
   taskGroup.innerHTML = `
-    <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; justify-content:center;">
-      <span style="font-size:0.8rem; color:#0369a1; font-weight:600;">当前发布任务:</span>
-      <strong style="font-size:0.9rem; color:#0284c7;">${escapeHtml(taskName)}</strong>
-      <code style="font-size:0.775rem; color:#0284c7; font-weight:600;">(${escapeHtml(taskCode)})</code>
+    <div style="display:flex; align-items:center; justify-content:center; gap:0.5rem; width:100%; flex-wrap:wrap; text-align:center;">
+      <span style="display:inline-flex; align-items:center; gap:0.35rem; color:#0369a1; font-weight:700; font-size:0.875rem;">
+        <svg class="icon-svg" viewBox="0 0 24 24" style="color:#0284c7; width:16px; height:16px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        当前挂接归属任务：
+      </span>
+      <span style="font-size:0.9rem; font-weight:700; color:#0f172a; background:#e0f2fe; padding:0.2rem 0.6rem; border-radius:6px; border:1px solid #7dd3fc;">
+        ${escapeHtml(taskName)}
+      </span>
+      <span style="font-size:0.75rem; font-family:monospace; color:#0284c7; background:#ffffff; padding:0.2rem 0.5rem; border-radius:4px; border:1px solid #bae6fd;">
+        [${escapeHtml(taskCode)}]
+      </span>
+      <input type="hidden" name="task_code" value="${escapeHtml(taskCode)}">
+      <input type="hidden" name="task_name" value="${escapeHtml(taskName)}">
     </div>
-    <input type="hidden" name="task_name" value="${escapeHtml(taskName)}">
-    <input type="hidden" name="task_code" value="${escapeHtml(taskCode)}">
   `;
   grid.appendChild(taskGroup);
 
-  // 美化后的本任务涉事人员档案下拉组
+  // 2. 涉事人员档案快速下拉选择
   const pGroup = document.createElement('div');
   pGroup.className = 'form-group full-width';
-  pGroup.style.cssText = 'background:#ffffff; border:1px solid #e2e8f0; padding:0.75rem 0.9rem; border-radius:8px; box-shadow:0 1px 2px rgba(0,0,0,0.03);';
+  pGroup.style.cssText = 'background:#f8fafc; border:1px solid #e2e8f0; padding:0.65rem 0.85rem; border-radius:8px; margin-bottom:0.15rem;';
 
-  const optsHtml = registeredPersonnel.length > 0
-    ? registeredPersonnel.map((p, idx) => `<option value="${idx}">${escapeHtml(p.name)} - 身份证: ${escapeHtml(p.id_card) || '未填'} (户籍: ${escapeHtml(p.domicile) || '未填'})</option>`).join('')
-    : '<option value="" disabled>-- 本任务暂无关联登记人员 (输入姓名身份证提交后将自动关联本任务) --</option>';
+  const optsHtml = registeredPersonnel.map((p, idx) => `
+    <option value="${idx}">
+      ${escapeHtml(p.name)} | 身份证: ${escapeHtml(p.id_card)} | 户籍: ${escapeHtml(p.domicile || '未记录')}
+    </option>
+  `).join('');
 
   pGroup.innerHTML = `
     <label style="color:#334155; font-weight:600; font-size:0.825rem; display:flex; align-items:center; justify-content:space-between; margin-bottom:0.45rem;">
@@ -282,42 +145,55 @@ function renderDynamicForm(fields) {
   `;
   grid.appendChild(pGroup);
 
-  const pointGroup = document.createElement('div');
-  pointGroup.className = 'form-group full-width monitoring-point-picker';
-  pointGroup.innerHTML = `
-    <label style="display:flex; justify-content:space-between; align-items:center;">
-      <span>监控点位 <span style="font-size:0.72rem; font-weight:normal; color:#64748b;">优先选择点位表中的标准坐标</span></span>
-      <button type="button" class="btn btn-secondary" style="color:var(--primary); font-weight:700; padding:0.25rem 0.55rem; font-size:0.75rem;" data-action="openPublishMapPicker()">地图选点</button>
-    </label>
-    <input id="monitoringPointSearch" type="search" placeholder="输入点位编号或名称关键词搜索" autocomplete="off" data-action-input="scheduleMonitoringPointSearch()" data-action-keydown="if (event.key === 'Enter') { event.preventDefault(); searchMonitoringPoints(); }">
-    <input type="hidden" id="monitoringPointSelect" name="monitoring_point_id" value="">
-    <div id="monitoringPointResults" class="monitoring-point-results"></div>
-    <div style="display:flex; gap:0.4rem; align-items:center; margin-top:0.4rem; flex-wrap:wrap;">
-      <button type="button" class="btn btn-secondary" style="color:var(--primary); font-weight:700;" data-action="openPublishMapPicker()">地图选点</button>
-      <button type="button" class="btn" data-action="openNewMonitoringPointForm()">新增本次点位</button>
-      <button type="button" class="btn" data-action="clearMonitoringPointSelection()">清除选择，手工填写</button>
-      <span id="locationPickerStatus" aria-live="polite">点位和经纬度均可不填写。</span>
+  // 3. 事发地点与地图坐标拾取卡片
+  const locCard = document.createElement('div');
+  locCard.className = 'form-group full-width';
+  locCard.style.cssText = 'background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:0.75rem; margin-bottom:0.35rem; box-shadow:0 1px 3px rgba(0,0,0,0.03);';
+  
+  const curLocation = existingValues.location || '';
+  const curLng = existingValues.longitude || '';
+  const curLat = existingValues.latitude || '';
+
+  locCard.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.55rem;">
+      <label style="font-weight:700; color:#1e293b; font-size:0.85rem; margin:0; display:flex; align-items:center; gap:0.4rem;">
+        <svg class="icon-svg" viewBox="0 0 24 24" style="color:var(--primary); width:16px; height:16px;"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+        事发地点与坐标
+      </label>
+      <button type="button" class="btn btn-secondary" style="color:var(--primary); font-weight:700; padding:0.3rem 0.75rem; font-size:0.775rem; display:flex; align-items:center; gap:0.35rem;" data-action="openPublishMapPicker()">
+        <svg class="icon-svg" viewBox="0 0 24 24" style="width:14px; height:14px;"><circle cx="12" cy="12" r="10"/><polygon points="12 8 8 12 12 16 16 12 12 8"/></svg>
+        在地图上选点拾取
+      </button>
     </div>
-    <div id="newMonitoringPointPanel" class="new-monitoring-point-panel" hidden>
-      <div class="new-monitoring-point-grid" style="display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:0.4rem;">
-        <input id="newMonitoringPointName" placeholder="点位名称 *" maxlength="128">
-        <input id="newMonitoringPointLongitude" placeholder="经度（可选）" inputmode="decimal">
-        <input id="newMonitoringPointLatitude" placeholder="纬度（可选）" inputmode="decimal">
+    <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:0.6rem;">
+      <div class="form-group" style="margin:0;">
+        <label style="font-size:0.75rem; font-weight:600; color:#475569;">事发地点 / 点位说明</label>
+        <input id="field-location" type="text" name="location" value="${escapeHtml(curLocation)}" placeholder="如：厂区北门 / 梁溪科技园1号机" autocomplete="off">
       </div>
-      <div style="display:flex; gap:0.4rem; margin-top:0.4rem; flex-wrap:wrap;">
-        <button type="button" class="btn btn-secondary" data-action="openNewPointModalMapPicker()">地图拾取坐标</button>
-        <button type="button" class="btn btn-primary" data-action="saveNewMonitoringPoint()">保存并使用</button>
-        <button type="button" class="btn" data-action="closeNewMonitoringPointForm()">取消</button>
+      <div class="form-group" style="margin:0;">
+        <label style="font-size:0.75rem; font-weight:600; color:#475569;">经度 (可选)</label>
+        <input id="field-longitude" type="text" name="longitude" value="${escapeHtml(curLng)}" placeholder="如：120.305456" inputmode="decimal" autocomplete="off">
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label style="font-size:0.75rem; font-weight:600; color:#475569;">纬度 (可选)</label>
+        <input id="field-latitude" type="text" name="latitude" value="${escapeHtml(curLat)}" placeholder="如：31.570037" inputmode="decimal" autocomplete="off">
       </div>
     </div>
   `;
-  grid.appendChild(pointGroup);
+  grid.appendChild(locCard);
+
+  // 4. 其他表单字段 (排除已有卡片覆盖的字段)
+  const excludedKeys = new Set([
+    'person_name', 'person_id_card', 'person_domicile',
+    'location', 'longitude', 'latitude',
+    'monitoring_point_id', 'monitoring_point_name', 'location_source'
+  ]);
 
   (fields || []).forEach(field => {
-    if (['person_name', 'person_id_card', 'person_domicile', 'monitoring_point_id', 'monitoring_point_name', 'location_source'].includes(field.key)) return;
+    if (excludedKeys.has(field.key)) return;
 
     const group = document.createElement('div');
-    const isFullWidth = field.type === 'textarea' || field.key === 'location';
+    const isFullWidth = field.type === 'textarea';
     group.className = 'form-group' + (isFullWidth ? ' full-width' : '');
 
     const curVal = existingValues[field.key] !== undefined ? existingValues[field.key] : (field.key === 'event_time' ? nowStr : '');
@@ -328,21 +204,20 @@ function renderDynamicForm(fields) {
 
     let inputHtml = '';
     if (field.type === 'select') {
-      const optsHtml = (field.options || []).map(opt => `<option value="${escapeHtml(opt)}" ${curVal === opt ? 'selected' : ''}>${escapeHtml(opt)}</option>`).join('');
-      inputHtml = `<select name="${safeKey}" ${field.required ? 'required' : ''}>${optsHtml}</select>`;
+      const opts = (field.options || []).map(opt => `<option value="${escapeHtml(opt)}" ${curVal === opt ? 'selected' : ''}>${escapeHtml(opt)}</option>`).join('');
+      inputHtml = `<select name="${safeKey}" ${field.required ? 'required' : ''}>${opts}</select>`;
     } else if (field.type === 'radio') {
-      const optsHtml = (field.options || []).map((opt, idx) => `
+      const opts = (field.options || []).map((opt, idx) => `
         <label class="radio-label">
           <input type="radio" name="${safeKey}" value="${escapeHtml(opt)}" ${curVal ? (curVal === opt ? 'checked' : '') : (idx === 0 ? 'checked' : '')}>
           ${escapeHtml(opt)}
         </label>
       `).join('');
-      inputHtml = `<div class="radio-group">${optsHtml}</div>`;
+      inputHtml = `<div class="radio-group">${opts}</div>`;
     } else if (field.type === 'textarea') {
       inputHtml = `<textarea name="${safeKey}" placeholder="请输入${safeLabel}" style="height:60px; min-height:54px;" ${field.required ? 'required' : ''}>${safeVal}</textarea>`;
     } else {
-      const coordinateHint = field.key === 'longitude' ? '例如 116.397128' : (field.key === 'latitude' ? '例如 39.916527' : `请输入${safeLabel}`);
-      inputHtml = `<input id="field-${safeKey}" type="text" name="${safeKey}" value="${safeVal}" placeholder="${coordinateHint}" autocomplete="off" inputmode="decimal" ${field.required ? 'required' : ''}>`;
+      inputHtml = `<input id="field-${safeKey}" type="text" name="${safeKey}" value="${safeVal}" placeholder="请输入${safeLabel}" autocomplete="off" ${field.required ? 'required' : ''}>`;
     }
 
     group.innerHTML = `
@@ -352,19 +227,7 @@ function renderDynamicForm(fields) {
     grid.appendChild(group);
   });
 
-  ['location', 'longitude', 'latitude'].forEach(key => {
-    if (!grid.querySelector(`[name="${key}"]`)) {
-      const hidden = document.createElement('input');
-      hidden.type = 'hidden';
-      hidden.name = key;
-      grid.appendChild(hidden);
-    }
-  });
-
-  selectedMonitoringPointId = existingValues.monitoring_point_id || '';
-  if (selectedMonitoringPointId) applyMonitoringPoint(selectedMonitoringPointId);
   loadTaskOptions();
-  loadMonitoringPoints();
 }
 
 function handleFileSelect(e) {
@@ -550,46 +413,25 @@ function bindPublishFormSubmit() {
 }
 
 function openPublishMapPicker() {
-  const currentLng = (getLocationCoordinateInput('longitude') || {}).value || '';
-  const currentLat = (getLocationCoordinateInput('latitude') || {}).value || '';
+  const lngInput = document.querySelector('#dynamicFormGrid [name="longitude"]');
+  const latInput = document.querySelector('#dynamicFormGrid [name="latitude"]');
+  const locInput = document.querySelector('#dynamicFormGrid [name="location"]');
+
+  const currentLng = lngInput?.value.trim() || '';
+  const currentLat = latInput?.value.trim() || '';
 
   if (typeof window.openMapPicker === 'function') {
     window.openMapPicker({
       initialLng: currentLng ? parseFloat(currentLng) : null,
       initialLat: currentLat ? parseFloat(currentLat) : null,
       title: '高德离线地图选点拾取坐标',
-      showExistingPoints: true,
       onConfirm: (lng, lat) => {
-        const lngInput = getLocationCoordinateInput('longitude');
-        const latInput = getLocationCoordinateInput('latitude');
-        const locInput = getLocationCoordinateInput('location');
         if (lngInput) lngInput.value = lng;
         if (latInput) latInput.value = lat;
-        if (locInput && !locInput.value) locInput.value = `现场点位 (${lng}, ${lat})`;
-        setLocationInputState(false, `已从地图拾取坐标：${lng}, ${lat}`);
-      }
-    });
-  } else {
-    showToast('地图选点组件初始化中，请稍候...', 'warn');
-  }
-}
-
-function openNewPointModalMapPicker() {
-  const currentLng = document.getElementById('newMonitoringPointLongitude')?.value.trim();
-  const currentLat = document.getElementById('newMonitoringPointLatitude')?.value.trim();
-  const name = document.getElementById('newMonitoringPointName')?.value.trim() || '新点位';
-
-  if (typeof window.openMapPicker === 'function') {
-    window.openMapPicker({
-      initialLng: currentLng ? parseFloat(currentLng) : null,
-      initialLat: currentLat ? parseFloat(currentLat) : null,
-      title: `拾取新点位坐标 [${name}]`,
-      showExistingPoints: true,
-      onConfirm: (lng, lat) => {
-        const lngInput = document.getElementById('newMonitoringPointLongitude');
-        const latInput = document.getElementById('newMonitoringPointLatitude');
-        if (lngInput) lngInput.value = lng;
-        if (latInput) latInput.value = lat;
+        if (locInput && !locInput.value.trim()) {
+          locInput.value = `现场点位 (${lng}, ${lat})`;
+        }
+        showToast(`已从地图拾取坐标: ${lng}, ${lat}`);
       }
     });
   } else {
@@ -598,7 +440,7 @@ function openNewPointModalMapPicker() {
 }
 
 Object.assign(window.VFusionActions = window.VFusionActions || {}, {
-  handleFileSelect, autoFillPersonnel, scheduleMonitoringPointSearch, searchMonitoringPoints,
-  openNewMonitoringPointForm, closeNewMonitoringPointForm, saveNewMonitoringPoint,
-  clearMonitoringPointSelection, chooseMonitoringPoint, openPublishMapPicker, openNewPointModalMapPicker
+  handleFileSelect, autoFillPersonnel, loadPersonnelList, loadTaskOptions,
+  selectTaskForPublish, publishToTask, clearAllSelectedFiles, removeSelectedFile,
+  openPublishMapPicker
 });

@@ -657,14 +657,24 @@ async function openTaskDetailModal(taskCode) {
     const json = await res.json();
     const photosGrid = document.getElementById('taskDetailPhotosGrid');
     if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-      photosGrid.innerHTML = json.data.map(img => `
-        <div style="position:relative; aspect-ratio:4/3; border-radius:6px; overflow:hidden; border:1px solid #cbd5e1; background:#000; cursor:pointer;" data-action="openImageLightbox('${escapeJsString(assetUrl(img.url))}', '${escapeJsString(img.description || task.task_name)}')">
+      photosGrid.innerHTML = json.data.map(img => {
+        const metaObj = {
+          description: img.description || '',
+          timestamp: img.timestamp ? new Date(img.timestamp).toLocaleString() : '',
+          location: img.location || '',
+          uploader: img.uploader_name || img.uploader_username || '',
+          longitude: img.longitude,
+          latitude: img.latitude
+        };
+        return `
+        <div style="position:relative; aspect-ratio:4/3; border-radius:6px; overflow:hidden; border:1px solid #cbd5e1; background:#000; cursor:pointer;" data-action="openImageLightbox('${escapeJsString(assetUrl(img.url))}', { description:'${escapeJsString(metaObj.description)}', timestamp:'${escapeJsString(metaObj.timestamp)}', location:'${escapeJsString(metaObj.location)}', uploader:'${escapeJsString(metaObj.uploader)}', longitude:'${escapeJsString(String(metaObj.longitude || ''))}', latitude:'${escapeJsString(String(metaObj.latitude || ''))}' })">
           <img src="${escapeHtml(assetUrl(img.url))}" style="width:100%; height:100%; object-fit:cover;" data-action-error="this.style.opacity='0.4';">
           <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.6); color:#fff; font-size:0.65rem; padding:2px 4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
             ${escapeHtml(img.uploader_name || '操作员')}
           </div>
         </div>
-      `).join('');
+      `;
+      }).join('');
     } else {
       if (photosGrid) photosGrid.innerHTML = `<div style="text-align:center; padding:1.5rem; color:#94a3b8; grid-column: 1 / -1;">本任务暂未上传任何抓拍照片</div>`;
     }

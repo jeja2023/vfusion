@@ -574,6 +574,8 @@ class SQLiteStorageEngine {
           uploader_name: f.uploader_name || uploaderName || '操作员',
           description: f.description !== undefined ? f.description : (payload.description || ''),
           location: f.location || payload.location || '',
+          longitude: f.longitude !== undefined ? f.longitude : (payload.longitude !== undefined ? payload.longitude : null),
+          latitude: f.latitude !== undefined ? f.latitude : (payload.latitude !== undefined ? payload.latitude : null),
           person_name: payload.person_name || '',
           event_id: evt.event_id,
           task_code: evt.task_code,

@@ -158,6 +158,11 @@ function renderGalleryGrid() {
             <span>提交人: <strong style="color:#1e293b;">${escapeHtml(img.uploader_name || img.uploader_username)}</strong></span>
             ${img.location ? `<span style="color:#0284c7; font-weight:600;">地点: ${escapeHtml(img.location)}</span>` : ''}
           </div>
+          ${(img.longitude && img.latitude) ? `
+          <div style="display:flex; align-items:center; gap:0.25rem; font-size:0.725rem; color:#059669; font-family:monospace; margin-bottom:0.25rem;">
+            <svg class="icon-svg" viewBox="0 0 24 24" style="width:13px; height:13px; color:#16a34a;"><circle cx="12" cy="12" r="9"/><line x1="12" y1="3" x2="12" y2="7"/><line x1="12" y1="17" x2="12" y2="21"/><line x1="3" y1="12" x2="7" y2="12"/><line x1="17" y1="12" x2="21" y2="12"/></svg>
+            <span>${parseFloat(img.longitude).toFixed(6)}, ${parseFloat(img.latitude).toFixed(6)}</span>
+          </div>` : ''}
 
           <!-- 底部操作按钮组 -->
           <div style="display:flex; gap:0.4rem; justify-content:flex-end; border-top:1px solid #f1f5f9; padding-top:0.55rem; margin-top:0.4rem;">
@@ -179,7 +184,9 @@ function viewGalleryImageLightbox(imageId) {
     description: img.description || '',
     timestamp: formattedTime,
     location: img.location || '',
-    uploader: img.uploader_name || img.uploader_username || ''
+    uploader: img.uploader_name || img.uploader_username || '',
+    longitude: img.longitude,
+    latitude: img.latitude
   });
 }
 

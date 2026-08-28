@@ -211,30 +211,41 @@ function openImageLightbox(url, captionData) {
   const overlay = document.getElementById('imageLightboxOverlay');
   const img = document.getElementById('lightboxImg');
   const captionEl = document.getElementById('lightboxCaption');
-  if (img) img.src = assetUrl(url);
+  if (img) img.src = typeof assetUrl === 'function' ? assetUrl(url) : url;
 
   if (captionEl) {
     if (typeof captionData === 'object' && captionData !== null) {
-      const { description, timestamp, location, uploader } = captionData;
+      const { description, timestamp, location, uploader, longitude, latitude } = captionData;
       const descHtml = description
-        ? `<div style="font-size:0.9rem; font-weight:600; color:#1e293b; background:#f1f5f9; padding:0.55rem 0.85rem; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:0.4rem; text-align:left; width:100%;">${escapeHtml(description)}</div>`
-        : `<div style="font-size:0.85rem; color:#94a3b8; font-style:italic; margin-bottom:0.4rem;">(暂无图片描述)</div>`;
-      
+        ? `<div style="font-size:0.875rem; font-weight:600; color:#1e293b; background:#f8fafc; padding:0.45rem 0.85rem; border-radius:6px; border:1px solid #e2e8f0; margin-bottom:0.35rem; text-align:left; width:100%;">${escapeHtml(description)}</div>`
+        : '';
+
       const metaParts = [];
-      if (timestamp) metaParts.push(`<span style="display:inline-flex; align-items:center; gap:0.25rem;"><svg class="icon-svg" viewBox="0 0 24 24" style="width:14px; height:14px; color:#0284c7;"><circle cx="12" cy="10" r="10"/><polyline points="12 6 12 12 16 14"/></svg><strong>时间:</strong> ${escapeHtml(timestamp)}</span>`);
-      if (location) metaParts.push(`<span style="display:inline-flex; align-items:center; gap:0.25rem;"><svg class="icon-svg" viewBox="0 0 24 24" style="width:14px; height:14px; color:#0284c7;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><strong>地点:</strong> ${escapeHtml(location)}</span>`);
-      if (uploader) metaParts.push(`<span style="display:inline-flex; align-items:center; gap:0.25rem;"><svg class="icon-svg" viewBox="0 0 24 24" style="width:14px; height:14px; color:#0284c7;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><strong>提交人:</strong> ${escapeHtml(uploader)}</span>`);
+      if (timestamp) {
+        metaParts.push(`<span style="display:inline-flex; align-items:center; gap:0.3rem; color:#334155; font-size:0.825rem;"><svg class="icon-svg" viewBox="0 0 24 24" style="width:15px; height:15px; color:#0284c7;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><strong>时间:</strong> <span style="color:#0f172a;">${escapeHtml(timestamp)}</span></span>`);
+      }
+      if (location) {
+        metaParts.push(`<span style="display:inline-flex; align-items:center; gap:0.3rem; color:#334155; font-size:0.825rem;"><svg class="icon-svg" viewBox="0 0 24 24" style="width:15px; height:15px; color:#0284c7;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><strong>地点:</strong> <span style="color:#0f172a; font-weight:600;">${escapeHtml(location)}</span></span>`);
+      }
+      const lng = longitude !== undefined && longitude !== null && longitude !== '' ? parseFloat(longitude) : null;
+      const lat = latitude !== undefined && latitude !== null && latitude !== '' ? parseFloat(latitude) : null;
+      if (lng !== null && !isNaN(lng) && lat !== null && !isNaN(lat)) {
+        metaParts.push(`<span style="display:inline-flex; align-items:center; gap:0.3rem; color:#334155; font-size:0.825rem;"><svg class="icon-svg" viewBox="0 0 24 24" style="width:15px; height:15px; color:#16a34a;"><circle cx="12" cy="12" r="9"/><line x1="12" y1="3" x2="12" y2="7"/><line x1="12" y1="17" x2="12" y2="21"/><line x1="3" y1="12" x2="7" y2="12"/><line x1="17" y1="12" x2="21" y2="12"/></svg><strong>经纬度:</strong> <code style="background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; padding:2px 6px; border-radius:4px; font-weight:700; font-family:monospace; font-size:0.8rem;">${lng.toFixed(6)}, ${lat.toFixed(6)}</code></span>`);
+      }
+      if (uploader) {
+        metaParts.push(`<span style="display:inline-flex; align-items:center; gap:0.3rem; color:#334155; font-size:0.825rem;"><svg class="icon-svg" viewBox="0 0 24 24" style="width:15px; height:15px; color:#64748b;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><strong>提交人:</strong> <span style="color:#0f172a;">${escapeHtml(uploader)}</span></span>`);
+      }
 
       captionEl.innerHTML = `
-        <div style="display:flex; flex-direction:column; align-items:center; gap:0.25rem; width:100%; max-width:680px; margin-top:0.5rem;">
+        <div style="display:flex; flex-direction:column; align-items:center; gap:0.35rem; width:100%;">
           ${descHtml}
-          <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:1.25rem; font-size:0.8rem; color:#475569;">
+          <div style="display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:1.25rem;">
             ${metaParts.join('')}
           </div>
         </div>
       `;
     } else {
-      captionEl.innerHTML = `<span style="font-size:0.875rem; font-weight:600; color:var(--text-main);">${escapeHtml(captionData || '现场照片')}</span>`;
+      captionEl.innerHTML = `<div style="font-size:0.875rem; font-weight:600; color:#1e293b; text-align:center;">${escapeHtml(captionData || '现场照片')}</div>`;
     }
   }
   if (overlay) overlay.style.display = 'flex';

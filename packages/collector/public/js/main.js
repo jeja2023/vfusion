@@ -424,7 +424,10 @@ function switchTab(tabId) {
   if (tabId === 'tab-history' && typeof loadPublishedHistory === 'function') loadPublishedHistory();
   if (tabId === 'tab-builder' && typeof loadSchema === 'function') loadSchema();
   if (tabId === 'tab-ftp' && typeof loadCollectorFtpConfig === 'function') loadCollectorFtpConfig();
-  if (tabId === 'tab-audits' && typeof loadAuditLogs === 'function') loadAuditLogs();
+  if (tabId === 'tab-audits') {
+    if (typeof loadFullAuditLogs === 'function') loadFullAuditLogs();
+    else if (typeof loadAuditLogs === 'function') loadAuditLogs();
+  }
   if (tabId === 'tab-users' && typeof loadUsers === 'function') loadUsers();
   if (tabId === 'tab-system' && typeof loadCollectorSystemConfig === 'function') loadCollectorSystemConfig();
 }

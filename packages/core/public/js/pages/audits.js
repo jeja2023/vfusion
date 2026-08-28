@@ -99,7 +99,11 @@ async function exportAuditLogsCsv() {
   }
 }
 
+const loadAuditLogs = loadFullAuditLogs;
+window.loadAuditLogs = loadFullAuditLogs;
+window.loadFullAuditLogs = loadFullAuditLogs;
+
 Object.assign(window.VFusionActions = window.VFusionActions || {}, {
-  renderAuditLogs, loadFullAuditLogs, renderFullAuditLogs, changeAuditPageSize,
+  renderAuditLogs, loadFullAuditLogs, loadAuditLogs, renderFullAuditLogs, changeAuditPageSize,
   prevAuditPage, nextAuditPage, exportAuditLogsCsv
 });

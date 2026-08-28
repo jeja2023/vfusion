@@ -397,7 +397,7 @@ function switchTab(tabId) {
   if (tabId === 'tab-ftp' && typeof loadCollectorFtpConfig === 'function') loadCollectorFtpConfig();
   if (tabId === 'tab-audits' && typeof loadAuditLogs === 'function') loadAuditLogs();
   if (tabId === 'tab-users' && typeof loadUsers === 'function') loadUsers();
-  if (tabId === 'tab-system' && typeof loadSystemInfo === 'function') loadSystemInfo();
+  if (tabId === 'tab-system' && typeof loadCollectorSystemConfig === 'function') loadCollectorSystemConfig();
 }
 
 document.addEventListener('DOMContentLoaded', async () => {

@@ -75,7 +75,7 @@ async function loadCoreMonitoringPointTable(page = coreMonitoringPointPage) {
     coreMonitoringPointPage = json.pagination?.page || page;
     coreMonitoringPointPages = json.pagination?.pages || 1;
     if (!coreMonitoringPoints.length) {
-      body.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#64748b;">尚未维护监控点位</td></tr>';
+      body.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#64748b;">尚未维护监控点位</td></tr>';
       renderCoreMonitoringPointPagination(0);
       return;
     }
@@ -83,9 +83,8 @@ async function loadCoreMonitoringPointTable(page = coreMonitoringPointPage) {
       <tr>
         <td><code>${escapeHtml(point.point_id)}</code></td>
         <td>${escapeHtml(point.name)}</td>
-        <td>${escapeHtml(point.location)}</td>
-        <td>${escapeHtml(point.longitude)}</td>
-        <td>${escapeHtml(point.latitude)}</td>
+        <td>${escapeHtml(point.longitude ?? '-')}</td>
+        <td>${escapeHtml(point.latitude ?? '-')}</td>
         <td>${escapeHtml(point.description || '-')}</td>
         <td><span class="status-badge ${point.enabled === false ? 'status-disabled' : 'status-active'}">${point.enabled === false ? '已停用' : '启用'}</span></td>
         <td style="white-space:nowrap;">
@@ -96,7 +95,7 @@ async function loadCoreMonitoringPointTable(page = coreMonitoringPointPage) {
     `).join('');
     renderCoreMonitoringPointPagination(json.pagination?.total || coreMonitoringPoints.length);
   } catch (e) {
-    body.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#b91c1c;">${escapeHtml(e.message)}</td></tr>`;
+    body.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#b91c1c;">${escapeHtml(e.message)}</td></tr>`;
   }
 }
 
@@ -177,7 +176,6 @@ function editCoreMonitoringPoint(index) {
   document.getElementById('coreMonitoringPointId').value = point.point_id;
   document.getElementById('coreMonitoringPointId').disabled = true;
   document.getElementById('coreMonitoringPointName').value = point.name || '';
-  document.getElementById('coreMonitoringPointLocation').value = point.location || '';
   document.getElementById('coreMonitoringPointLongitude').value = point.longitude ?? '';
   document.getElementById('coreMonitoringPointLatitude').value = point.latitude ?? '';
   document.getElementById('coreMonitoringPointDescription').value = point.description || '';
@@ -188,10 +186,11 @@ async function saveCoreMonitoringPoint(event) {
   event.preventDefault();
   const pointId = document.getElementById('coreMonitoringPointId').value.trim();
   const editingId = document.getElementById('coreMonitoringPointEditingId').value.trim();
+  const name = document.getElementById('coreMonitoringPointName').value.trim();
   const payload = {
     point_id: pointId,
-    name: document.getElementById('coreMonitoringPointName').value.trim(),
-    location: document.getElementById('coreMonitoringPointLocation').value.trim(),
+    name: name,
+    location: name,
     longitude: document.getElementById('coreMonitoringPointLongitude').value.trim(),
     latitude: document.getElementById('coreMonitoringPointLatitude').value.trim(),
     description: document.getElementById('coreMonitoringPointDescription').value.trim()

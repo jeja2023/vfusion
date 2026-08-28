@@ -119,7 +119,7 @@ function renderMonitoringPointResults(points) {
   }
   box.innerHTML = monitoringPoints.map((point, index) => `
     <button type="button" class="monitoring-point-result" data-action="chooseMonitoringPoint(${index})">
-      <span><strong>${escapeHtml(point.name)}</strong><small>${escapeHtml(point.location || '')} · ${escapeHtml(point.point_id)}</small></span>
+      <span><strong>${escapeHtml(point.name)}</strong><small>${escapeHtml(point.point_id)}</small></span>
       <code>${point.longitude === null ? '暂无坐标' : `${escapeHtml(point.longitude)}, ${escapeHtml(point.latitude)}`}</code>
     </button>
   `).join('');

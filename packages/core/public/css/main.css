@@ -84,9 +84,21 @@ body { background-color: var(--bg-main); color: var(--text-main); padding: 0; ma
   gap: 0.4rem;
   transition: all 0.15s ease;
   box-shadow: var(--shadow-sm);
-  border: 1px solid transparent;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
   white-space: nowrap;
   flex-shrink: 0;
+  outline: none;
+  text-decoration: none;
+  user-select: none;
+  box-sizing: border-box;
+}
+
+.btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: var(--primary);
 }
 
 .btn:active { transform: scale(0.97); }

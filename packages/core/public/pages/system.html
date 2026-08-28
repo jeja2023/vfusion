@@ -66,10 +66,10 @@
         <div style="font-size:0.74rem; color:var(--text-sub); line-height:1.45;">点位坐标以现场测绘、设备台账或管理员核准结果为准。采集端发布时从点位表选择，核心端按点位编号复核，不使用互联网地图或采集端当前位置。</div>
       </div>
       <div style="display:flex; gap:0.35rem; flex-wrap:wrap; justify-content:flex-end;">
-        <button class="btn" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" data-action="exportCoreMonitoringPoints('csv')">导出 CSV</button>
-        <button class="btn" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" data-action="exportCoreMonitoringPoints('json')">导出 JSON</button>
-        <label class="btn" style="padding:0.38rem 0.65rem; font-size:0.75rem; cursor:pointer;">导入文件<input type="file" id="coreMonitoringPointImportFile" accept=".csv,.json,text/csv,application/json" hidden data-action-change="importCoreMonitoringPoints(this)"></label>
-        <button class="btn" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" data-action="resetCoreMonitoringPointForm();">新建点位</button>
+        <button class="btn btn-secondary" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" data-action="exportCoreMonitoringPoints('csv')">导出 CSV</button>
+        <button class="btn btn-secondary" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" data-action="exportCoreMonitoringPoints('json')">导出 JSON</button>
+        <label class="btn btn-secondary" style="padding:0.38rem 0.65rem; font-size:0.75rem; cursor:pointer;">导入文件<input type="file" id="coreMonitoringPointImportFile" accept=".csv,.json,text/csv,application/json" hidden data-action-change="importCoreMonitoringPoints(this)"></label>
+        <button class="btn btn-primary" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" data-action="resetCoreMonitoringPointForm();">＋ 新建点位</button>
       </div>
     </div>
     <form id="coreMonitoringPointForm" data-action-submit="saveCoreMonitoringPoint(event)" style="display:grid; grid-template-columns:repeat(6, minmax(0, 1fr)); gap:0.5rem; align-items:end; margin-bottom:0.75rem;" autocomplete="off">

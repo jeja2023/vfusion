@@ -4,7 +4,7 @@ const http = require('http');
 
 async function runDoctor() {
   console.log('===================================================');
-  console.log(' 视汇 (VFusion) 系统健康度与部署诊断工具 (v0.23.0)');
+  console.log(' 视汇 (VFusion) 系统健康度与部署诊断工具 (v0.24.0)');
   console.log('===================================================');
 
   let issueCount = 0;

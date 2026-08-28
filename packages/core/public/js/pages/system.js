@@ -134,8 +134,13 @@ async function saveCoreMapConfig() {
   if (rawCenter) {
     const parts = rawCenter.split(/[,，\s]+/).filter(Boolean);
     if (parts.length >= 2) {
-      const lng = parseFloat(parts[0]);
-      const lat = parseFloat(parts[1]);
+      let lng = parseFloat(parts[0]);
+      let lat = parseFloat(parts[1]);
+      if (lng < 60 && lat > 60) {
+        const tmp = lng;
+        lng = lat;
+        lat = tmp;
+      }
       if (!isNaN(lng) && !isNaN(lat)) center = [lng, lat];
     }
   }

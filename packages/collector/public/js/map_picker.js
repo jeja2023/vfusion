@@ -152,8 +152,30 @@
     document.body.appendChild(div.firstElementChild);
   }
 
-  async function fetchMapConfig() {
-    if (mapConfigCache) return mapConfigCache;
+  let currentTileLayer = null;
+
+  function parseCoordinates(center) {
+    let rawLng = 120.305456;
+    let rawLat = 31.570037;
+    if (Array.isArray(center) && center.length >= 2) {
+      rawLng = Number(center[0]) || 120.305456;
+      rawLat = Number(center[1]) || 31.570037;
+    } else if (typeof center === 'string') {
+      const parts = center.split(/[,，\s]+/).filter(Boolean);
+      if (parts.length >= 2) {
+        rawLng = parseFloat(parts[0]) || 120.305456;
+        rawLat = parseFloat(parts[1]) || 31.570037;
+      }
+    }
+    // 智能防颠倒：中国境内经度约 73~136，纬度约 3~54
+    if (rawLng < 60 && rawLat > 60) {
+      return { lng: rawLat, lat: rawLng };
+    }
+    return { lng: rawLng, lat: rawLat };
+  }
+
+  async function fetchMapConfig(forceRefresh = false) {
+    if (!forceRefresh && mapConfigCache) return mapConfigCache;
     try {
       const res = await fetch('/api/config/map');
       const json = await res.json();
@@ -180,15 +202,13 @@
     const mapContainer = document.getElementById('vfusionLeafletMapContainer');
     if (!mapContainer) return;
 
-    const config = await fetchMapConfig();
+    const config = await fetchMapConfig(true);
+    const { lng, lat } = parseCoordinates(config.default_center);
+    const tileTemplate = config.tile_url_template || '/api/map/tiles/{z}/{x}/{y}.png';
 
     if (!mapInstance) {
-      const center = config.default_center || [120.305456, 31.570037];
-      const initialLng = Array.isArray(center) ? Number(center[0]) : 120.305456;
-      const initialLat = Array.isArray(center) ? Number(center[1]) : 31.570037;
-
       mapInstance = L.map('vfusionLeafletMapContainer', {
-        center: [initialLat, initialLng],
+        center: [lat, lng],
         zoom: config.default_zoom || 12,
         minZoom: config.min_zoom || 3,
         maxZoom: config.max_zoom || 18,
@@ -196,23 +216,32 @@
         attributionControl: false
       });
 
-      const tileTemplate = config.tile_url_template || '/api/map/tiles/{z}/{x}/{y}.png';
-      L.tileLayer(tileTemplate, {
+      currentTileLayer = L.tileLayer(tileTemplate, {
         maxZoom: config.max_zoom || 18,
         minZoom: config.min_zoom || 3,
         tileSize: 256,
         zoomOffset: 0
       }).addTo(mapInstance);
 
+      currentTileLayer.on('tileerror', (error) => {
+        console.warn('[VFusion Map] 瓦片切片加载异常 (请检查瓦片目录/中心点或代理规则):', error.coords);
+      });
+
       pointLayerGroup = L.layerGroup().addTo(mapInstance);
       trackLayerGroup = L.layerGroup().addTo(mapInstance);
 
       mapInstance.on('click', (e) => {
         if (currentModalMode !== 'PICKER') return;
-        const lng = Number(e.latlng.lng.toFixed(6));
-        const lat = Number(e.latlng.lat.toFixed(6));
-        setMapPin(lng, lat, false);
+        const nLng = Number(e.latlng.lng.toFixed(6));
+        const nLat = Number(e.latlng.lat.toFixed(6));
+        setMapPin(nLng, nLat, false);
       });
+    } else {
+      if (currentTileLayer) {
+        currentTileLayer.setUrl(tileTemplate);
+      }
+      mapInstance.setMinZoom(config.min_zoom || 3);
+      mapInstance.setMaxZoom(config.max_zoom || 18);
     }
   }
 
@@ -314,14 +343,18 @@
       setMapPin(options.initialLng, options.initialLat, true);
     } else {
       clearMapPin();
-      const config = await fetchMapConfig();
-      const center = config.default_center || [120.305456, 31.570037];
-      mapInstance.setView([Number(center[1]), Number(center[0])], config.default_zoom || 12);
+      const config = await fetchMapConfig(true);
+      const { lng, lat } = parseCoordinates(config.default_center);
+      if (mapInstance) {
+        mapInstance.setView([lat, lng], config.default_zoom || 12);
+      }
     }
 
-    setTimeout(() => { if (mapInstance) mapInstance.invalidateSize(); }, 50);
-    setTimeout(() => { if (mapInstance) mapInstance.invalidateSize(); }, 150);
-    setTimeout(() => { if (mapInstance) mapInstance.invalidateSize(); }, 350);
+    [0, 50, 150, 300, 600, 1000].forEach(delay => {
+      setTimeout(() => {
+        if (mapInstance) mapInstance.invalidateSize(true);
+      }, delay);
+    });
   }
 
   /**
@@ -537,10 +570,10 @@
   }
 
   async function resetMapPickerCenter() {
-    const config = await fetchMapConfig();
-    const center = config.default_center || [120.305456, 31.570037];
+    const config = await fetchMapConfig(true);
+    const { lng, lat } = parseCoordinates(config.default_center);
     if (mapInstance) {
-      mapInstance.setView([Number(center[1]), Number(center[0])], config.default_zoom || 12);
+      mapInstance.setView([lat, lng], config.default_zoom || 12);
     }
   }
 

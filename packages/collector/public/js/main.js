@@ -409,6 +409,7 @@ function switchTab(tabId) {
 
   if (tabId === 'tab-tasks' && typeof loadTaskList === 'function') loadTaskList();
   if (tabId === 'tab-task-images' && typeof initTaskImagesPage === 'function') initTaskImagesPage();
+  if (tabId === 'tab-publish' && typeof initPublishPage === 'function') initPublishPage();
   if (tabId === 'tab-history' && typeof loadPublishedHistory === 'function') loadPublishedHistory();
   if (tabId === 'tab-builder' && typeof loadSchema === 'function') loadSchema();
   if (tabId === 'tab-ftp' && typeof loadCollectorFtpConfig === 'function') loadCollectorFtpConfig();

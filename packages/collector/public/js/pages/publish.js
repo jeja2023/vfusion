@@ -37,30 +37,45 @@ async function loadTaskOptions() {
     const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
     const res = await fetchFn('/api/tasks');
     const json = await res.json();
-    if (json.success) {
-      availableTasks = (json.data || []).filter(t => t.status === 'ACTIVE' || t.is_shared);
+    if (json.success && Array.isArray(json.data)) {
+      availableTasks = json.data;
       const storedCode = selectedTaskCode || localStorage.getItem('vfusion_selected_task_code') || '';
       if (storedCode && availableTasks.some(t => t.task_code === storedCode)) {
         selectedTaskCode = storedCode;
-      } else if (availableTasks.length > 0) {
+      } else if (!selectedTaskCode && availableTasks.length > 0) {
         selectedTaskCode = availableTasks[0].task_code;
       }
-      await loadPersonnelList(selectedTaskCode);
     }
   } catch (e) {
     console.error('加载任务数据失败:', e);
   }
 }
 
-function selectTaskForPublish(taskCode) {
-  selectedTaskCode = taskCode;
-  localStorage.setItem('vfusion_selected_task_code', taskCode);
-  loadPersonnelList(taskCode);
+async function selectTaskForPublish(taskCode) {
+  if (taskCode) {
+    selectedTaskCode = taskCode;
+    localStorage.setItem('vfusion_selected_task_code', taskCode);
+  }
+  await loadTaskOptions();
+  await loadPersonnelList(selectedTaskCode);
+  if (typeof currentSchema !== 'undefined' && currentSchema && currentSchema.fields) {
+    renderDynamicForm(currentSchema.fields);
+  }
 }
 
-function publishToTask(taskCode) {
-  selectTaskForPublish(taskCode);
+async function publishToTask(taskCode) {
+  if (taskCode) {
+    selectedTaskCode = taskCode;
+    localStorage.setItem('vfusion_selected_task_code', taskCode);
+  }
+  await selectTaskForPublish(taskCode);
   if (typeof switchTab === 'function') switchTab('tab-publish');
+}
+
+async function initPublishPage() {
+  const storedCode = localStorage.getItem('vfusion_selected_task_code') || '';
+  if (storedCode) selectedTaskCode = storedCode;
+  await selectTaskForPublish(selectedTaskCode);
 }
 
 function validateCoordinateInputs() {
@@ -93,7 +108,7 @@ function renderDynamicForm(fields) {
   const storedCode = selectedTaskCode || localStorage.getItem('vfusion_selected_task_code') || '';
   const currentTask = availableTasks.find(t => t.task_code === storedCode) || (availableTasks.length > 0 ? availableTasks[0] : null);
 
-  const taskName = currentTask ? currentTask.task_name : '未指定任务';
+  const taskName = currentTask ? currentTask.task_name : (storedCode ? `任务 [${storedCode}]` : '未指定任务');
   const taskCode = currentTask ? currentTask.task_code : (storedCode || '');
 
   // 1. 顶部当前发布任务状态只读提示卡片
@@ -442,5 +457,5 @@ function openPublishMapPicker() {
 Object.assign(window.VFusionActions = window.VFusionActions || {}, {
   handleFileSelect, autoFillPersonnel, loadPersonnelList, loadTaskOptions,
   selectTaskForPublish, publishToTask, clearAllSelectedFiles, removeSelectedFile,
-  openPublishMapPicker
+  openPublishMapPicker, initPublishPage
 });

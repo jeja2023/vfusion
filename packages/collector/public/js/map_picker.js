@@ -268,6 +268,10 @@
     }
   }
 
+  function clearMapPickerPin() {
+    clearMapPin();
+  }
+
   function escapeHtml(str) {
     if (!str) return '';
     return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[m]);
@@ -545,6 +549,7 @@
   global.closeMapPicker = closeMapPicker;
   global.confirmMapPickerSelection = confirmMapPickerSelection;
   global.clearMapPickerPin = clearMapPickerPin;
+  global.clearMapPin = clearMapPin;
   global.jumpToManualCoordinates = jumpToManualCoordinates;
   global.resetMapPickerCenter = resetMapPickerCenter;
   global.prevTrackPoint = prevTrackPoint;
@@ -552,7 +557,7 @@
   global.fitTrackBounds = fitTrackBounds;
 
   Object.assign(global.VFusionActions = global.VFusionActions || {}, {
-    openMapPicker, openTrackMapViewer, closeMapPicker, confirmMapPickerSelection, clearMapPickerPin,
+    openMapPicker, openTrackMapViewer, closeMapPicker, confirmMapPickerSelection, clearMapPickerPin, clearMapPin,
     jumpToManualCoordinates, resetMapPickerCenter, prevTrackPoint, nextTrackPoint, fitTrackBounds
   });
 })(window);

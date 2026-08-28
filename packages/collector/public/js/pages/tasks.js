@@ -263,7 +263,7 @@ async function openTaskDetail(taskCode) {
           const files = evt.files || [];
           const payload = evt.payload || {};
           const imgsHtml = files.map(f =>
-            `<img src="${escapeHtml(assetUrl(f.url))}" style="width:72px; height:72px; object-fit:cover; border-radius:6px; border:1px solid #cbd5e1; cursor:pointer;" onclick="openImageLightbox('${escapeJsString(assetUrl(f.url))}', '${escapeJsString(t.task_name)} - 现场照片')">`
+            `<img src="${escapeHtml(assetUrl(f.url))}" style="width:72px; height:72px; object-fit:cover; border-radius:6px; border:1px solid #cbd5e1; cursor:pointer;" onerror="this.style.opacity='0.4'; this.title='图片无法加载';" onclick="openImageLightbox('${escapeJsString(assetUrl(f.url))}', '${escapeJsString(t.task_name)} - 现场照片')">`
           ).join(' ');
 
           return `
@@ -644,7 +644,7 @@ async function openTaskDetailModal(taskCode) {
     if (json.success && Array.isArray(json.data) && json.data.length > 0) {
       photosGrid.innerHTML = json.data.map(img => `
         <div style="position:relative; aspect-ratio:4/3; border-radius:6px; overflow:hidden; border:1px solid #cbd5e1; background:#000; cursor:pointer;" onclick="openImageLightbox('${escapeJsString(assetUrl(img.url))}', '${escapeJsString(img.description || task.task_name)}')">
-          <img src="${escapeHtml(assetUrl(img.url))}" style="width:100%; height:100%; object-fit:cover;">
+          <img src="${escapeHtml(assetUrl(img.url))}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.opacity='0.4';">
           <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.6); color:#fff; font-size:0.65rem; padding:2px 4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
             ${escapeHtml(img.uploader_name || '操作员')}
           </div>

@@ -404,7 +404,7 @@ function renderEvents() {
     const p = item.payload || {};
 
     const imgsHtml = (item.files || []).map(f =>
-      `<img src="${escapeHtml(assetUrl(f.url))}" style="width:24px; height:24px; object-fit:cover; border-radius:4px; border:1px solid var(--border-color); cursor:pointer; transition:transform 0.15s;" onclick="event.stopPropagation(); openImageLightbox('${escapeJsString(assetUrl(f.url))}', '现场照片放大预览 (${escapeJsString(f.filename || '001.jpg')})')" title="点击在弹窗中放大查看">`
+      `<img src="${escapeHtml(assetUrl(f.url))}" style="width:24px; height:24px; object-fit:cover; border-radius:4px; border:1px solid var(--border-color); cursor:pointer; transition:transform 0.15s;" onerror="this.style.opacity='0.4';" onclick="event.stopPropagation(); openImageLightbox('${escapeJsString(assetUrl(f.url))}', '现场照片放大预览 (${escapeJsString(f.filename || '001.jpg')})')" title="点击在弹窗中放大查看">`
     ).join(' ');
 
     const personStr = p.person_name
@@ -433,4 +433,3 @@ function renderEvents() {
 function changeEvtPageSize(val) { evtPageSize = parseInt(val); evtCurrentPage = 1; renderEvents(); }
 function prevEvtPage() { if (evtCurrentPage > 1) { evtCurrentPage--; renderEvents(); } }
 function nextEvtPage() { evtCurrentPage++; renderEvents(); }
-

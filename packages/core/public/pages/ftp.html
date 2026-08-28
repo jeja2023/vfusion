@@ -119,24 +119,24 @@
     <form onsubmit="handleAddFtpServerSubmit(event)">
       <div class="form-group" style="margin-bottom:0.55rem;">
         <label style="font-size:0.75rem; font-weight:600;">服务器节点名称 <span style="color:red;">*</span></label>
-        <input type="text" id="ftpNodeNameInput" placeholder="例如: 视频专网 FTP-01" required style="padding:0.3rem 0.55rem; font-size:0.775rem; height:32px;">
+        <input type="text" id="ftpNodeNameInput" placeholder="例如: 视频专网 FTP-01" required style="padding:0.3rem 0.55rem; font-size:0.775rem; height:32px;" autocomplete="off">
       </div>
 
       <div style="display:grid; grid-template-columns: 2fr 1fr; gap:0.5rem; margin-bottom:0.55rem;">
         <div class="form-group" style="margin:0;">
           <label style="font-size:0.75rem; font-weight:600;">IP / 域名 (Host) <span style="color:red;">*</span></label>
-          <input type="text" id="ftpNodeHostInput" placeholder="例如: 192.168.1.100" required style="padding:0.3rem 0.55rem; font-size:0.775rem; height:32px;">
+          <input type="text" id="ftpNodeHostInput" placeholder="例如: 192.168.1.100" required style="padding:0.3rem 0.55rem; font-size:0.775rem; height:32px;" autocomplete="off">
         </div>
         <div class="form-group" style="margin:0;">
           <label style="font-size:0.75rem; font-weight:600;">端口号 (Port)</label>
-          <input type="number" id="ftpNodePortInput" value="21" required style="padding:0.3rem 0.55rem; font-size:0.775rem; height:32px;">
+          <input type="number" id="ftpNodePortInput" value="21" required style="padding:0.3rem 0.55rem; font-size:0.775rem; height:32px;" autocomplete="off">
         </div>
       </div>
 
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem; margin-bottom:0.55rem;">
         <div class="form-group" style="margin:0;">
           <label style="font-size:0.75rem;">登录用户名 (Username)</label>
-          <input type="text" id="ftpNodeUserInput" placeholder="例如: vfusion_user" style="padding:0.3rem 0.55rem; font-size:0.775rem; height:32px;">
+          <input type="text" id="ftpNodeUserInput" placeholder="例如: vfusion_user" style="padding:0.3rem 0.55rem; font-size:0.775rem; height:32px;" autocomplete="username">
         </div>
         <div class="form-group" style="margin:0;">
           <label style="font-size:0.75rem;">登录密码 (Password)</label>
@@ -147,11 +147,11 @@
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem; margin-bottom:0.55rem;">
         <div class="form-group" style="margin:0;">
           <label style="font-size:0.75rem;">远程专用目录 (Remote Dir)</label>
-          <input type="text" id="ftpNodeRemoteDirInput" value="/vfusion_packages" style="padding:0.3rem 0.55rem; font-size:0.775rem; height:32px;">
+          <input type="text" id="ftpNodeRemoteDirInput" value="/vfusion_packages" style="padding:0.3rem 0.55rem; font-size:0.775rem; height:32px;" autocomplete="off">
         </div>
         <div class="form-group" style="margin:0;">
           <label style="font-size:0.75rem;">文件匹配前缀 (Prefix)</label>
-          <input type="text" id="ftpNodePrefixInput" value="vfusion_" style="padding:0.3rem 0.55rem; font-size:0.775rem; height:32px;">
+          <input type="text" id="ftpNodePrefixInput" value="vfusion_" style="padding:0.3rem 0.55rem; font-size:0.775rem; height:32px;" autocomplete="off">
         </div>
       </div>
 
@@ -197,24 +197,24 @@
       <input type="hidden" id="editFtpId">
       <div class="form-group" style="margin-bottom:0.55rem;">
         <label style="font-size:0.75rem; font-weight:600;">节点名称 <span style="color:red;">*</span></label>
-        <input type="text" id="editFtpName" required style="padding:0.3rem 0.55rem; font-size:0.775rem; height:32px;">
+        <input type="text" id="editFtpName" required style="padding:0.3rem 0.55rem; font-size:0.775rem; height:32px;" autocomplete="off">
       </div>
 
       <div style="display:grid; grid-template-columns: 2fr 1fr; gap:0.5rem; margin-bottom:0.55rem;">
         <div class="form-group" style="margin:0;">
           <label style="font-size:0.75rem; font-weight:600;">IP / 域名 (Host) <span style="color:red;">*</span></label>
-          <input type="text" id="editFtpHost" required style="padding:0.3rem 0.55rem; font-size:0.775rem; height:32px;">
+          <input type="text" id="editFtpHost" required style="padding:0.3rem 0.55rem; font-size:0.775rem; height:32px;" autocomplete="off">
         </div>
         <div class="form-group" style="margin:0;">
           <label style="font-size:0.75rem; font-weight:600;">端口号 (Port)</label>
-          <input type="number" id="editFtpPort" required value="21" style="padding:0.3rem 0.55rem; font-size:0.775rem; height:32px;">
+          <input type="number" id="editFtpPort" required value="21" style="padding:0.3rem 0.55rem; font-size:0.775rem; height:32px;" autocomplete="off">
         </div>
       </div>
 
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem; margin-bottom:0.55rem;">
         <div class="form-group" style="margin:0;">
           <label style="font-size:0.75rem;">登录用户名 (Username)</label>
-          <input type="text" id="editFtpUser" style="padding:0.3rem 0.55rem; font-size:0.775rem; height:32px;">
+          <input type="text" id="editFtpUser" style="padding:0.3rem 0.55rem; font-size:0.775rem; height:32px;" autocomplete="username">
         </div>
         <div class="form-group" style="margin:0;">
           <label style="font-size:0.75rem;">登录密码 (Password)</label>
@@ -225,11 +225,11 @@
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem; margin-bottom:0.55rem;">
         <div class="form-group" style="margin:0;">
           <label style="font-size:0.75rem;">远程专用目录 (Remote Dir)</label>
-          <input type="text" id="editFtpRemoteDir" value="/vfusion_packages" style="padding:0.3rem 0.55rem; font-size:0.775rem; height:32px;">
+          <input type="text" id="editFtpRemoteDir" value="/vfusion_packages" style="padding:0.3rem 0.55rem; font-size:0.775rem; height:32px;" autocomplete="off">
         </div>
         <div class="form-group" style="margin:0;">
           <label style="font-size:0.75rem;">文件匹配前缀 (Prefix)</label>
-          <input type="text" id="editFtpPrefix" value="vfusion_" style="padding:0.3rem 0.55rem; font-size:0.775rem; height:32px;">
+          <input type="text" id="editFtpPrefix" value="vfusion_" style="padding:0.3rem 0.55rem; font-size:0.775rem; height:32px;" autocomplete="off">
         </div>
       </div>
 

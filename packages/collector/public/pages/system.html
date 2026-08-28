@@ -72,14 +72,14 @@
         <button class="btn" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" onclick="resetMonitoringPointForm();">新建点位</button>
       </div>
     </div>
-    <form id="monitoringPointForm" onsubmit="saveMonitoringPoint(event)" style="display:grid; grid-template-columns:repeat(6, minmax(0, 1fr)); gap:0.5rem; align-items:end; margin-bottom:0.75rem;">
+    <form id="monitoringPointForm" onsubmit="saveMonitoringPoint(event)" style="display:grid; grid-template-columns:repeat(6, minmax(0, 1fr)); gap:0.5rem; align-items:end; margin-bottom:0.75rem;" autocomplete="off">
       <input type="hidden" id="monitoringPointEditingId">
-      <div class="form-group"><label>点位编号 *</label><input id="monitoringPointId" required maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,63}" placeholder="如 GATE_NORTH_01"></div>
-      <div class="form-group"><label>点位名称 *</label><input id="monitoringPointName" required maxlength="128" placeholder="如 厂区北门1号机"></div>
-      <div class="form-group"><label>地点名称 *</label><input id="monitoringPointLocation" required maxlength="256" placeholder="如 厂区北门"></div>
-      <div class="form-group"><label>经度（可选）</label><input id="monitoringPointLongitude" inputmode="decimal" placeholder="-180 至 180"></div>
-      <div class="form-group"><label>纬度（可选）</label><input id="monitoringPointLatitude" inputmode="decimal" placeholder="-90 至 90"></div>
-      <div class="form-group"><label>点位说明</label><input id="monitoringPointDescription" maxlength="500" placeholder="测绘批次、设备编号等"></div>
+      <div class="form-group"><label>点位编号 *</label><input id="monitoringPointId" required maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,63}" placeholder="如 GATE_NORTH_01" autocomplete="off"></div>
+      <div class="form-group"><label>点位名称 *</label><input id="monitoringPointName" required maxlength="128" placeholder="如 厂区北门1号机" autocomplete="off"></div>
+      <div class="form-group"><label>地点名称 *</label><input id="monitoringPointLocation" required maxlength="256" placeholder="如 厂区北门" autocomplete="off"></div>
+      <div class="form-group"><label>经度（可选）</label><input id="monitoringPointLongitude" inputmode="decimal" placeholder="-180 至 180" autocomplete="off"></div>
+      <div class="form-group"><label>纬度（可选）</label><input id="monitoringPointLatitude" inputmode="decimal" placeholder="-90 至 90" autocomplete="off"></div>
+      <div class="form-group"><label>点位说明</label><input id="monitoringPointDescription" maxlength="500" placeholder="测绘批次、设备编号等" autocomplete="off"></div>
       <div style="grid-column:1/-1; display:flex; gap:0.5rem; justify-content:flex-end;">
         <button class="btn btn-primary" type="submit" style="padding:0.4rem 0.8rem; font-size:0.75rem;">保存点位</button>
         <button class="btn" type="button" style="padding:0.4rem 0.8rem; font-size:0.75rem;" onclick="resetMonitoringPointForm();">取消</button>

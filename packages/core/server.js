@@ -10,7 +10,7 @@ const crypto = require('crypto');
 const { unpackAndVerifyPackage } = require('../common/unpacker');
 const { DEFAULT_FORM_SCHEMA, getHmacSecret, setHmacSecret } = require('../common/protocol');
 const { hashPassword, verifyPassword, buildDefaultUsers, generateToken, verifyToken, setTokenSecret } = require('../common/auth');
-const { authMiddleware, assetAuthMiddleware, requireRole } = require('../common/auth_middleware');
+const { authMiddleware, assetAuthMiddleware, requireRole, ASSET_TOKEN_TTL_MS } = require('../common/auth_middleware');
 const { isSafeIdentifier, isSafeFileName: isSafeFileNameUtil, resolveInside, assertJsonObject, validateHttpUrl, validateHttpUrlResolved } = require('../common/security_utils');
 const { writeJsonAtomic: writeJsonAtomicSafe, updateJsonAtomic } = require('../common/json_store');
 
@@ -189,13 +189,28 @@ app.use(authMiddleware({
   loadUser: (id) => readUsers().find(u => u.id === id) || null
 }));
 
+const FALLBACK_IMAGE_SVG = Buffer.from(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="150" viewBox="0 0 200 150">
+    <rect width="200" height="150" fill="#f8fafc"/>
+    <text x="50%" y="46%" dominant-baseline="middle" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#94a3b8">暂无现场存照</text>
+    <text x="50%" y="64%" dominant-baseline="middle" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="10" fill="#cbd5e1">(历史测试数据)</text>
+  </svg>`
+);
+
+function serveAssetFallback(req, res) {
+  if (req.path && req.path.match(/\.(jpg|jpeg|png|webp|gif|svg)$/i)) {
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.setHeader('Cache-Control', 'no-cache');
+    return res.status(200).send(FALLBACK_IMAGE_SVG);
+  }
+  res.status(404).send('Asset not found');
+}
+
 const protectedAssetAuth = assetAuthMiddleware({
   loadUser: (id) => readUsers().find(u => u.id === id) || null
 });
-app.use('/assets', protectedAssetAuth, express.static(ASSETS_DIR, { fallthrough: false }));
-app.use('/assets', protectedAssetAuth, express.static(COLLECTOR_ASSETS_DIR, { fallthrough: false }));
-app.use('/collector-assets', protectedAssetAuth, express.static(COLLECTOR_ASSETS_DIR, { fallthrough: false }));
-app.use('/collector-assets', protectedAssetAuth, express.static(ASSETS_DIR, { fallthrough: false }));
+app.use('/assets', protectedAssetAuth, express.static(ASSETS_DIR), express.static(COLLECTOR_ASSETS_DIR), serveAssetFallback);
+app.use('/collector-assets', protectedAssetAuth, express.static(COLLECTOR_ASSETS_DIR), express.static(ASSETS_DIR), serveAssetFallback);
 
 function readDb() {
   try {
@@ -306,6 +321,21 @@ app.get('/api/auth/me', (req, res) => {
   // 认证中间件已完成 Token 校验与用户回查
   const user = req.user;
   res.json({ success: true, data: { id: user.id, username: user.username, name: user.name, role: user.role } });
+});
+
+// 短期图片资产访问 Token 获取 API (仅限图片访问，TTL: 10 分钟)
+app.get('/api/auth/asset-token', (req, res) => {
+  const assetToken = generateToken(req.user, {
+    scope: 'asset',
+    ttlMs: ASSET_TOKEN_TTL_MS || (10 * 60 * 1000)
+  });
+  res.json({
+    success: true,
+    data: {
+      token: assetToken,
+      expires_in: Math.floor((ASSET_TOKEN_TTL_MS || (10 * 60 * 1000)) / 1000)
+    }
+  });
 });
 
 // 离线监控点位主数据：坐标由现场测绘/设备台账维护，不依赖外部地图服务
@@ -2017,7 +2047,7 @@ function getLocalIps() {
 const httpServer = app.listen(PORT, '0.0.0.0', () => {
   const localIps = getLocalIps();
   console.log(`===================================================`);
-  console.log(` 内网数据汇聚与管理中台 (VFusion Core v0.20.0) 已启动`);
+  console.log(` 内网数据汇聚与管理中台 (VFusion Core v0.21.0) 已启动`);
   console.log(` 本机访问地址: http://localhost:${PORT}`);
   localIps.forEach(ip => {
     console.log(` 局域网/其他电脑访问地址: http://${ip}:${PORT}`);

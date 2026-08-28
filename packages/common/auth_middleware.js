@@ -100,8 +100,17 @@ function authMiddleware(opts = {}) {
     if (urlPath === '/api/auth/login' || urlPath === '/auth/login' || exempt.has(urlPath)) return next();
 
     const header = req.headers.authorization || '';
-    const queryToken = allowQueryToken && req.query && (req.query.access_token || req.query.token);
-    const token = header.startsWith('Bearer ') ? header.slice(7) : (typeof queryToken === 'string' ? queryToken : null);
+    let token = null;
+    if (header.startsWith('Bearer ')) {
+      token = header.slice(7).trim();
+    } else if (allowQueryToken && req.query) {
+      const rawQuery = req.query.access_token || req.query.token;
+      if (Array.isArray(rawQuery)) {
+        token = typeof rawQuery[0] === 'string' ? rawQuery[0].trim() : null;
+      } else if (typeof rawQuery === 'string') {
+        token = rawQuery.trim();
+      }
+    }
     const decoded = verifyToken(token, { audience, allowedScopes });
 
     if (!decoded) {

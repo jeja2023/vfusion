@@ -8,7 +8,7 @@ const { formidable } = require('formidable');
 const { packEventPackage } = require('../common/packager');
 const { DEFAULT_FORM_SCHEMA, setHmacSecret } = require('../common/protocol');
 const { hashPassword, verifyPassword, generateToken, setTokenSecret } = require('../common/auth');
-const { authMiddleware, assetAuthMiddleware, requireRole } = require('../common/auth_middleware');
+const { authMiddleware, assetAuthMiddleware, requireRole, ASSET_TOKEN_TTL_MS } = require('../common/auth_middleware');
 const { isSafeIdentifier, getImageExtension, validateImageMagic, resolveInside, assertJsonObject } = require('../common/security_utils');
 const { writeJsonAtomic: writeJsonAtomicSafe, updateJsonAtomic } = require('../common/json_store');
 const { createRateLimiter } = require('../common/rate_limiter');
@@ -215,11 +215,28 @@ app.use('/api', authMiddleware({
   publicPaths: ['/auth/login'],
   loadUser: (id) => (readCollectorDb().users || []).find(u => u.id === id) || null
 }));
+const FALLBACK_IMAGE_SVG = Buffer.from(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="150" viewBox="0 0 200 150">
+    <rect width="200" height="150" fill="#f8fafc"/>
+    <text x="50%" y="46%" dominant-baseline="middle" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#94a3b8">暂无现场存照</text>
+    <text x="50%" y="64%" dominant-baseline="middle" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="10" fill="#cbd5e1">(历史测试数据)</text>
+  </svg>`
+);
+
+function serveAssetFallback(req, res) {
+  if (req.path && req.path.match(/\.(jpg|jpeg|png|webp|gif|svg)$/i)) {
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.setHeader('Cache-Control', 'no-cache');
+    return res.status(200).send(FALLBACK_IMAGE_SVG);
+  }
+  res.status(404).send('Asset not found');
+}
+
 const protectedAssetAuth = assetAuthMiddleware({
   loadUser: (id) => (readCollectorDb().users || []).find(u => u.id === id) || null
 });
-app.use('/collector-assets', protectedAssetAuth, express.static(COLLECTOR_ASSETS_DIR, { fallthrough: false }));
-app.use('/assets', protectedAssetAuth, express.static(COLLECTOR_ASSETS_DIR, { fallthrough: false }));
+app.use('/collector-assets', protectedAssetAuth, express.static(COLLECTOR_ASSETS_DIR), express.static(STORAGE_ROOT), serveAssetFallback);
+app.use('/assets', protectedAssetAuth, express.static(COLLECTOR_ASSETS_DIR), express.static(STORAGE_ROOT), serveAssetFallback);
 
 // 表单 Schema 配置 API（视频网发布端与可视化构建器）
 app.get('/api/schema', (req, res) => {
@@ -454,6 +471,26 @@ app.post('/api/auth/login', loginRateLimiter, (req, res) => {
       user: { id: user.id, username: user.username, name: user.name, role: user.role }
     }
   });
+});
+
+// 短期图片资产访问 Token 获取 API (仅限图片访问，TTL: 10 分钟)
+app.get('/api/auth/asset-token', (req, res) => {
+  const assetToken = generateToken(req.user, {
+    scope: 'asset',
+    ttlMs: ASSET_TOKEN_TTL_MS || (10 * 60 * 1000)
+  });
+  res.json({
+    success: true,
+    data: {
+      token: assetToken,
+      expires_in: Math.floor((ASSET_TOKEN_TTL_MS || (10 * 60 * 1000)) / 1000)
+    }
+  });
+});
+
+app.get('/api/auth/me', (req, res) => {
+  const user = req.user;
+  res.json({ success: true, data: { id: user.id, username: user.username, name: user.name, role: user.role } });
 });
 
 // 用户管理 API（仅管理员）
@@ -1465,7 +1502,7 @@ function getLocalIps() {
 const httpServer = app.listen(PORT, '0.0.0.0', () => {
   const localIps = getLocalIps();
   console.log(`===================================================`);
-  console.log(` 视频网数据采集/发布终端 (VFusion Collector v0.20.0) 已启动`);
+  console.log(` 视频网数据采集/发布终端 (VFusion Collector v0.21.0) 已启动`);
   console.log(` 本机访问地址: http://localhost:${PORT}`);
   localIps.forEach(ip => {
     console.log(` 局域网/其他电脑访问地址: http://${ip}:${PORT}`);

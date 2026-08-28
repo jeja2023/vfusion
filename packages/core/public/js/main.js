@@ -66,10 +66,19 @@ function getAuthToken() {
 }
 
 function assetUrl(url) {
-  const value = String(url || '');
+  let value = String(url || '');
   if (!/^\/(?:assets|collector-assets)\//.test(value)) return value;
-  const token = localStorage.getItem('vfusion_core_asset_token') || '';
-  return token ? `${value}${value.includes('?') ? '&' : '?'}access_token=${encodeURIComponent(token)}` : value;
+  const token = localStorage.getItem('vfusion_core_asset_token') || localStorage.getItem('vfusion_token') || '';
+  if (!token) return value;
+  try {
+    const origin = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : 'http://localhost';
+    const parsed = new URL(value, origin);
+    parsed.searchParams.set('access_token', token);
+    return `${parsed.pathname}${parsed.search}`;
+  } catch (e) {
+    const cleanBase = value.split('?')[0];
+    return `${cleanBase}?access_token=${encodeURIComponent(token)}`;
+  }
 }
 
 // 保留原生实现，供 apiFetch 与静态资源请求使用，避免下方全局拦截造成递归
@@ -87,6 +96,7 @@ async function apiFetch(url, options = {}) {
     const wasLoggedIn = !!currentUser || !!token;
     localStorage.removeItem('vfusion_token');
     localStorage.removeItem('vfusion_user');
+    localStorage.removeItem('vfusion_core_asset_token');
     currentUser = null;
 
     if (wasLoggedIn) {
@@ -147,7 +157,7 @@ async function loadPageTemplates() {
   const pages = ['events', 'builder', 'ftp', 'webhooks', 'audits', 'personnel', 'users', 'errors', 'system'];
   await Promise.all(pages.map(async (p) => {
     try {
-      const res = await fetch(`pages/${p}.html`);
+      const res = await fetch(`pages/${p}.html?v=${Date.now()}`);
       if (res.ok) {
         const html = await res.text();
         const container = document.getElementById(`tab-${p}`);
@@ -161,6 +171,7 @@ async function loadPageTemplates() {
 
 function showToast(message, type = 'success') {
   const container = document.getElementById('toast-container');
+  if (!container) return;
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
   toast.innerHTML = `
@@ -193,7 +204,7 @@ function openImageLightbox(url, captionData) {
         : `<div style="font-size:0.85rem; color:#94a3b8; font-style:italic; margin-bottom:0.4rem;">(暂无图片描述)</div>`;
       
       const metaParts = [];
-      if (timestamp) metaParts.push(`<span style="display:inline-flex; align-items:center; gap:0.25rem;"><svg class="icon-svg" viewBox="0 0 24 24" style="width:14px; height:14px; color:#0284c7;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><strong>时间:</strong> ${escapeHtml(timestamp)}</span>`);
+      if (timestamp) metaParts.push(`<span style="display:inline-flex; align-items:center; gap:0.25rem;"><svg class="icon-svg" viewBox="0 0 24 24" style="width:14px; height:14px; color:#0284c7;"><circle cx="12" cy="10" r="10"/><polyline points="12 6 12 12 16 14"/></svg><strong>时间:</strong> ${escapeHtml(timestamp)}</span>`);
       if (location) metaParts.push(`<span style="display:inline-flex; align-items:center; gap:0.25rem;"><svg class="icon-svg" viewBox="0 0 24 24" style="width:14px; height:14px; color:#0284c7;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><strong>地点:</strong> ${escapeHtml(location)}</span>`);
       if (uploader) metaParts.push(`<span style="display:inline-flex; align-items:center; gap:0.25rem;"><svg class="icon-svg" viewBox="0 0 24 24" style="width:14px; height:14px; color:#0284c7;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><strong>提交人:</strong> ${escapeHtml(uploader)}</span>`);
 
@@ -213,51 +224,79 @@ function openImageLightbox(url, captionData) {
 }
 
 function closeImageLightbox() {
-  document.getElementById('imageLightboxOverlay').style.display = 'none';
+  const overlay = document.getElementById('imageLightboxOverlay');
+  if (overlay) overlay.style.display = 'none';
 }
 
 function showPersonDetailModal(encodedJson) {
   try {
     const p = JSON.parse(decodeURIComponent(encodedJson));
-    document.getElementById('modalPersonName').innerText = p.person_name || '未知';
-    document.getElementById('modalPersonIdCard').innerText = p.person_id_card || '未填';
-    document.getElementById('modalPersonDomicile').innerText = p.person_domicile || '未填';
-    document.getElementById('personDetailModal').style.display = 'flex';
+    const nameEl = document.getElementById('modalPersonName');
+    const idCardEl = document.getElementById('modalPersonIdCard');
+    const domicileEl = document.getElementById('modalPersonDomicile');
+    const modalEl = document.getElementById('personDetailModal');
+    if (nameEl) nameEl.innerText = p.person_name || '未知';
+    if (idCardEl) idCardEl.innerText = p.person_id_card || '未填';
+    if (domicileEl) domicileEl.innerText = p.person_domicile || '未填';
+    if (modalEl) modalEl.style.display = 'flex';
   } catch (e) { console.error('解析涉事人员信息失败:', e); }
 }
 
 function closePersonDetailModal() {
-  document.getElementById('personDetailModal').style.display = 'none';
+  const modalEl = document.getElementById('personDetailModal');
+  if (modalEl) modalEl.style.display = 'none';
 }
 
 async function checkAuth() {
   const storedUser = localStorage.getItem('vfusion_user');
-  if (storedUser) {
-    try {
-      const tokenRes = await apiFetch('/api/auth/asset-token');
-      const tokenJson = await tokenRes.json();
-      if (tokenJson.success) {
-        localStorage.setItem('vfusion_core_asset_token', tokenJson.data.token);
-        setTimeout(() => checkAuth(), Math.max(30_000, (tokenJson.data.expires_in - 30) * 1000));
-      }
-    } catch (e) {}
-    currentUser = JSON.parse(storedUser);
-    document.getElementById('loginOverlay').style.display = 'none';
-    document.getElementById('userInfoTag').innerText = formatUserWithRealName(currentUser.username, currentUser.name);
-    applyRolePermissions();
-    if (typeof fetchData === 'function') fetchData();
-    loadAlerts();
+  const storedToken = localStorage.getItem('vfusion_token');
+  if (!storedUser || !storedToken) {
+    currentUser = null;
+    const overlay = document.getElementById('loginOverlay');
+    if (overlay) overlay.style.display = 'flex';
+    return;
+  }
 
-    // 刷新恢复上次访问的页面 Tab
-    const hashTab = location.hash ? location.hash.replace('#', '') : '';
-    const savedTab = hashTab || localStorage.getItem('vfusion_core_active_tab') || 'tab-events';
-    if (savedTab && document.getElementById(savedTab)) {
-      switchTab(savedTab);
-    } else {
-      switchTab('tab-events');
+  try {
+    const meRes = await apiFetch('/api/auth/me');
+    const meJson = await meRes.json();
+    if (!meJson.success || !meJson.data) {
+      throw new Error('鉴权无效');
     }
+    currentUser = meJson.data;
+    localStorage.setItem('vfusion_user', JSON.stringify(currentUser));
+
+    const tokenRes = await apiFetch('/api/auth/asset-token');
+    const tokenJson = await tokenRes.json();
+    if (tokenJson.success && tokenJson.data && tokenJson.data.token) {
+      localStorage.setItem('vfusion_core_asset_token', tokenJson.data.token);
+      setTimeout(() => checkAuth(), Math.max(30_000, (tokenJson.data.expires_in - 30) * 1000));
+    }
+  } catch (e) {
+    currentUser = null;
+    localStorage.removeItem('vfusion_token');
+    localStorage.removeItem('vfusion_user');
+    localStorage.removeItem('vfusion_core_asset_token');
+    const overlay = document.getElementById('loginOverlay');
+    if (overlay) overlay.style.display = 'flex';
+    return;
+  }
+
+  const overlay = document.getElementById('loginOverlay');
+  if (overlay) overlay.style.display = 'none';
+  const userInfoTag = document.getElementById('userInfoTag');
+  if (userInfoTag) userInfoTag.innerText = formatUserWithRealName(currentUser.username, currentUser.name);
+  applyRolePermissions();
+  if (typeof fetchData === 'function') fetchData();
+  loadAlerts();
+
+  // 刷新恢复上次访问的页面 Tab
+  const hashTab = location.hash ? location.hash.replace('#', '') : '';
+  const savedTab = hashTab || localStorage.getItem('vfusion_core_active_tab') || 'tab-events';
+  if (savedTab && document.getElementById(savedTab)) {
+    switchTab(savedTab);
   } else {
-    document.getElementById('loginOverlay').style.display = 'flex';
+    switchTab('tab-events');
   }
 }
 
@@ -267,7 +306,7 @@ async function handleLogin(e) {
   const password = document.getElementById('loginPassword').value.trim();
 
   try {
-    const res = await fetch('/api/auth/login', {
+    const res = await nativeFetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
@@ -278,9 +317,9 @@ async function handleLogin(e) {
       localStorage.setItem('vfusion_user', JSON.stringify(currentUser));
       localStorage.setItem('vfusion_token', json.data.token);
       showToast(`登录成功！欢迎 ${currentUser.name}`);
-      checkAuth();
+      await checkAuth();
     } else {
-      showToast(json.error, 'error');
+      showToast(json.error || json.message || '登录失败', 'error');
     }
   } catch (err) {
     showToast('登录异常: ' + err.message, 'error');
@@ -292,7 +331,8 @@ function handleLogout() {
   localStorage.removeItem('vfusion_token');
   localStorage.removeItem('vfusion_core_asset_token');
   currentUser = null;
-  document.getElementById('loginOverlay').style.display = 'flex';
+  const overlay = document.getElementById('loginOverlay');
+  if (overlay) overlay.style.display = 'flex';
   showToast('已安全退出');
 }
 

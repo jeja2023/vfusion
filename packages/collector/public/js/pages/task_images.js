@@ -148,7 +148,7 @@ function renderGalleryGrid() {
 
         <!-- 图片预览区 -->
         <div style="position:relative; width:100%; height:185px; background:#0f172a; overflow:hidden; cursor:pointer;" onclick="viewGalleryImageLightbox('${escapeJsString(img.id)}')">
-          <img src="${escapeHtml(assetUrl(img.url))}" style="width:100%; height:100%; object-fit:cover; transition:transform 0.3s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+          <img src="${escapeHtml(assetUrl(img.url))}" style="width:100%; height:100%; object-fit:cover; transition:transform 0.3s ease;" onerror="this.style.opacity='0.4'; this.title='图片未找到或无法加载';" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
           ${isOwn ? `<span style="position:absolute; top:8px; right:8px; background:rgba(37,99,235,0.9); color:#fff; font-size:0.7rem; font-weight:700; padding:0.15rem 0.45rem; border-radius:4px; backdrop-filter:blur(4px);">我上传的</span>` : ''}
         </div>
 

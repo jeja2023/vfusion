@@ -65,12 +65,12 @@
     <form onsubmit="handleCreateUserSubmit(event)" autocomplete="off">
       <div class="form-group" style="margin-bottom:0.6rem;">
         <label style="font-size:0.775rem; font-weight:600;">用户名 (登录账号) <span style="color:red;">*</span></label>
-        <input type="text" id="newUsername" placeholder="例如: zhangsan" required style="padding:0.35rem 0.6rem; font-size:0.8rem; height:32px;">
+        <input type="text" id="newUsername" placeholder="例如: zhangsan" required style="padding:0.35rem 0.6rem; font-size:0.8rem; height:32px;" autocomplete="username">
       </div>
 
       <div class="form-group" style="margin-bottom:0.6rem;">
         <label style="font-size:0.775rem; font-weight:600;">真实姓名 <span style="color:red;">*</span></label>
-        <input type="text" id="newFullname" placeholder="例如: 张三" required style="padding:0.35rem 0.6rem; font-size:0.8rem; height:32px;">
+        <input type="text" id="newFullname" placeholder="例如: 张三" required style="padding:0.35rem 0.6rem; font-size:0.8rem; height:32px;" autocomplete="off">
       </div>
 
       <div class="form-group" style="margin-bottom:0.6rem;">
@@ -107,12 +107,12 @@
       <input type="hidden" id="editUserId">
       <div class="form-group" style="margin-bottom:0.6rem;">
         <label style="font-size:0.775rem; font-weight:600;">用户名</label>
-        <input type="text" id="editUsername" disabled style="padding:0.35rem 0.6rem; font-size:0.8rem; height:32px; background:#f8fafc; color:#64748b;">
+        <input type="text" id="editUsername" disabled style="padding:0.35rem 0.6rem; font-size:0.8rem; height:32px; background:#f8fafc; color:#64748b;" autocomplete="username">
       </div>
 
       <div class="form-group" style="margin-bottom:0.6rem;">
         <label style="font-size:0.775rem; font-weight:600;">真实姓名 <span style="color:red;">*</span></label>
-        <input type="text" id="editFullname" required style="padding:0.35rem 0.6rem; font-size:0.8rem; height:32px;">
+        <input type="text" id="editFullname" required style="padding:0.35rem 0.6rem; font-size:0.8rem; height:32px;" autocomplete="off">
       </div>
 
       <div class="form-group" style="margin-bottom:0.6rem;">

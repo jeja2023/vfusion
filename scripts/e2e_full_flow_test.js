@@ -8,7 +8,7 @@ const { unpackAndVerifyPackage } = require('../packages/common/unpacker');
 const { uploadToRemoteFtp, downloadFromRemoteFtp } = require('../packages/common/ftp_client');
 
 console.log('================================================================');
-console.log('   视汇 (VFusion v0.25.0) 端到端 (E2E) 全流程真实性检测脚本');
+console.log('   视汇 (VFusion v0.26.0) 端到端 (E2E) 全流程真实性检测脚本');
 console.log('================================================================\n');
 
 const STORAGE_ROOT = path.resolve(__dirname, '../storage');

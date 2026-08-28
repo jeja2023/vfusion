@@ -285,25 +285,31 @@ function renderDynamicForm(fields) {
   const pointGroup = document.createElement('div');
   pointGroup.className = 'form-group full-width monitoring-point-picker';
   pointGroup.innerHTML = `
-    <label>监控点位 <span style="font-size:0.72rem; font-weight:normal; color:#64748b;">优先选择点位表中的标准坐标</span></label>
-    <input id="monitoringPointSearch" type="search" placeholder="输入点位编号、名称或地点关键词" autocomplete="off" data-action-input="scheduleMonitoringPointSearch()" data-action-keydown="if (event.key === 'Enter') { event.preventDefault(); searchMonitoringPoints(); }">
+    <label style="display:flex; justify-content:space-between; align-items:center;">
+      <span>监控点位 <span style="font-size:0.72rem; font-weight:normal; color:#64748b;">优先选择点位表中的标准坐标</span></span>
+      <button type="button" class="btn btn-secondary" style="color:var(--primary); font-weight:700; padding:0.25rem 0.55rem; font-size:0.75rem;" data-action="openPublishMapPicker()">🗺️ 地图选点</button>
+    </label>
+    <input id="monitoringPointSearch" type="search" placeholder="输入点位编号或名称关键词搜索" autocomplete="off" data-action-input="scheduleMonitoringPointSearch()" data-action-keydown="if (event.key === 'Enter') { event.preventDefault(); searchMonitoringPoints(); }">
     <input type="hidden" id="monitoringPointSelect" name="monitoring_point_id" value="">
     <div id="monitoringPointResults" class="monitoring-point-results"></div>
-    <div style="display:flex; gap:0.4rem; align-items:center; margin-top:0.4rem;">
-      <button type="button" class="btn" data-action="openNewMonitoringPointForm()">新增本次点位</button>
+    <div style="display:flex; gap:0.4rem; align-items:center; margin-top:0.4rem; flex-wrap:wrap;">
+      <button type="button" class="btn btn-secondary" style="color:var(--primary); font-weight:700;" data-action="openPublishMapPicker()">🗺️ 在高德地图上选点</button>
+      <button type="button" class="btn" data-action="openNewMonitoringPointForm()">＋ 新增本次点位</button>
       <button type="button" class="btn" data-action="clearMonitoringPointSelection()">清除选择，手工填写</button>
       <span id="locationPickerStatus" aria-live="polite">点位和经纬度均可不填写。</span>
     </div>
     <div id="newMonitoringPointPanel" class="new-monitoring-point-panel" hidden>
-      <div class="new-monitoring-point-grid">
+      <div class="new-monitoring-point-grid" style="display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:0.4rem;">
         <input id="newMonitoringPointName" placeholder="点位名称 *" maxlength="128">
-        <input id="newMonitoringPointLocation" placeholder="地点名称（可选）" maxlength="256">
         <input id="newMonitoringPointLongitude" placeholder="经度（可选）" inputmode="decimal">
         <input id="newMonitoringPointLatitude" placeholder="纬度（可选）" inputmode="decimal">
       </div>
-      <div style="display:flex; gap:0.4rem; margin-top:0.4rem;"><button type="button" class="btn btn-primary" data-action="saveNewMonitoringPoint()">保存并使用</button><button type="button" class="btn" data-action="closeNewMonitoringPointForm()">取消</button></div>
+      <div style="display:flex; gap:0.4rem; margin-top:0.4rem; flex-wrap:wrap;">
+        <button type="button" class="btn btn-secondary" data-action="openNewPointModalMapPicker()">🗺️ 地图拾取坐标</button>
+        <button type="button" class="btn btn-primary" data-action="saveNewMonitoringPoint()">保存并使用</button>
+        <button type="button" class="btn" data-action="closeNewMonitoringPointForm()">取消</button>
+      </div>
     </div>
-    <div id="locationPickerStatus" aria-live="polite">点位表由管理员维护；不调用互联网地图或设备当前位置。</div>
   `;
   grid.appendChild(pointGroup);
 
@@ -442,6 +448,40 @@ function removeSelectedFile() {
 function initUploadZoneDragAndDrop() {
   const uploadZone = document.getElementById('uploadZone');
   if (!uploadZone || uploadZone.dataset.dragInit) return;
+        <img src="${imgUrl}" style="max-width:100%; max-height:250px; width:auto; height:auto; object-fit:contain; border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.5); cursor:pointer;" title="点击放大预览: ${escapeHtml(file.name)}">
+        <div style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); color:#fff; font-size:0.725rem; padding:3px 8px; border-radius:12px; border:1px solid rgba(255,255,255,0.2); pointer-events:none; display:flex; align-items:center; gap:0.25rem;">
+          <svg viewBox="0 0 24 24" style="width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:2;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> 点击放大预览
+        </div>
+      </div>
+      <div style="background:rgba(15,23,42,0.92); backdrop-filter:blur(4px); padding:0.6rem 0.85rem; border-top:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; color:#fff; font-size:0.8rem; z-index:10;" data-action="event.stopPropagation()">
+        <div style="display:flex; align-items:center; gap:0.5rem; overflow:hidden;">
+          <span style="color:#94a3b8;">已选抓拍照片:</span>
+          <strong style="color:#60a5fa; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:180px;" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</strong>
+          <span style="color:#cbd5e1; font-size:0.75rem; font-family:monospace; background:rgba(255,255,255,0.1); padding:1px 6px; border-radius:4px;">${(file.size / 1024).toFixed(0)}KB</span>
+        </div>
+        <div style="display:flex; gap:0.4rem; flex-shrink:0;">
+          <button type="button" class="btn" style="padding:0.25rem 0.65rem; font-size:0.75rem; background:#2563eb; color:#fff; border:none; border-radius:4px; cursor:pointer;" data-action="document.getElementById('photoInput').click()">重新选择</button>
+          <button type="button" class="btn btn-danger" style="padding:0.25rem 0.65rem; font-size:0.75rem;" data-action="clearAllSelectedFiles()">清空图片</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function clearAllSelectedFiles() {
+  selectedFiles = [];
+  const photoInput = document.getElementById('photoInput');
+  if (photoInput) photoInput.value = '';
+  renderFilePreviews();
+}
+
+function removeSelectedFile() {
+  clearAllSelectedFiles();
+}
+
+function initUploadZoneDragAndDrop() {
+  const uploadZone = document.getElementById('uploadZone');
+  if (!uploadZone || uploadZone.dataset.dragInit) return;
   uploadZone.dataset.dragInit = 'true';
 
   ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -542,3 +582,57 @@ function bindPublishFormSubmit() {
     }
   });
 }
+
+function openPublishMapPicker() {
+  const currentLng = (getLocationCoordinateInput('longitude') || {}).value || '';
+  const currentLat = (getLocationCoordinateInput('latitude') || {}).value || '';
+
+  if (typeof window.openMapPicker === 'function') {
+    window.openMapPicker({
+      initialLng: currentLng ? parseFloat(currentLng) : null,
+      initialLat: currentLat ? parseFloat(currentLat) : null,
+      title: '🗺️ 高德离线地图选点拾取坐标',
+      showExistingPoints: true,
+      onConfirm: (lng, lat) => {
+        const lngInput = getLocationCoordinateInput('longitude');
+        const latInput = getLocationCoordinateInput('latitude');
+        const locInput = getLocationCoordinateInput('location');
+        if (lngInput) lngInput.value = lng;
+        if (latInput) latInput.value = lat;
+        if (locInput && !locInput.value) locInput.value = `现场点位 (${lng}, ${lat})`;
+        setLocationInputState(false, `已从地图拾取坐标：${lng}, ${lat}`);
+      }
+    });
+  } else {
+    showToast('地图选点组件初始化中，请稍候...', 'warn');
+  }
+}
+
+function openNewPointModalMapPicker() {
+  const currentLng = document.getElementById('newMonitoringPointLongitude')?.value.trim();
+  const currentLat = document.getElementById('newMonitoringPointLatitude')?.value.trim();
+  const name = document.getElementById('newMonitoringPointName')?.value.trim() || '新点位';
+
+  if (typeof window.openMapPicker === 'function') {
+    window.openMapPicker({
+      initialLng: currentLng ? parseFloat(currentLng) : null,
+      initialLat: currentLat ? parseFloat(currentLat) : null,
+      title: `🗺️ 拾取新点位坐标 [${name}]`,
+      showExistingPoints: true,
+      onConfirm: (lng, lat) => {
+        const lngInput = document.getElementById('newMonitoringPointLongitude');
+        const latInput = document.getElementById('newMonitoringPointLatitude');
+        if (lngInput) lngInput.value = lng;
+        if (latInput) latInput.value = lat;
+      }
+    });
+  } else {
+    showToast('地图选点组件初始化中，请稍候...', 'warn');
+  }
+}
+
+Object.assign(window.VFusionActions = window.VFusionActions || {}, {
+  handleFileSelect, autoFillPersonnel, scheduleMonitoringPointSearch, searchMonitoringPoints,
+  openNewMonitoringPointForm, closeNewMonitoringPointForm, saveNewMonitoringPoint,
+  clearMonitoringPointSelection, chooseMonitoringPoint, openPublishMapPicker, openNewPointModalMapPicker
+});

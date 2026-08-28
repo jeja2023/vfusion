@@ -57,6 +57,37 @@
       </button>
       <div id="webUpgradeStatusBox" style="display:none; margin-top:0.45rem; font-size:0.75rem; padding:0.45rem 0.6rem; border-radius:6px; font-family:monospace;"></div>
     </div>
+
+    <!-- 高德离线地图瓦片与选点配置卡片 -->
+    <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:0.85rem; display:flex; flex-direction:column; justify-content:space-between;">
+      <div>
+        <h4 style="font-size:0.85rem; font-weight:700; color:#1e293b; margin:0 0 0.4rem; display:flex; align-items:center; gap:0.4rem;">
+          <span>🗺️</span> 高德离线地图瓦片配置
+        </h4>
+        <div style="font-size:0.75rem; color:#64748b; margin-bottom:0.65rem; line-height:1.45;">
+          离线瓦片保存在 <code>storage/tiles/{z}/{x}/{y}.png</code>，可自定义局域网切片服务器地址及默认中心。
+        </div>
+        <div style="display:flex; flex-direction:column; gap:0.45rem; margin-bottom:0.6rem;">
+          <div class="form-group" style="margin:0;">
+            <label style="font-size:0.725rem;">瓦片 URL 模板</label>
+            <input id="coreMapTileUrl" style="font-size:0.75rem; padding:0.3rem 0.5rem;" placeholder="/api/map/tiles/{z}/{x}/{y}.png" value="/api/map/tiles/{z}/{x}/{y}.png">
+          </div>
+          <div style="display:grid; grid-template-columns:1.5fr 1fr; gap:0.4rem;">
+            <div class="form-group" style="margin:0;">
+              <label style="font-size:0.725rem;">默认中心坐标 (经度, 纬度)</label>
+              <input id="coreMapDefaultCenter" style="font-size:0.75rem; padding:0.3rem 0.5rem;" placeholder="116.397428, 39.909230" value="116.397428, 39.909230">
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label style="font-size:0.725rem;">默认缩放级别</label>
+              <input id="coreMapDefaultZoom" type="number" min="3" max="18" style="font-size:0.75rem; padding:0.3rem 0.5rem;" placeholder="12" value="12">
+            </div>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-secondary" style="width:100%; justify-content:center; padding:0.4rem; font-size:0.775rem;" data-action="saveCoreMapConfig()">
+        保存地图参数
+      </button>
+    </div>
   </div>
 
   <div style="margin-top:0.85rem; background:#ffffff; border:1px solid var(--border-color); border-radius:8px; padding:0.85rem;">
@@ -66,6 +97,7 @@
         <div style="font-size:0.74rem; color:var(--text-sub); line-height:1.45;">点位坐标以现场测绘、设备台账或管理员核准结果为准。采集端发布时从点位表选择，核心端按点位编号复核，不使用互联网地图或采集端当前位置。</div>
       </div>
       <div style="display:flex; gap:0.35rem; flex-wrap:wrap; justify-content:flex-end;">
+        <button class="btn btn-secondary" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" data-action="openCorePointMapPicker()">🗺️ 地图选点</button>
         <button class="btn btn-secondary" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" data-action="exportCoreMonitoringPoints('csv')">导出 CSV</button>
         <button class="btn btn-secondary" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" data-action="exportCoreMonitoringPoints('json')">导出 JSON</button>
         <label class="btn btn-secondary" style="padding:0.38rem 0.65rem; font-size:0.75rem; cursor:pointer;">导入文件<input type="file" id="coreMonitoringPointImportFile" accept=".csv,.json,text/csv,application/json" hidden data-action-change="importCoreMonitoringPoints(this)"></label>
@@ -76,10 +108,23 @@
       <input type="hidden" id="coreMonitoringPointEditingId">
       <div class="form-group"><label>点位编号 *</label><input id="coreMonitoringPointId" required maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,63}" placeholder="如 GATE_NORTH_01" autocomplete="off"></div>
       <div class="form-group"><label>点位名称 *</label><input id="coreMonitoringPointName" required maxlength="128" placeholder="如 厂区北门1号机" autocomplete="off"></div>
-      <div class="form-group"><label>经度（可选）</label><input id="coreMonitoringPointLongitude" inputmode="decimal" placeholder="-180 至 180" autocomplete="off"></div>
-      <div class="form-group"><label>纬度（可选）</label><input id="coreMonitoringPointLatitude" inputmode="decimal" placeholder="-90 至 90" autocomplete="off"></div>
+      <div class="form-group">
+        <label style="display:flex; justify-content:space-between; align-items:center;">
+          <span>经度（可选）</span>
+          <a href="javascript:void(0)" data-action="openCorePointMapPicker()" style="color:var(--primary); font-weight:600; text-decoration:none; font-size:0.75rem;">🗺️ 地图选点</a>
+        </label>
+        <input id="coreMonitoringPointLongitude" inputmode="decimal" placeholder="-180 至 180" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label style="display:flex; justify-content:space-between; align-items:center;">
+          <span>纬度（可选）</span>
+          <a href="javascript:void(0)" data-action="openCorePointMapPicker()" style="color:var(--primary); font-weight:600; text-decoration:none; font-size:0.75rem;">🗺️ 地图选点</a>
+        </label>
+        <input id="coreMonitoringPointLatitude" inputmode="decimal" placeholder="-90 至 90" autocomplete="off">
+      </div>
       <div class="form-group"><label>点位说明</label><input id="coreMonitoringPointDescription" maxlength="500" placeholder="测绘批次、设备编号等" autocomplete="off"></div>
       <div style="grid-column:1/-1; display:flex; gap:0.5rem; justify-content:flex-end;">
+        <button class="btn btn-secondary" type="button" style="padding:0.4rem 0.8rem; font-size:0.75rem;" data-action="openCorePointMapPicker()">🗺️ 打开地图拾取坐标</button>
         <button class="btn btn-primary" type="submit" style="padding:0.4rem 0.8rem; font-size:0.75rem;">保存点位</button>
         <button class="btn" type="button" style="padding:0.4rem 0.8rem; font-size:0.75rem;" data-action="resetCoreMonitoringPointForm();">取消</button>
       </div>

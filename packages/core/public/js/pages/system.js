@@ -1,8 +1,13 @@
 async function loadSystemHealth() {
   try {
-    const [healthRes, secRes] = await Promise.all([fetch('/api/system/health'), fetch('/api/config/security')]);
+    const [healthRes, secRes, mapRes] = await Promise.all([
+      fetch('/api/system/health'),
+      fetch('/api/config/security'),
+      fetch('/api/config/map')
+    ]);
     const json = await healthRes.json();
     const secJson = await secRes.json();
+    const mapJson = await mapRes.json();
 
     if (secJson.success) {
       const currentKeyEl = document.getElementById('currentKeyMasked');
@@ -17,6 +22,16 @@ async function loadSystemHealth() {
       if (document.getElementById('ftpRemoteDirInput')) document.getElementById('ftpRemoteDirInput').value = d.ftp_remote_dir || '/vfusion_packages';
       if (document.getElementById('pkgPrefixInput')) document.getElementById('pkgPrefixInput').value = d.pkg_prefix || 'vfusion_';
       if (document.getElementById('ftpDeleteSelect')) document.getElementById('ftpDeleteSelect').value = String(d.ftp_delete_after_download !== false);
+    }
+
+    if (mapJson.success && mapJson.data) {
+      const d = mapJson.data;
+      if (document.getElementById('coreMapTileUrl')) document.getElementById('coreMapTileUrl').value = d.tile_url_template || '/api/map/tiles/{z}/{x}/{y}.png';
+      if (document.getElementById('coreMapDefaultCenter')) {
+        const center = d.default_center || [116.397428, 39.909230];
+        document.getElementById('coreMapDefaultCenter').value = Array.isArray(center) ? center.join(', ') : center;
+      }
+      if (document.getElementById('coreMapDefaultZoom')) document.getElementById('coreMapDefaultZoom').value = d.default_zoom || 12;
     }
 
     if (json.success) {
@@ -459,11 +474,67 @@ function onUpgradeFileSelected(input) {
   }
 }
 
+async function saveCoreMapConfig() {
+  const tileUrl = document.getElementById('coreMapTileUrl')?.value.trim();
+  const rawCenter = document.getElementById('coreMapDefaultCenter')?.value.trim();
+  const zoom = parseInt(document.getElementById('coreMapDefaultZoom')?.value, 10) || 12;
+
+  let center = [116.397428, 39.909230];
+  if (rawCenter) {
+    const parts = rawCenter.split(/[,，\s]+/).filter(Boolean);
+    if (parts.length >= 2) {
+      const lng = parseFloat(parts[0]);
+      const lat = parseFloat(parts[1]);
+      if (!isNaN(lng) && !isNaN(lat)) center = [lng, lat];
+    }
+  }
+
+  try {
+    const res = await fetch('/api/config/map', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tile_url_template: tileUrl,
+        default_center: center,
+        default_zoom: zoom
+      })
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) throw new Error(json.error || '保存地图参数失败');
+    showToast('高德离线地图配置已成功保存！');
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+function openCorePointMapPicker() {
+  const currentLng = document.getElementById('coreMonitoringPointLongitude')?.value.trim();
+  const currentLat = document.getElementById('coreMonitoringPointLatitude')?.value.trim();
+  const name = document.getElementById('coreMonitoringPointName')?.value.trim() || '监控点位选点';
+
+  if (typeof window.openMapPicker === 'function') {
+    window.openMapPicker({
+      initialLng: currentLng ? parseFloat(currentLng) : null,
+      initialLat: currentLat ? parseFloat(currentLat) : null,
+      title: `🗺️ 高德离线地图选点拾取 [${name}]`,
+      showExistingPoints: true,
+      onConfirm: (lng, lat) => {
+        const lngInput = document.getElementById('coreMonitoringPointLongitude');
+        const latInput = document.getElementById('coreMonitoringPointLatitude');
+        if (lngInput) lngInput.value = lng;
+        if (latInput) latInput.value = lat;
+      }
+    });
+  } else {
+    showToast('地图组件正在加载中，请稍后再试', 'warn');
+  }
+}
+
 Object.assign(window.VFusionActions = window.VFusionActions || {}, {
   loadSystemHealth, loadCoreMonitoringPointTable, renderCoreMonitoringPointPagination,
   scheduleCoreMonitoringPointSearch, exportCoreMonitoringPoints, importCoreMonitoringPoints,
   resetCoreMonitoringPointForm, editCoreMonitoringPoint, saveCoreMonitoringPoint,
   toggleCoreMonitoringPoint, rotateHmacSecret, updateAutoDiodeConfig, cleanupArchives,
   runOnlineDiagnostics, saveFtpChannelConfig, testFtpServerConnection, uploadWebPatchUpgrade,
-  onUpgradeFileSelected
+  onUpgradeFileSelected, saveCoreMapConfig, openCorePointMapPicker
 });

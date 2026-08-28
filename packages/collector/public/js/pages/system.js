@@ -1,12 +1,22 @@
 async function loadCollectorSystemConfig() {
   try {
-    const res = await fetch('/api/config/ftp');
-    const json = await res.json();
+    const [ftpRes, mapRes] = await Promise.all([fetch('/api/config/ftp'), fetch('/api/config/map')]);
+    const json = await ftpRes.json();
+    const mapJson = await mapRes.json();
     if (json.success && json.data) {
       const keyEl = document.getElementById('collectorCurrentHmacKeyStr');
       if (keyEl) {
         keyEl.innerText = json.data.hmac_secret_masked || '未设置';
       }
+    }
+    if (mapJson.success && mapJson.data) {
+      const d = mapJson.data;
+      if (document.getElementById('collectorMapTileUrl')) document.getElementById('collectorMapTileUrl').value = d.tile_url_template || '/api/map/tiles/{z}/{x}/{y}.png';
+      if (document.getElementById('collectorMapDefaultCenter')) {
+        const center = d.default_center || [116.397428, 39.909230];
+        document.getElementById('collectorMapDefaultCenter').value = Array.isArray(center) ? center.join(', ') : center;
+      }
+      if (document.getElementById('collectorMapDefaultZoom')) document.getElementById('collectorMapDefaultZoom').value = d.default_zoom || 12;
     }
   } catch (e) {
     console.error('加载视频网系统配置失败:', e);
@@ -14,11 +24,67 @@ async function loadCollectorSystemConfig() {
   await loadMonitoringPointAdminTable();
 }
 
+async function saveCollectorMapConfig() {
+  const tileUrl = document.getElementById('collectorMapTileUrl')?.value.trim();
+  const rawCenter = document.getElementById('collectorMapDefaultCenter')?.value.trim();
+  const zoom = parseInt(document.getElementById('collectorMapDefaultZoom')?.value, 10) || 12;
+
+  let center = [116.397428, 39.909230];
+  if (rawCenter) {
+    const parts = rawCenter.split(/[,，\s]+/).filter(Boolean);
+    if (parts.length >= 2) {
+      const lng = parseFloat(parts[0]);
+      const lat = parseFloat(parts[1]);
+      if (!isNaN(lng) && !isNaN(lat)) center = [lng, lat];
+    }
+  }
+
+  try {
+    const res = await fetch('/api/config/map', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tile_url_template: tileUrl,
+        default_center: center,
+        default_zoom: zoom
+      })
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) throw new Error(json.error || '保存地图参数失败');
+    showToast('高德离线地图配置已成功保存！');
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+function openCollectorPointMapPicker() {
+  const currentLng = document.getElementById('monitoringPointLongitude')?.value.trim();
+  const currentLat = document.getElementById('monitoringPointLatitude')?.value.trim();
+  const name = document.getElementById('monitoringPointName')?.value.trim() || '监控点位选点';
+
+  if (typeof window.openMapPicker === 'function') {
+    window.openMapPicker({
+      initialLng: currentLng ? parseFloat(currentLng) : null,
+      initialLat: currentLat ? parseFloat(currentLat) : null,
+      title: `🗺️ 高德离线地图选点拾取 [${name}]`,
+      showExistingPoints: true,
+      onConfirm: (lng, lat) => {
+        const lngInput = document.getElementById('monitoringPointLongitude');
+        const latInput = document.getElementById('monitoringPointLatitude');
+        if (lngInput) lngInput.value = lng;
+        if (latInput) latInput.value = lat;
+      }
+    });
+  } else {
+    showToast('地图组件正在加载中，请稍后再试', 'warn');
+  }
+}
+
 Object.assign(window.VFusionActions = window.VFusionActions || {}, {
   loadCollectorSystemConfig, loadMonitoringPointAdminTable, scheduleMonitoringPointAdminSearch,
   exportMonitoringPoints, importMonitoringPoints, resetMonitoringPointForm, editMonitoringPoint,
   saveMonitoringPoint, toggleMonitoringPoint, saveCollectorHmacSecret, uploadCollectorWebPatchUpgrade,
-  onUpgradeFileSelected
+  onUpgradeFileSelected, saveCollectorMapConfig, openCollectorPointMapPicker
 });
 
 let adminMonitoringPoints = [];

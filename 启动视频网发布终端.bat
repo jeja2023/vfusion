@@ -3,7 +3,7 @@ cd /d "%~dp0"
 set NODE_EXE=%~dp0node.exe
 if not exist "%NODE_EXE%" set NODE_EXE=node
 
-title 视汇 - 视频网数据采集与发布终端 (v0.25.0)
+title 视汇 - 视频网数据采集与发布终端 (v0.26.0)
 :loop
 echo ===================================================
 echo   正在启动 [视汇 - 视频网数据采集/发布终端] ...

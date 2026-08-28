@@ -471,6 +471,95 @@ app.patch('/api/monitoring-points/:point_id/toggle', requireRole('admin'), (req,
   }
 });
 
+// ==========================================
+// 离线高德地图瓦片托管与地图参数配置 API
+// ==========================================
+const MAP_TILES_DIR = path.join(STORAGE_ROOT, 'tiles');
+if (!fs.existsSync(MAP_TILES_DIR)) fs.mkdirSync(MAP_TILES_DIR, { recursive: true });
+
+function getMapConfig() {
+  try {
+    const secPath = path.join(STORAGE_ROOT, 'security.json');
+    if (fs.existsSync(secPath)) {
+      const sec = JSON.parse(fs.readFileSync(secPath, 'utf8'));
+      if (sec.map_config) return sec.map_config;
+    }
+  } catch (e) {}
+  return {
+    tile_url_template: '/api/map/tiles/{z}/{x}/{y}.png',
+    default_center: [116.397428, 39.909230],
+    default_zoom: 12,
+    min_zoom: 3,
+    max_zoom: 18
+  };
+}
+
+function getGridTileSvg(z, x, y) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <rect width="256" height="256" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <line x1="0" y1="128" x2="256" y2="128" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="128" y1="0" x2="128" y2="256" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4"/>
+  <text x="128" y="118" font-size="11" font-weight="600" fill="#94a3b8" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif">高德离线瓦片 (z:${z})</text>
+  <text x="128" y="142" font-size="10" fill="#cbd5e1" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif">x:${x}, y:${y}</text>
+</svg>`;
+}
+
+app.get('/api/map/tiles/:z/:x/:y', (req, res) => {
+  const z = String(req.params.z).replace(/[^0-9]/g, '');
+  const x = String(req.params.x).replace(/[^0-9]/g, '');
+  let rawY = String(req.params.y);
+  const extMatch = rawY.match(/\.(png|jpg|jpeg|webp)$/i);
+  const ext = extMatch ? extMatch[1].toLowerCase() : 'png';
+  const y = rawY.replace(/\.(png|jpg|jpeg|webp)$/i, '').replace(/[^0-9]/g, '');
+
+  if (!z || !x || !y) {
+    res.setHeader('Content-Type', 'image/svg+xml');
+    return res.send(getGridTileSvg(z || 0, x || 0, y || 0));
+  }
+
+  const candidatePaths = [
+    path.join(MAP_TILES_DIR, z, x, `${y}.${ext}`),
+    path.join(MAP_TILES_DIR, z, x, `${y}.png`),
+    path.join(MAP_TILES_DIR, z, x, `${y}.jpg`),
+    path.join(MAP_TILES_DIR, z, x, y)
+  ];
+
+  for (const candidate of candidatePaths) {
+    if (fs.existsSync(candidate)) {
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      res.setHeader('Content-Type', ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'image/png');
+      return fs.createReadStream(candidate).pipe(res);
+    }
+  }
+
+  res.setHeader('Content-Type', 'image/svg+xml');
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  res.send(getGridTileSvg(z, x, y));
+});
+
+app.get('/api/config/map', (req, res) => {
+  res.json({ success: true, data: getMapConfig() });
+});
+
+app.post('/api/config/map', requireRole('admin'), (req, res) => {
+  const { tile_url_template, default_center, default_zoom, min_zoom, max_zoom } = req.body || {};
+  try {
+    const secPath = path.join(STORAGE_ROOT, 'security.json');
+    const sec = fs.existsSync(secPath) ? JSON.parse(fs.readFileSync(secPath, 'utf8')) : {};
+    sec.map_config = {
+      tile_url_template: tile_url_template ? tile_url_template.trim() : '/api/map/tiles/{z}/{x}/{y}.png',
+      default_center: Array.isArray(default_center) && default_center.length === 2 ? default_center : [116.397428, 39.909230],
+      default_zoom: parseInt(default_zoom, 10) || 12,
+      min_zoom: parseInt(min_zoom, 10) || 3,
+      max_zoom: parseInt(max_zoom, 10) || 18
+    };
+    writeJsonAtomic(secPath, sec);
+    res.json({ success: true, message: '地图参数配置已保存', data: sec.map_config });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // 涉事人员库 API (内网端同步归档)
 app.get('/api/personnel', (req, res) => {
   const db = readDb();
@@ -2113,7 +2202,7 @@ function getLocalIps() {
 const httpServer = app.listen(PORT, '0.0.0.0', () => {
   const localIps = getLocalIps();
   console.log(`===================================================`);
-  console.log(` 内网数据汇聚与管理中台 (VFusion Core v0.25.0) 已启动`);
+  console.log(` 内网数据汇聚与管理中台 (VFusion Core v0.26.0) 已启动`);
   console.log(` 本机访问地址: http://localhost:${PORT}`);
   localIps.forEach(ip => {
     console.log(` 局域网/其他电脑访问地址: http://${ip}:${PORT}`);

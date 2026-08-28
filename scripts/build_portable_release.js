@@ -11,13 +11,10 @@ const RELEASE_DIR = path.join(ROOT_DIR, 'release');
 
 console.log(`=== 开始按部署场景模块化构建 视汇 (VFusion v${VERSION}) 专属发布包 ===\n`);
 
-// 1. 清理并新建 release 目录
-try {
-  if (fs.existsSync(RELEASE_DIR)) {
-    fs.rmSync(RELEASE_DIR, { recursive: true, force: true });
-  }
-} catch (e) {}
-fs.mkdirSync(RELEASE_DIR, { recursive: true });
+// 1. 确保 release 目录存在
+if (!fs.existsSync(RELEASE_DIR)) {
+  fs.mkdirSync(RELEASE_DIR, { recursive: true });
+}
 
 // Helper: 递归复制目录
 function copyDirSync(src, dest, ignoreDirs = []) {

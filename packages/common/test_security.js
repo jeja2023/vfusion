@@ -6,10 +6,12 @@ const {
   isSafeFileName,
   resolveInside,
   validateHttpUrl,
+  validateHttpUrlResolved,
   getImageExtension
 } = require('./security_utils');
 const { normalizeCoordinates, normalizeMonitoringPoint, findMonitoringPoint, applyMonitoringPoint } = require('./monitoring_points');
 const { writeJsonAtomic, readJson } = require('./json_store');
+const { generateToken, verifyToken, setTokenSecret } = require('./auth_middleware');
 
 let passed = 0;
 let failed = 0;
@@ -45,9 +47,21 @@ try {
   const jsonPath = path.join(tempDir, 'state.json');
   writeJsonAtomic(jsonPath, { ok: true, count: 1 });
   check('原子 JSON 写入可读', readJson(jsonPath, {}).count === 1);
+  setTokenSecret('test_token_secret_012345678901234567890123');
+  const apiToken = generateToken({ id: 1, username: 'tester', role: 'operator' }, { audience: 'test-service' });
+  const assetToken = generateToken({ id: 1, username: 'tester', role: 'operator' }, { audience: 'test-service', scope: 'asset', ttlMs: 10000 });
+  check('API Token audience 校验生效', Boolean(verifyToken(apiToken, { audience: 'test-service' })));
+  check('资产 Token scope 校验生效', Boolean(verifyToken(assetToken, { audience: 'test-service', allowedScopes: ['asset'] })));
+  check('API 中间件拒绝资产 Token', verifyToken(assetToken, { audience: 'test-service', allowedScopes: ['api'] }) === null);
 } finally {
   fs.rmSync(tempDir, { recursive: true, force: true });
 }
 
-console.log(`=== 测试结果: ${passed} 通过, ${failed} 失败 ===`);
-if (failed) process.exit(1);
+validateHttpUrlResolved('https://8.8.8.8/hook').then(result => {
+  check('公网 IP Webhook 解析校验可执行', result.valid === true);
+  console.log(`=== 测试结果: ${passed} 通过, ${failed} 失败 ===`);
+  if (failed) process.exit(1);
+}).catch(err => {
+  console.error('Webhook 解析测试异常:', err);
+  process.exit(1);
+});

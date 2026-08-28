@@ -21,14 +21,14 @@
     <div class="stat-card">
       <div class="stat-info">
         <h3>防篡改防破损 protection</h3>
-        <div class="num" style="font-size:1.1rem; color:var(--primary);">HMAC + MD5 强校验</div>
+        <div class="num" style="font-size:1.1rem; color:var(--primary);">HMAC + SHA-256 强校验</div>
       </div>
     </div>
   </div>
 
   <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:0.65rem 1rem; font-size:0.8rem; color:#1e40af; margin-bottom:0.75rem; display:flex; align-items:center; gap:0.5rem;">
     <svg class="icon-svg" viewBox="0 0 24 24" style="color:#2563eb;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-    <span><strong>死信保护机制说明：</strong>当隔离网摆渡的数据 Zip 包遇到文件破损、HMAC 签名不匹配或 MD5 摘要校验失败时，系统将自动隔离至该目录保护主业务通道。修正后可点击【重试解包】。</span>
+    <span><strong>死信保护机制说明：</strong>当隔离网摆渡的数据 Zip 包遇到文件破损、HMAC 签名不匹配或 SHA-256 摘要校验失败时，系统将自动隔离至该目录保护主业务通道。修正后可点击【重试解包】。</span>
   </div>
   <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:1rem;">展示校验失败、签名不匹配或损坏的隔离摆渡包</p>
 

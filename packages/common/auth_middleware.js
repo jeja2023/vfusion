@@ -9,6 +9,7 @@ const crypto = require('crypto');
  */
 
 const TOKEN_TTL_MS = 12 * 60 * 60 * 1000; // 12 小时
+const ASSET_TOKEN_TTL_MS = 10 * 60 * 1000; // 10 分钟，仅用于受保护图片
 
 let tokenSecret = crypto.randomBytes(32).toString('hex');
 
@@ -23,13 +24,16 @@ function getTokenSecret() {
 /**
  * 生成带过期时间的 HMAC 签名 Token
  */
-function generateToken(user) {
+function generateToken(user, options = {}) {
+  const ttlMs = Number.isFinite(options.ttlMs) && options.ttlMs > 0 ? options.ttlMs : TOKEN_TTL_MS;
   const payload = {
     id: user.id,
     username: user.username,
     role: user.role,
+    aud: options.audience || 'vfusion',
+    scope: options.scope || 'api',
     iat: Date.now(),
-    exp: Date.now() + TOKEN_TTL_MS
+    exp: Date.now() + ttlMs
   };
   const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
   const sig = crypto.createHmac('sha256', getTokenSecret()).update(body).digest('base64url');
@@ -39,7 +43,7 @@ function generateToken(user) {
 /**
  * 校验 Token，返回 payload 或 null
  */
-function verifyToken(tokenStr) {
+function verifyToken(tokenStr, options = {}) {
   if (typeof tokenStr !== 'string' || !tokenStr.includes('.')) return null;
   const [body, sig, extra] = tokenStr.split('.');
   if (!body || !sig || extra) return null;
@@ -54,6 +58,11 @@ function verifyToken(tokenStr) {
   try {
     const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
     if (typeof payload.iat !== 'number' || typeof payload.exp !== 'number' || payload.iat > Date.now() + 5000 || Date.now() > payload.exp) return null;
+    if (options.audience && payload.aud !== options.audience) return null;
+    const allowedScopes = Array.isArray(options.allowedScopes) && options.allowedScopes.length > 0
+      ? options.allowedScopes
+      : ['api'];
+    if (!allowedScopes.includes(payload.scope || 'api')) return null;
     return payload;
   } catch (e) {
     return null;
@@ -68,7 +77,14 @@ function verifyToken(tokenStr) {
  * @param {string[]} [opts.publicPaths] skipPaths 的别名，便于按端命名习惯调用
  */
 function authMiddleware(opts = {}) {
-  const { loadUser, skipPaths = [], publicPaths = [] } = opts;
+  const {
+    loadUser,
+    skipPaths = [],
+    publicPaths = [],
+    audience,
+    allowedScopes = ['api'],
+    allowQueryToken = false
+  } = opts;
   const exempt = new Set([...skipPaths, ...publicPaths]);
 
   return async (req, res, next) => {
@@ -84,9 +100,9 @@ function authMiddleware(opts = {}) {
     if (urlPath === '/api/auth/login' || urlPath === '/auth/login' || exempt.has(urlPath)) return next();
 
     const header = req.headers.authorization || '';
-    const queryToken = req.query && (req.query.access_token || req.query.token);
+    const queryToken = allowQueryToken && req.query && (req.query.access_token || req.query.token);
     const token = header.startsWith('Bearer ') ? header.slice(7) : (typeof queryToken === 'string' ? queryToken : null);
-    const decoded = verifyToken(token);
+    const decoded = verifyToken(token, { audience, allowedScopes });
 
     if (!decoded) {
       return res.status(401).json({ success: false, error: '未登录或 Token 已失效，请重新登录' });
@@ -112,7 +128,11 @@ function authMiddleware(opts = {}) {
 }
 
 function assetAuthMiddleware(opts = {}) {
-  return authMiddleware(opts);
+  return authMiddleware({
+    ...opts,
+    allowQueryToken: true,
+    allowedScopes: ['api', 'asset']
+  });
 }
 
 /**
@@ -120,7 +140,8 @@ function assetAuthMiddleware(opts = {}) {
  */
 function requireRole(...roles) {
   return (req, res, next) => {
-    const role = req.user && req.user.role;
+    const rawRole = req.user && req.user.role;
+    const role = rawRole === 'user' ? 'operator' : rawRole;
     if (role === 'admin' || roles.includes(role)) return next();
     return res.status(403).json({ success: false, error: '权限不足: 该操作需要管理员权限' });
   };
@@ -134,5 +155,6 @@ module.exports = {
   authMiddleware,
   assetAuthMiddleware,
   requireRole,
-  TOKEN_TTL_MS
+  TOKEN_TTL_MS,
+  ASSET_TOKEN_TTL_MS
 };

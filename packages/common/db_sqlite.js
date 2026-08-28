@@ -57,6 +57,8 @@ class SQLiteStorageEngine {
           task_code TEXT,
           timestamp TEXT,
           operator TEXT,
+          operator_username TEXT,
+          operator_name TEXT,
           payload TEXT,
           files TEXT,
           zip_hash TEXT,
@@ -69,6 +71,8 @@ class SQLiteStorageEngine {
       // 平滑数据库迁移：补全 task_name 和 task_code 字段
       this.db.run(`ALTER TABLE events ADD COLUMN task_name TEXT`, () => {});
       this.db.run(`ALTER TABLE events ADD COLUMN task_code TEXT`, () => {});
+      this.db.run(`ALTER TABLE events ADD COLUMN operator_username TEXT`, () => {});
+      this.db.run(`ALTER TABLE events ADD COLUMN operator_name TEXT`, () => {});
 
       // 2. 系统安全审计日志表
       this.db.run(`
@@ -161,6 +165,8 @@ class SQLiteStorageEngine {
       task_code: record.task_code || 'TASK_DEFAULT',
       timestamp: record.timestamp,
       operator: record.operator,
+      operator_username: record.operator_username || '',
+      operator_name: record.operator_name || '',
       payload: record.payload || {},
       files: record.files || [],
       zip_hash: record.zip_hash || '',
@@ -179,16 +185,17 @@ class SQLiteStorageEngine {
     }
     const operation = () => new Promise((resolve, reject) => {
       this.db.serialize(() => this.db.run(`
-        INSERT INTO events (id, app_id, biz_type, event_id, task_name, task_code, timestamp, operator, payload, files, zip_hash, signature, ai_tags, status, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO events (id, app_id, biz_type, event_id, task_name, task_code, timestamp, operator, operator_username, operator_name, payload, files, zip_hash, signature, ai_tags, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(event_id) DO UPDATE SET
           app_id=excluded.app_id, biz_type=excluded.biz_type, task_name=excluded.task_name,
           task_code=excluded.task_code, timestamp=excluded.timestamp, operator=excluded.operator,
+          operator_username=excluded.operator_username, operator_name=excluded.operator_name,
           payload=excluded.payload, files=excluded.files, zip_hash=excluded.zip_hash,
           signature=excluded.signature, ai_tags=excluded.ai_tags, status=excluded.status,
           created_at=excluded.created_at
       `, [norm.id, norm.app_id, norm.biz_type, norm.event_id, norm.task_name, norm.task_code, norm.timestamp, norm.operator,
-        JSON.stringify(norm.payload), JSON.stringify(norm.files), norm.zip_hash, norm.signature, JSON.stringify(norm.ai_tags), norm.status, norm.created_at], function (err) {
+        norm.operator_username, norm.operator_name, JSON.stringify(norm.payload), JSON.stringify(norm.files), norm.zip_hash, norm.signature, JSON.stringify(norm.ai_tags), norm.status, norm.created_at], function (err) {
         if (err) return reject(err);
         resolve(norm);
       }));
@@ -199,7 +206,7 @@ class SQLiteStorageEngine {
 
   // 查询事件单据列表
   getEvents(appId = null, options = {}) {
-    const limit = Math.min(Math.max(Number(options.limit) || 1000, 1), 5000);
+    const limit = Math.min(Math.max(Number(options.limit) || 1000, 1), 100000);
     const offset = Math.max(Number(options.offset) || 0, 0);
     const taskCode = options.taskCode || null;
     return new Promise((resolve) => {
@@ -229,17 +236,104 @@ class SQLiteStorageEngine {
 
   getFallbackEvents(appId = null, options = {}) {
     try {
-      const jsonPath = `${this.dbPath}.fallback.json`;
-      if (fs.existsSync(jsonPath)) {
-        let list = this.parseJson(fs.readFileSync(jsonPath, 'utf8'), []);
+      let list = this.getAllFallbackEvents();
+      if (list.length > 0) {
         if (appId) list = list.filter(e => e.app_id === appId);
         if (options.taskCode) list = list.filter(e => e.task_code === options.taskCode);
-        const limit = Math.min(Math.max(Number(options.limit) || 1000, 1), 5000);
+        const limit = Math.min(Math.max(Number(options.limit) || 1000, 1), 100000);
         const offset = Math.max(Number(options.offset) || 0, 0);
         return list.slice(offset, offset + limit);
       }
     } catch (e) {}
     return [];
+  }
+
+  getAllFallbackEvents() {
+    try {
+      const jsonPath = `${this.dbPath}.fallback.json`;
+      return fs.existsSync(jsonPath) ? this.parseJson(fs.readFileSync(jsonPath, 'utf8'), []) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  getEventByEventId(eventId) {
+    if (!eventId) return Promise.resolve(null);
+    return new Promise((resolve) => {
+      if (this.isNative && this.db) {
+        this.pendingWrites.then(() => this.db.get('SELECT * FROM events WHERE event_id = ?', [eventId], (err, row) => {
+          if (err || !row) return resolve(this.getAllFallbackEvents().find(event => event.event_id === eventId) || null);
+          resolve({ ...row, payload: this.parseJson(row.payload, {}), files: this.parseJson(row.files, []), ai_tags: this.parseJson(row.ai_tags, []) });
+        })).catch(() => resolve(null));
+      } else {
+        resolve(this.getAllFallbackEvents().find(event => event.event_id === eventId) || null);
+      }
+    });
+  }
+
+  getEventByHash(zipHash) {
+    if (!zipHash) return Promise.resolve(null);
+    return new Promise((resolve) => {
+      if (this.isNative && this.db) {
+        this.pendingWrites.then(() => this.db.get('SELECT event_id, zip_hash FROM events WHERE zip_hash = ? LIMIT 1', [zipHash], (err, row) => {
+          if (err || !row) return resolve(this.getAllFallbackEvents().find(event => event.zip_hash === zipHash) || null);
+          resolve(row);
+        })).catch(() => resolve(null));
+      } else {
+        resolve(this.getAllFallbackEvents().find(event => event.zip_hash === zipHash) || null);
+      }
+    });
+  }
+
+  getEventCount() {
+    return new Promise((resolve) => {
+      if (this.isNative && this.db) {
+        this.pendingWrites.then(() => this.db.get('SELECT COUNT(*) AS count FROM events', [], (err, row) => {
+          resolve(err ? this.getAllFallbackEvents().length : Number(row && row.count) || 0);
+        })).catch(() => resolve(0));
+      } else {
+        resolve(this.getAllFallbackEvents().length);
+      }
+    });
+  }
+
+  getTaskStats() {
+    return new Promise((resolve) => {
+      if (this.isNative && this.db) {
+        const sql = `SELECT task_code, COUNT(*) AS event_count, MAX(timestamp) AS latest_timestamp,
+          GROUP_CONCAT(DISTINCT operator) AS contributors, SUM(COALESCE(json_array_length(files), 0)) AS photo_count
+          FROM events GROUP BY task_code`;
+        this.pendingWrites.then(() => this.db.all(sql, [], (err, rows) => {
+          if (err) return resolve(this.getFallbackTaskStats());
+          const result = {};
+          for (const row of rows || []) {
+            result[row.task_code || 'TASK_DEFAULT'] = {
+              event_count: Number(row.event_count) || 0,
+              photo_count: Number(row.photo_count) || 0,
+              contributors: row.contributors ? String(row.contributors).split(',') : [],
+              latest_timestamp: row.latest_timestamp
+            };
+          }
+          resolve(result);
+        })).catch(() => resolve(this.getFallbackTaskStats()));
+      } else {
+        resolve(this.getFallbackTaskStats());
+      }
+    });
+  }
+
+  getFallbackTaskStats() {
+    const result = {};
+    for (const event of this.getAllFallbackEvents()) {
+      const code = event.task_code || 'TASK_DEFAULT';
+      const stat = result[code] || { event_count: 0, photo_count: 0, contributors: [], latest_timestamp: event.timestamp || event.created_at };
+      stat.event_count += 1;
+      stat.photo_count += Array.isArray(event.files) ? event.files.length : 0;
+      if (event.operator && !stat.contributors.includes(event.operator)) stat.contributors.push(event.operator);
+      if (new Date(event.timestamp) > new Date(stat.latest_timestamp)) stat.latest_timestamp = event.timestamp;
+      result[code] = stat;
+    }
+    return result;
   }
 
   // 写入审计日志
@@ -425,7 +519,16 @@ class SQLiteStorageEngine {
   // 删除任务
   deleteTask(taskCode) {
     if (this.isNative && this.db) {
-      const operation = () => new Promise((resolve, reject) => this.db.serialize(() => this.db.run('DELETE FROM tasks WHERE task_code = ?', [taskCode], err => err ? reject(err) : resolve(true))));
+      const operation = () => new Promise((resolve, reject) => this.db.serialize(() => {
+        this.db.run('BEGIN IMMEDIATE TRANSACTION');
+        this.db.run('DELETE FROM events WHERE task_code = ?', [taskCode], (eventErr) => {
+          if (eventErr) return this.db.run('ROLLBACK', () => reject(eventErr));
+          this.db.run('DELETE FROM tasks WHERE task_code = ?', [taskCode], (taskErr) => {
+            if (taskErr) return this.db.run('ROLLBACK', () => reject(taskErr));
+            this.db.run('COMMIT', commitErr => commitErr ? reject(commitErr) : resolve(true));
+          });
+        });
+      }));
       this.pendingWrites = this.pendingWrites.catch(() => {}).then(operation);
       return this.pendingWrites;
     }
@@ -436,13 +539,18 @@ class SQLiteStorageEngine {
           list = list.filter(x => x.task_code !== taskCode);
           this.writeFallback(jsonPath, list);
         }
+        const eventJsonPath = `${this.dbPath}.fallback.json`;
+        if (fs.existsSync(eventJsonPath)) {
+          const events = this.getAllFallbackEvents().filter(event => event.task_code !== taskCode);
+          this.writeFallback(eventJsonPath, events);
+        }
     } catch (e) { return Promise.reject(e); }
     return Promise.resolve(true);
   }
 
   // 获取任务下按时间顺序（Chronological Order）排列的所有图片
   async getTaskImages(taskCode = null, sortOrder = 'ASC') {
-    const events = await this.getEvents(null, { taskCode, limit: 5000 });
+    const events = await this.getEvents(null, { taskCode, limit: 100000 });
     const images = [];
     events.forEach(evt => {
       const files = evt.files || [];
@@ -486,7 +594,7 @@ class SQLiteStorageEngine {
 
   // 修改图片信息 (描述、地点、拍摄时间)
   async updateImageMetadata(imageId, updates = {}) {
-    const allEvents = await this.getEvents();
+    const allEvents = await this.getEvents(null, { limit: 100000 });
     let targetEvent = null;
     let targetFileIdx = -1;
 
@@ -520,7 +628,7 @@ class SQLiteStorageEngine {
 
   // 删除图片
   async deleteImage(imageId) {
-    const allEvents = await this.getEvents();
+    const allEvents = await this.getEvents(null, { limit: 100000 });
     let targetEvent = null;
 
     for (const evt of allEvents) {

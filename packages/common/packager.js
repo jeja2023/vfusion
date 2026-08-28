@@ -52,7 +52,7 @@ async function packEventPackage(options) {
     processedFiles.push({
       filename: f.filename,
       file_type: 'image',
-      md5: fileMd5
+      sha256: fileMd5
     });
     fileChecksumMap[`images/${f.filename}`] = fileMd5;
   }

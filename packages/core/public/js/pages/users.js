@@ -33,7 +33,7 @@ function renderUsers() {
     tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">暂无用户记录</td></tr>`;
     return;
   }
-  const roleMap = { admin: '管理员', user: '普通用户', operator: '普通用户', auditor: '普通用户' };
+  const roleMap = { admin: '管理员', operator: '业务操作员', auditor: '审计员', user: '业务操作员' };
   const paged = cachedUsersData.slice((usersCurrentPage - 1) * usersPageSize, usersCurrentPage * usersPageSize);
   tbody.innerHTML = paged.map((item, idx) => {
     const globalIdx = (usersCurrentPage - 1) * usersPageSize + idx + 1;
@@ -64,7 +64,7 @@ function openAddUserModal() {
   document.getElementById('newUsername').value = '';
   document.getElementById('newFullname').value = '';
   document.getElementById('newUserPwd').value = '';
-  document.getElementById('newUserRole').value = 'user';
+  document.getElementById('newUserRole').value = 'operator';
   const modal = document.getElementById('addUserModal');
   if (modal) modal.style.display = 'flex';
 }
@@ -113,7 +113,7 @@ function openEditUserModal(id) {
   document.getElementById('editUserId').value = user.id;
   document.getElementById('editUsername').value = user.username || '';
   document.getElementById('editFullname').value = user.name || '';
-  document.getElementById('editUserRole').value = user.role || 'user';
+  document.getElementById('editUserRole').value = user.role === 'user' ? 'operator' : (user.role || 'operator');
   document.getElementById('editUserStatus').value = user.status || 'ACTIVE';
   const modal = document.getElementById('editUserModal');
   if (modal) modal.style.display = 'flex';

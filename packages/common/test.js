@@ -89,14 +89,20 @@ async function runTest() {
   // 攻击 A: 篡改 payload 但保留原签名
   const tamperedInfo = { ...packResult.info, payload: { location: '被篡改的地点' } };
   const tamperedZip = path.join(outDir, 'attack_tampered.zip');
-  await buildMaliciousZip(tamperedZip, tamperedInfo);
+  await buildMaliciousZip(tamperedZip, tamperedInfo, {
+    'signature.sig': packResult.info.signature,
+    'images/001.jpg': fs.readFileSync(sampleImgPath)
+  });
   await expectReject('篡改 payload 后签名校验失败', () =>
     unpackAndVerifyPackage(tamperedZip, path.join(testDir, 'ex_a')));
 
   // 攻击 B: 完全自制的未签名包（signature 为空）
   const unsignedInfo = { ...packResult.info, signature: '', payload: { location: '伪造投放' } };
   const unsignedZip = path.join(outDir, 'attack_unsigned.zip');
-  await buildMaliciousZip(unsignedZip, unsignedInfo);
+  await buildMaliciousZip(unsignedZip, unsignedInfo, {
+    'signature.sig': '',
+    'images/001.jpg': fs.readFileSync(sampleImgPath)
+  });
   await expectReject('未签名的伪造包被拒绝', () =>
     unpackAndVerifyPackage(unsignedZip, path.join(testDir, 'ex_b')));
 
@@ -104,7 +110,10 @@ async function runTest() {
   const noSigInfo = { ...packResult.info, payload: { location: '伪造投放' } };
   delete noSigInfo.signature;
   const noSigZip = path.join(outDir, 'attack_nosig.zip');
-  await buildMaliciousZip(noSigZip, noSigInfo);
+  await buildMaliciousZip(noSigZip, noSigInfo, {
+    'signature.sig': '',
+    'images/001.jpg': fs.readFileSync(sampleImgPath)
+  });
   await expectReject('缺失 signature 字段的包被拒绝', () =>
     unpackAndVerifyPackage(noSigZip, path.join(testDir, 'ex_c')));
 

@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const unzipper = require('unzipper');
-const { md5String, md5File } = require('./checksum');
+const { md5String, md5File, md5StringLegacy, md5FileLegacy } = require('./checksum');
 const { verifyInfoSignature } = require('./protocol');
 const { isSafeFileName, isSafeIdentifier, resolveInside, getImageExtension, validateImageMagic } = require('./security_utils');
 
@@ -39,7 +39,7 @@ async function unpackAndVerifyPackage(zipFilePath, targetDir) {
   const zipFileHash = await md5File(zipFilePath);
   await inspectArchive(zipFilePath);
 
-  const extractDir = resolveInside(targetDir, `_tmp_${process.pid}_${Date.now()}_${crypto.randomBytes(6).toString('hex')}`);
+    const extractDir = resolveInside(targetDir, `_tmp_${process.pid}_${Date.now()}_${crypto.randomBytes(6).toString('hex')}`);
   fs.mkdirSync(extractDir, { recursive: true });
   let keepExtractDir = false;
 
@@ -62,7 +62,7 @@ async function unpackAndVerifyPackage(zipFilePath, targetDir) {
     if (!Array.isArray(infoJsonContent.files) || infoJsonContent.files.length > 200) fail('附件清单无效');
     const listedImageNames = new Set();
     for (const file of infoJsonContent.files) {
-      if (!file || !isSafeFileName(file.filename) || !/^[a-f0-9]{32}$/i.test(String(file.md5 || ''))) fail('附件清单字段无效');
+      if (!file || !isSafeFileName(file.filename) || !/^(?:[a-f0-9]{64}|[a-f0-9]{32})$/i.test(String(file.sha256 || file.md5 || ''))) fail('附件清单字段无效');
       if (listedImageNames.has(file.filename)) fail(`附件清单存在重复文件名: ${file.filename}`);
       listedImageNames.add(file.filename);
       const imagePath = resolveInside(extractDir, 'images', file.filename);
@@ -79,7 +79,7 @@ async function unpackAndVerifyPackage(zipFilePath, targetDir) {
     const checksumLines = checksumRaw.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
     const entries = new Map();
     for (const line of checksumLines) {
-      const match = line.match(/^([a-f0-9]{32})\s{2}(.+)$/i);
+      const match = line.match(/^([a-f0-9]{32}|[a-f0-9]{64})\s{2}(.+)$/i);
       if (!match) fail(`checksum.txt 条目格式无效: ${line}`);
       const expectedMd5 = match[1].toLowerCase();
       const relPath = match[2].replace(/\\/g, '/');
@@ -88,9 +88,10 @@ async function unpackAndVerifyPackage(zipFilePath, targetDir) {
       if (relPath.startsWith('images/') && !isSafeFileName(relPath.slice('images/'.length))) fail(`checksum.txt 图片路径无效: ${relPath}`);
       const actualFilePath = resolveInside(extractDir, relPath);
       if (!fs.existsSync(actualFilePath) || !fs.statSync(actualFilePath).isFile()) fail(`文件丢失: ${relPath}`);
+      const isLegacyMd5 = expectedMd5.length === 32;
       const actualMd5 = relPath === 'info.json' || relPath === 'signature.sig'
-        ? md5String(fs.readFileSync(actualFilePath, 'utf8'))
-        : await md5File(actualFilePath);
+        ? (isLegacyMd5 ? md5StringLegacy(fs.readFileSync(actualFilePath, 'utf8')) : md5String(fs.readFileSync(actualFilePath, 'utf8')))
+        : (isLegacyMd5 ? await md5FileLegacy(actualFilePath) : await md5File(actualFilePath));
       if (actualMd5.toLowerCase() !== expectedMd5) fail(`MD5 校验不一致: ${relPath}`);
       entries.set(relPath, expectedMd5);
     }
@@ -100,7 +101,7 @@ async function unpackAndVerifyPackage(zipFilePath, targetDir) {
       fail('checksum.txt 未完整覆盖 info.json、签名和全部附件');
     }
     for (const file of infoJsonContent.files) {
-      if (entries.get(`images/${file.filename}`) !== String(file.md5).toLowerCase()) fail(`附件摘要与 info.json 不一致: ${file.filename}`);
+      if (entries.get(`images/${file.filename}`) !== String(file.sha256 || file.md5).toLowerCase()) fail(`附件摘要与 info.json 不一致: ${file.filename}`);
     }
     const signatureContent = fs.readFileSync(signaturePath, 'utf8').trim();
     if (signatureContent !== infoJsonContent.signature) fail('signature.sig 与 info.json 签名不一致');

@@ -36,6 +36,8 @@ async function runTaskImagesTest() {
     status: 'ACTIVE'
   });
   check('任务创建成功', t1 && t1.task_code === 'TASK_TEST_001');
+  const taskStats = await storage.getTaskStats();
+  check('任务统计支持数据库聚合', taskStats && typeof taskStats === 'object');
 
   const updatedTask = await storage.updateTaskDetails('TASK_TEST_001', {
     task_name: '厂区智能安防巡检(已修改)',
@@ -142,6 +144,7 @@ async function runTaskImagesTest() {
   await storage.deleteTask('TASK_TEST_001');
   const deletedTaskQuery = await storage.getTaskByCode('TASK_TEST_001');
   check('任务已成功删除', deletedTaskQuery === null);
+  check('删除任务同时删除事件', (await storage.getEventByEventId('EVT_001')) === null);
 
   // 清理测试目录
   try {

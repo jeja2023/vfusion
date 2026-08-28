@@ -1,10 +1,11 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const crypto = require('crypto');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
 const pkg = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, 'package.json'), 'utf8'));
-const VERSION = pkg.version || '0.19.0';
+const VERSION = pkg.version || '0.20.0';
 
 const RELEASE_DIR = path.join(ROOT_DIR, 'release');
 const PATCH_DIR_NAME = `vfusion-patch-v${VERSION}`;
@@ -36,6 +37,16 @@ copyDirSync(path.join(ROOT_DIR, 'packages'), path.join(PATCH_DIR, 'packages'));
 fs.copyFileSync(path.join(ROOT_DIR, 'package.json'), path.join(PATCH_DIR, 'package.json'));
 fs.copyFileSync(path.join(ROOT_DIR, 'README.md'), path.join(PATCH_DIR, 'README.md'));
 fs.copyFileSync(path.join(ROOT_DIR, '更新日志.md'), path.join(PATCH_DIR, '更新日志.md'));
+
+const upgradeKey = process.env.VFUSION_UPGRADE_SIGNING_KEY;
+if (!upgradeKey || upgradeKey.length < 32) {
+  console.error('构建补丁包失败: 请设置 VFUSION_UPGRADE_SIGNING_KEY（至少 32 个字符），并将同一密钥配置到目标 storage/security.json');
+  process.exitCode = 1;
+  process.exit(1);
+}
+const manifest = JSON.stringify({ version: VERSION, generated_at: new Date().toISOString(), format: 1 }, null, 2);
+fs.writeFileSync(path.join(PATCH_DIR, 'upgrade_manifest.json'), manifest, 'utf8');
+fs.writeFileSync(path.join(PATCH_DIR, 'upgrade_manifest.sig'), crypto.createHmac('sha256', upgradeKey).update(manifest).digest('hex') + '\n', 'utf8');
 
 // 2. 打包成轻量 Zip 补丁
 try {

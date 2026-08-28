@@ -4,6 +4,7 @@ const crypto = require('crypto');
 
 const LOCK_WAIT_MS = 10;
 const LOCK_TIMEOUT_MS = 5000;
+const LOCK_STALE_MS = 30_000;
 
 function waitSync(ms) {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
@@ -15,6 +16,15 @@ function acquireLock(filePath) {
   while (Date.now() - started < LOCK_TIMEOUT_MS) {
     try { return { fd: fs.openSync(lockPath, 'wx'), lockPath }; } catch (e) {
       if (e.code !== 'EEXIST') throw e;
+      try {
+        const stat = fs.statSync(lockPath);
+        if (Date.now() - stat.mtimeMs > LOCK_STALE_MS) {
+          fs.unlinkSync(lockPath);
+          continue;
+        }
+      } catch (staleErr) {
+        if (staleErr.code !== 'ENOENT') throw staleErr;
+      }
       waitSync(LOCK_WAIT_MS);
     }
   }

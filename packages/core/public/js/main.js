@@ -18,8 +18,11 @@ function escapeHtml(value) {
 function escapeJsString(value) {
   if (value === null || value === undefined) return '';
   return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
     .replace(/\\/g, '\\\\')
-    .replace(/'/g, "\\'")
+    .replace(/'/g, "\\&#39;")
     .replace(/"/g, '&quot;')
     .replace(/</g, '\\u003c')
     .replace(/\r?\n/g, '\\n');
@@ -65,7 +68,7 @@ function getAuthToken() {
 function assetUrl(url) {
   const value = String(url || '');
   if (!/^\/(?:assets|collector-assets)\//.test(value)) return value;
-  const token = getAuthToken();
+  const token = localStorage.getItem('vfusion_core_asset_token') || '';
   return token ? `${value}${value.includes('?') ? '&' : '?'}access_token=${encodeURIComponent(token)}` : value;
 }
 
@@ -230,6 +233,14 @@ function closePersonDetailModal() {
 async function checkAuth() {
   const storedUser = localStorage.getItem('vfusion_user');
   if (storedUser) {
+    try {
+      const tokenRes = await apiFetch('/api/auth/asset-token');
+      const tokenJson = await tokenRes.json();
+      if (tokenJson.success) {
+        localStorage.setItem('vfusion_core_asset_token', tokenJson.data.token);
+        setTimeout(() => checkAuth(), Math.max(30_000, (tokenJson.data.expires_in - 30) * 1000));
+      }
+    } catch (e) {}
     currentUser = JSON.parse(storedUser);
     document.getElementById('loginOverlay').style.display = 'none';
     document.getElementById('userInfoTag').innerText = formatUserWithRealName(currentUser.username, currentUser.name);
@@ -279,6 +290,7 @@ async function handleLogin(e) {
 function handleLogout() {
   localStorage.removeItem('vfusion_user');
   localStorage.removeItem('vfusion_token');
+  localStorage.removeItem('vfusion_core_asset_token');
   currentUser = null;
   document.getElementById('loginOverlay').style.display = 'flex';
   showToast('已安全退出');
@@ -290,9 +302,14 @@ function applyRolePermissions() {
 
   const usersBtn = document.getElementById('tabBtn-users');
   const systemBtn = document.getElementById('tabBtn-system');
+  const auditsBtn = document.getElementById('tabBtn-audits');
+  const personnelBtn = document.getElementById('tabBtn-personnel');
+  const canAudit = isAdmin || currentUser.role === 'auditor';
 
   if (usersBtn) usersBtn.style.display = isAdmin ? 'inline-flex' : 'none';
   if (systemBtn) systemBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+  if (auditsBtn) auditsBtn.style.display = canAudit ? 'inline-flex' : 'none';
+  if (personnelBtn) personnelBtn.style.display = canAudit ? 'inline-flex' : 'none';
 }
 
 async function loadAlerts() {
@@ -480,7 +497,7 @@ function openEventDrawer(eventId) {
           <div style="font-family:monospace; font-size:0.725rem; color:#0369a1; background:#f0f9ff; padding:0.4rem 0.6rem; border-radius:6px; border:1px solid #bae6fd; word-break:break-all;">${escapeHtml(evt.signature || '未签名')}</div>
         </div>
         <div>
-          <div style="font-size:0.725rem; color:#64748b; margin-bottom:0.2rem;">包摘要校验和 (MD5 / ZIP Hash)</div>
+          <div style="font-size:0.725rem; color:#64748b; margin-bottom:0.2rem;">包摘要校验和 (SHA-256 / ZIP Hash)</div>
           <div style="font-family:monospace; font-size:0.725rem; color:#334155; background:#f8fafc; padding:0.4rem 0.6rem; border-radius:6px; border:1px solid #e2e8f0; word-break:break-all;">${escapeHtml(evt.zip_hash || '-')}</div>
         </div>
       </div>

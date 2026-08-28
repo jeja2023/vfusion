@@ -5,7 +5,7 @@ const iconv = require('iconv-lite');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
 const pkg = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, 'package.json'), 'utf8'));
-const VERSION = pkg.version || '0.19.0';
+const VERSION = pkg.version || '0.20.0';
 
 const RELEASE_DIR = path.join(ROOT_DIR, 'release');
 
@@ -283,6 +283,7 @@ try { fs.copyFileSync(process.execPath, path.join(collectorDir, 'node.exe')); } 
 fs.copyFileSync(path.join(ROOT_DIR, 'package.json'), path.join(collectorDir, 'package.json'));
 fs.copyFileSync(path.join(ROOT_DIR, 'README.md'), path.join(collectorDir, 'README.md'));
 fs.copyFileSync(path.join(ROOT_DIR, '更新日志.md'), path.join(collectorDir, '更新日志.md'));
+if (fs.existsSync(path.join(ROOT_DIR, '.env.example'))) fs.copyFileSync(path.join(ROOT_DIR, '.env.example'), path.join(collectorDir, '.env.example'));
 
 writeBatFileSync(path.join(collectorDir, '启动视频网发布终端.bat'), batCollectorRun);
 writeBatFileSync(path.join(collectorDir, '一键无损升级-视频网发布终端.bat'), batCollectorUpgrade);
@@ -309,6 +310,7 @@ try { fs.copyFileSync(process.execPath, path.join(coreDir, 'node.exe')); } catch
 fs.copyFileSync(path.join(ROOT_DIR, 'package.json'), path.join(coreDir, 'package.json'));
 fs.copyFileSync(path.join(ROOT_DIR, 'README.md'), path.join(coreDir, 'README.md'));
 fs.copyFileSync(path.join(ROOT_DIR, '更新日志.md'), path.join(coreDir, '更新日志.md'));
+if (fs.existsSync(path.join(ROOT_DIR, '.env.example'))) fs.copyFileSync(path.join(ROOT_DIR, '.env.example'), path.join(coreDir, '.env.example'));
 
 writeBatFileSync(path.join(coreDir, '启动内网数据中台.bat'), batCoreRun);
 writeBatFileSync(path.join(coreDir, '一键无损升级-内网数据中台.bat'), batCoreUpgrade);
@@ -334,6 +336,7 @@ try { fs.copyFileSync(process.execPath, path.join(allDir, 'node.exe')); } catch 
 fs.copyFileSync(path.join(ROOT_DIR, 'package.json'), path.join(allDir, 'package.json'));
 fs.copyFileSync(path.join(ROOT_DIR, 'README.md'), path.join(allDir, 'README.md'));
 fs.copyFileSync(path.join(ROOT_DIR, '更新日志.md'), path.join(allDir, '更新日志.md'));
+if (fs.existsSync(path.join(ROOT_DIR, '.env.example'))) fs.copyFileSync(path.join(ROOT_DIR, '.env.example'), path.join(allDir, '.env.example'));
 
 writeBatFileSync(path.join(allDir, '一键双端双开启动.bat'), batAllRun);
 writeBatFileSync(path.join(allDir, '启动视频网发布终端.bat'), batCollectorRun);

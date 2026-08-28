@@ -75,7 +75,8 @@ async function validateHttpUrlResolved(value) {
   const result = validateHttpUrl(value);
   if (!result.valid) return result;
   const hostname = result.url.hostname.replace(/[\[\]]/g, '');
-  if (net.isIP(hostname)) return { ...result, addresses: [{ address: hostname, family: ipVersion }] };
+  const literalFamily = net.isIP(hostname);
+  if (literalFamily) return { ...result, addresses: [{ address: hostname, family: literalFamily }] };
   try {
     const addresses = await dns.lookup(hostname, { all: true, verbatim: true });
     if (!addresses.length || addresses.some(record => isPrivateAddress(record.address))) {

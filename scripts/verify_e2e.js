@@ -147,7 +147,7 @@ async function testE2E() {
   console.log(' -> 网闸摆渡动作处理完成:', diodeRes.message || '完成');
 
   // 5. 等待内网扫描循环 (3秒) 解包入库
-  console.log('\n[4/4] 等待内网 Core 自动轮询解包、MD5 校验与入库...');
+  console.log('\n[4/4] 等待内网 Core 自动轮询解包、SHA-256 校验与入库...');
   await new Promise(r => setTimeout(r, 4000));
 
   // 6. 查询内网事件列表 (http://localhost:5002/api/events)
@@ -180,7 +180,7 @@ async function testE2E() {
     console.log(` - 发生地点: ${latest.payload ? latest.payload.location : '未填'}`);
     console.log(` - 交通方式: ${latest.payload ? latest.payload.transportation : '未填'}`);
     console.log(` - 照片附件: ${Array.isArray(latest.files) ? latest.files.map(f => f.url).join(', ') : '无'}`);
-    console.log(` - 包 Hash (Zip MD5): ${latest.zip_hash}`);
+  console.log(` - 包 Hash (Zip SHA-256): ${latest.zip_hash}`);
   }
 
   // 清理临时样本文件

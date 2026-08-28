@@ -13,7 +13,14 @@ function escapeHtml(value) {
 
 function escapeJsString(str) {
   if (!str) return '';
-  return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\&#39;")
+    .replace(/"/g, '&quot;')
+    .replace(/\r?\n/g, '\\n');
 }
 
 function formatUserForTable(val, nameFallback) {
@@ -56,7 +63,7 @@ function getAuthToken() {
 function assetUrl(url) {
   const value = String(url || '');
   if (!/^\/(?:assets|collector-assets)\//.test(value)) return value;
-  const token = getAuthToken();
+  const token = localStorage.getItem('vfusion_collector_asset_token') || '';
   return token ? `${value}${value.includes('?') ? '&' : '?'}access_token=${encodeURIComponent(token)}` : value;
 }
 
@@ -198,6 +205,14 @@ function showToast(message, type = 'success') {
 async function checkAuth() {
   const storedUser = localStorage.getItem('vfusion_collector_user');
   if (storedUser) {
+    try {
+      const tokenRes = await apiFetch('/api/auth/asset-token');
+      const tokenJson = await tokenRes.json();
+      if (tokenJson.success) {
+        localStorage.setItem('vfusion_collector_asset_token', tokenJson.data.token);
+        setTimeout(() => checkAuth(), Math.max(30_000, (tokenJson.data.expires_in - 30) * 1000));
+      }
+    } catch (e) {}
     currentUser = JSON.parse(storedUser);
     document.getElementById('loginOverlay').style.display = 'none';
     document.getElementById('userInfoTag').innerText = formatUserWithRealName(currentUser.username, currentUser.name);
@@ -268,6 +283,7 @@ async function handleLogin(e) {
 function handleLogout() {
   localStorage.removeItem('vfusion_collector_user');
   localStorage.removeItem('vfusion_collector_token');
+  localStorage.removeItem('vfusion_collector_asset_token');
   currentUser = null;
   document.getElementById('loginOverlay').style.display = 'flex';
   showToast('已安全退出');

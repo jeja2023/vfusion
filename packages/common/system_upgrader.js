@@ -7,6 +7,17 @@ const { resolveInside, isSafeFileName } = require('./security_utils');
 const MAX_UPGRADE_BYTES = 200 * 1024 * 1024;
 const MAX_UPGRADE_ENTRIES = 2000;
 
+function getUpgradeSigningKey(storageRoot) {
+  if (process.env.VFUSION_UPGRADE_SIGNING_KEY) return process.env.VFUSION_UPGRADE_SIGNING_KEY;
+  try {
+    const securityPath = path.join(storageRoot, 'security.json');
+    const security = JSON.parse(fs.readFileSync(securityPath, 'utf8'));
+    return security.upgrade_signing_key || security.hmac_secret || '';
+  } catch (e) {
+    return '';
+  }
+}
+
 async function validateUpgradeArchive(zipFilePath) {
   const stat = fs.statSync(zipFilePath);
   if (!stat.isFile() || stat.size > MAX_UPGRADE_BYTES) throw new Error('升级补丁包超过 200MB 限制');
@@ -14,6 +25,8 @@ async function validateUpgradeArchive(zipFilePath) {
   if (directory.files.length > MAX_UPGRADE_ENTRIES) throw new Error('升级补丁包文件数量超限');
   let total = 0;
   let packageCount = 0;
+  let hasManifest = false;
+  let hasSignature = false;
   for (const entry of directory.files) {
     const name = String(entry.path || '').replace(/\\/g, '/');
     if (!name || name.startsWith('/') || name.includes('\0') || name.split('/').some(part => part === '..')) {
@@ -23,18 +36,21 @@ async function validateUpgradeArchive(zipFilePath) {
     const parts = name.replace(/\/$/, '').split('/');
     const isPackageFile = name.startsWith('packages/') || name.includes('/packages/');
     const baseName = parts[parts.length - 1];
-    const isTopLevelMetadata = (parts.length === 1 || parts.length === 2) && (baseName === 'package.json' || baseName.startsWith('README') || baseName.startsWith('更新日志') || baseName.toLowerCase().endsWith('.md'));
+    const isTopLevelMetadata = (parts.length === 1 || parts.length === 2) && (baseName === 'package.json' || baseName === 'upgrade_manifest.json' || baseName === 'upgrade_manifest.sig' || baseName.startsWith('README') || baseName.startsWith('更新日志') || baseName.toLowerCase().endsWith('.md'));
     const isRootDirectory = entry.type === 'Directory' && parts.length === 1;
     if (!isPackageFile && !isTopLevelMetadata && !isRootDirectory) {
       throw new Error(`升级补丁包含未授权文件: ${name}`);
     }
     if (entry.type === 'File') {
+      if ((parts.length === 1 || parts.length === 2) && baseName === 'upgrade_manifest.json') hasManifest = true;
+      if ((parts.length === 1 || parts.length === 2) && baseName === 'upgrade_manifest.sig') hasSignature = true;
       total += Number(entry.uncompressedSize || 0);
       if (total > 500 * 1024 * 1024) throw new Error('升级补丁解压后超过 500MB 限制');
       if (name.startsWith('packages/') || name.includes('/packages/')) packageCount++;
     }
   }
   if (!packageCount) throw new Error('无效的升级补丁包: 未找到 packages 文件');
+  if (!hasManifest || !hasSignature) throw new Error('升级补丁必须包含签名清单 upgrade_manifest.json 与 upgrade_manifest.sig');
 }
 
 /**
@@ -74,6 +90,30 @@ async function performOnlineUpgrade(zipFilePath, storageRoot, appRootDir) {
       .pipe(unzipper.Extract({ path: tempExtractDir }))
       .promise();
 
+    let manifestPath = resolveInside(tempExtractDir, 'upgrade_manifest.json');
+    let signaturePath = resolveInside(tempExtractDir, 'upgrade_manifest.sig');
+    if (!fs.existsSync(manifestPath) || !fs.existsSync(signaturePath)) {
+      const roots = fs.readdirSync(tempExtractDir, { withFileTypes: true }).filter(entry => entry.isDirectory());
+      for (const root of roots) {
+        const candidateManifest = resolveInside(tempExtractDir, root.name, 'upgrade_manifest.json');
+        const candidateSignature = resolveInside(tempExtractDir, root.name, 'upgrade_manifest.sig');
+        if (fs.existsSync(candidateManifest) && fs.existsSync(candidateSignature)) {
+          manifestPath = candidateManifest;
+          signaturePath = candidateSignature;
+          break;
+        }
+      }
+    }
+    {
+      if (!fs.existsSync(manifestPath) || !fs.existsSync(signaturePath)) throw new Error('升级补丁签名清单不完整');
+      const manifestRaw = fs.readFileSync(manifestPath, 'utf8');
+      const key = getUpgradeSigningKey(storageRoot);
+      if (!key) throw new Error('未配置升级补丁签名密钥');
+      const expected = crypto.createHmac('sha256', key).update(manifestRaw).digest('hex');
+      const actual = fs.readFileSync(signaturePath, 'utf8').trim();
+      if (!/^[a-f0-9]{64}$/i.test(actual) || !crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(actual))) throw new Error('升级补丁签名校验失败');
+    }
+
     // 尝试寻找 packages 目录（可能是压缩在根路径下，或者在子目录中）
     let sourcePackagesDir = path.join(tempExtractDir, 'packages');
     if (!fs.existsSync(sourcePackagesDir)) {
@@ -100,8 +140,8 @@ async function performOnlineUpgrade(zipFilePath, storageRoot, appRootDir) {
     if (fs.existsSync(storageRoot)) {
       const files = fs.readdirSync(storageRoot);
       for (const f of files) {
-        if (f.endsWith('.db') || f.endsWith('.json')) {
-        fs.copyFileSync(resolveInside(storageRoot, f), resolveInside(backupDir, f));
+        if (f.endsWith('.db') || f.endsWith('.db-wal') || f.endsWith('.db-shm') || f.endsWith('.json')) {
+          fs.copyFileSync(resolveInside(storageRoot, f), resolveInside(backupDir, f));
         }
       }
     }

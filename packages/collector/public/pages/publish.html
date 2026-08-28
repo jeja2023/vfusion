@@ -22,7 +22,7 @@
             <div class="upload-zone-prompt" id="uploadPrompt">
               <svg class="upload-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               <p style="font-size:0.925rem; font-weight:600; color:var(--text-main);">点击或拖拽上传图片</p>
-              <p style="font-size:0.775rem; color:var(--text-muted); margin-top:4px;">支持 JPG / PNG，自动签署 MD5 与数字签名</p>
+              <p style="font-size:0.775rem; color:var(--text-muted); margin-top:4px;">支持 JPG / PNG，自动计算 SHA-256 摘要并生成数字签名</p>
             </div>
             <div id="uploadPreviewContent" style="display:none; width:100%; height:100%; position:relative;"></div>
             <input type="file" id="photoInput" name="images" accept="image/*" style="display:none;" onchange="handleFileSelect(event)">

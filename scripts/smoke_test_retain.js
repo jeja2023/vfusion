@@ -145,7 +145,7 @@ async function runSmokeTest() {
   fs.copyFileSync(packResult.zipPath, archiveZipPath); // 模拟网闸单向传输
 
   const unpackResult = await unpackAndVerifyPackage(archiveZipPath, ASSETS_DIR);
-  console.log(' -> 内网验签解包成功: HMAC 数字签名与 MD5 校验和 100% 匹配!');
+  console.log(' -> 内网验签解包成功: HMAC 数字签名与 SHA-256 校验和 100% 匹配!');
 
   // 将解压照片移动到内网端静态资源库
   const coreEventAssetDir = path.join(ASSETS_DIR, eventId);

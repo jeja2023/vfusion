@@ -4,7 +4,13 @@ After=network.target
 
 [Service]
 Type=simple
-User=root
+User=vfusion
+Group=vfusion
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/vfusion/storage /opt/vfusion/packages
 WorkingDirectory=/opt/vfusion
 ExecStart=/usr/bin/node /opt/vfusion/packages/collector/server.js
 Restart=always

@@ -8,7 +8,7 @@ const { unpackAndVerifyPackage } = require('../packages/common/unpacker');
 const { uploadToRemoteFtp, downloadFromRemoteFtp } = require('../packages/common/ftp_client');
 
 console.log('================================================================');
-console.log('   视汇 (VFusion v0.19.0) 端到端 (E2E) 全流程真实性检测脚本');
+console.log('   视汇 (VFusion v0.20.0) 端到端 (E2E) 全流程真实性检测脚本');
 console.log('================================================================\n');
 
 const STORAGE_ROOT = path.resolve(__dirname, '../storage');
@@ -90,7 +90,7 @@ async function runE2ETest() {
     console.error('  ✕ 摆渡包复制到内网接收目录失败');
   }
 
-  console.log('\n[步骤 4/6] 内网数据中台解包、校验 MD5 摘要与 64 位 HMAC 数字签名...');
+  console.log('\n[步骤 4/6] 内网数据中台解包、校验 SHA-256 摘要与 64 位 HMAC 数字签名...');
   let unpackResult = null;
   try {
     unpackResult = await unpackAndVerifyPackage(destJpgPath, ASSETS_DIR);

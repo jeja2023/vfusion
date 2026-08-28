@@ -126,7 +126,7 @@ function nextTaskPage() { taskCurrentPage++; renderTaskCards(); }
 
 function escapeJsString(str) {
   if (!str) return '';
-  return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\\/g, '\\\\').replace(/'/g, "\\&#39;").replace(/"/g, '&quot;').replace(/\r?\n/g, '\\n');
 }
 
 function openCreateTaskModal() {

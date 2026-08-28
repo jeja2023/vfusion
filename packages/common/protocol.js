@@ -65,7 +65,7 @@ function verifyHmacSignature(dataStr, signature, customSecret = null) {
 }
 
 function encryptPayload(payloadObj, secretKey = null) {
-  const secret = (secretKey || DEFAULT_HMAC_SECRET).padEnd(32, '0').slice(0, 32);
+  const secret = crypto.createHash('sha256').update(String(secretKey || DEFAULT_HMAC_SECRET)).digest();
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv('aes-256-gcm', Buffer.from(secret), iv);
   let encrypted = cipher.update(JSON.stringify(payloadObj), 'utf8', 'hex');
@@ -79,8 +79,8 @@ function encryptPayload(payloadObj, secretKey = null) {
 }
 
 function decryptPayload(encryptedObj, secretKey = null) {
-  const secret = (secretKey || DEFAULT_HMAC_SECRET).padEnd(32, '0').slice(0, 32);
-  const decipher = crypto.createDecipheriv('aes-256-gcm', Buffer.from(secret), Buffer.from(encryptedObj.iv, 'hex'));
+  const secret = crypto.createHash('sha256').update(String(secretKey || DEFAULT_HMAC_SECRET)).digest();
+  const decipher = crypto.createDecipheriv('aes-256-gcm', secret, Buffer.from(encryptedObj.iv, 'hex'));
   decipher.setAuthTag(Buffer.from(encryptedObj.auth_tag, 'hex'));
   let decrypted = decipher.update(encryptedObj.ciphertext, 'hex', 'utf8');
   decrypted += decipher.final('utf8');

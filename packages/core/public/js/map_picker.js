@@ -202,7 +202,7 @@
     }
   }
 
-  function clearMapPin() {
+  function clearMapPickerPin() {
     currentLng = null;
     currentLat = null;
     const lngEl = document.getElementById('mapPickerLngDisplay');
@@ -216,6 +216,10 @@
       mapInstance.removeLayer(activeMarker);
       activeMarker = null;
     }
+  }
+
+  function clearMapPin() {
+    clearMapPickerPin();
   }
 
   async function loadExistingMonitoringPointsOnMap() {
@@ -235,7 +239,7 @@
                 <strong style="color:#1e293b; font-size:0.82rem;">${escapeHtml(p.name)}</strong><br>
                 <span style="color:#64748b;">编号: <code>${escapeHtml(p.point_id)}</code></span><br>
                 <span style="color:#0284c7;">坐标: ${p.longitude}, ${p.latitude}</span><br>
-                <button type="button" style="margin-top:0.35rem; padding:0.2rem 0.5rem; font-size:0.72rem; background:#2563eb; color:#fff; border:none; border-radius:4px; cursor:pointer;" onclick="window.VFusionActions.selectExistingPointCoord(${p.longitude}, ${p.latitude}, '${escapeHtml(p.name)}', '${escapeHtml(p.point_id)}')">选择此点位坐标</button>
+                <button type="button" class="btn btn-primary" style="margin-top:0.35rem; padding:0.25rem 0.6rem; font-size:0.725rem;" data-action="selectExistingPointCoord(${p.longitude}, ${p.latitude}, '${escapeHtml(p.name)}', '${escapeHtml(p.point_id)}')">选择此点位坐标</button>
               </div>
             `);
           }

@@ -448,40 +448,6 @@ function removeSelectedFile() {
 function initUploadZoneDragAndDrop() {
   const uploadZone = document.getElementById('uploadZone');
   if (!uploadZone || uploadZone.dataset.dragInit) return;
-        <img src="${imgUrl}" style="max-width:100%; max-height:250px; width:auto; height:auto; object-fit:contain; border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.5); cursor:pointer;" title="点击放大预览: ${escapeHtml(file.name)}">
-        <div style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); color:#fff; font-size:0.725rem; padding:3px 8px; border-radius:12px; border:1px solid rgba(255,255,255,0.2); pointer-events:none; display:flex; align-items:center; gap:0.25rem;">
-          <svg viewBox="0 0 24 24" style="width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:2;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> 点击放大预览
-        </div>
-      </div>
-      <div style="background:rgba(15,23,42,0.92); backdrop-filter:blur(4px); padding:0.6rem 0.85rem; border-top:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; color:#fff; font-size:0.8rem; z-index:10;" data-action="event.stopPropagation()">
-        <div style="display:flex; align-items:center; gap:0.5rem; overflow:hidden;">
-          <span style="color:#94a3b8;">已选抓拍照片:</span>
-          <strong style="color:#60a5fa; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:180px;" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</strong>
-          <span style="color:#cbd5e1; font-size:0.75rem; font-family:monospace; background:rgba(255,255,255,0.1); padding:1px 6px; border-radius:4px;">${(file.size / 1024).toFixed(0)}KB</span>
-        </div>
-        <div style="display:flex; gap:0.4rem; flex-shrink:0;">
-          <button type="button" class="btn" style="padding:0.25rem 0.65rem; font-size:0.75rem; background:#2563eb; color:#fff; border:none; border-radius:4px; cursor:pointer;" data-action="document.getElementById('photoInput').click()">重新选择</button>
-          <button type="button" class="btn btn-danger" style="padding:0.25rem 0.65rem; font-size:0.75rem;" data-action="clearAllSelectedFiles()">清空图片</button>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-function clearAllSelectedFiles() {
-  selectedFiles = [];
-  const photoInput = document.getElementById('photoInput');
-  if (photoInput) photoInput.value = '';
-  renderFilePreviews();
-}
-
-function removeSelectedFile() {
-  clearAllSelectedFiles();
-}
-
-function initUploadZoneDragAndDrop() {
-  const uploadZone = document.getElementById('uploadZone');
-  if (!uploadZone || uploadZone.dataset.dragInit) return;
   uploadZone.dataset.dragInit = 'true';
 
   ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {

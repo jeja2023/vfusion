@@ -5,130 +5,135 @@
         <svg class="icon-svg" viewBox="0 0 24 24" style="color:var(--primary);"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         视频网采集端 - 系统配置与升级维护
       </h2>
-      <p style="font-size:0.725rem; margin-top:1px;">管理跨隔离网防篡改 HMAC 数字签名校验秘钥，以及通过 Web 控制台上传增量补丁实现零停机平滑无损热升级</p>
+      <p style="font-size:0.725rem; margin-top:1px;">管理跨隔离网防篡改 HMAC 数字签名校验秘钥，配置高德离线地图瓦片，以及通过 Web 控制台上传增量补丁实现零停机热升级</p>
     </div>
   </div>
 
-  <div style="display:grid; grid-template-columns: 1fr 1.2fr; gap:0.85rem;">
-    <!-- 左栏：HMAC 防篡改签名秘钥维护 -->
-    <div style="background:#ffffff; border:1px solid var(--border-color); border-radius:8px; padding:0.85rem;">
-      <h4 style="font-size:0.85rem; font-weight:700; color:var(--text-main); margin-bottom:0.45rem; display:flex; align-items:center; gap:0.4rem;">
-        <svg class="icon-svg" viewBox="0 0 24 24" style="color:var(--primary); width:16px; height:16px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        HMAC-SHA256 数字签名秘钥
-      </h4>
-      <div style="font-size:0.775rem; color:var(--text-sub); margin-bottom:0.75rem; line-height:1.45;">
-        视频网数据包打包时将自动使用此秘钥计算 64 位防篡改签名。<span style="color:var(--danger); font-weight:600;">必须与内网数据中台的 HMAC 秘钥保持一致！</span>
-      </div>
-      <div class="form-group" style="gap:0.3rem; margin-bottom:0.75rem;">
-        <label style="font-size:0.75rem; font-weight:600;">当前生效的秘钥：</label>
-        <div style="font-family:monospace; font-size:0.825rem; color:var(--primary); background:#f8fafc; padding:0.4rem 0.6rem; border-radius:6px; border:1px solid var(--border-color);" id="collectorCurrentHmacKeyStr">加载中...</div>
-      </div>
-      <div class="form-group" style="gap:0.3rem; margin-bottom:0.75rem;">
-        <label style="font-size:0.75rem; font-weight:600;">更新 / 轮换新秘钥：</label>
-        <input type="text" id="collectorHmacSecretInput" placeholder="输入新的 64 位 HMAC 秘钥" style="padding:0.4rem 0.6rem; font-size:0.775rem; font-family:monospace;" autocomplete="off">
-      </div>
-      <button class="btn btn-primary" style="width:100%; justify-content:center; padding:0.45rem; font-size:0.775rem;" data-action="saveCollectorHmacSecret()">
-        保存并更新 HMAC 签名秘钥
-      </button>
-    </div>
-
-    <!-- 右栏：Web 一键在线无损热升级 -->
-    <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:0.85rem;">
-      <h4 style="font-size:0.85rem; font-weight:700; color:#0369a1; margin-bottom:0.45rem; display:flex; align-items:center; gap:0.4rem;">
-        <svg class="icon-svg" viewBox="0 0 24 24" style="color:#0284c7; width:16px; height:16px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        Web 控制台一键无损热升级 (系统热补丁)
-      </h4>
-      <div style="font-size:0.775rem; color:#0369a1; margin-bottom:0.65rem; line-height:1.45;">
-        直接在浏览器中上传增量补丁包（<code>vfusion-patch-v*.zip</code>），系统将自动备份数据库并在 3 秒内平滑重载生效，无需登录服务器。
-      </div>
-
-      <!-- 高质感拖拽与选择文件按钮 -->
-      <div class="patch-upload-dropzone" id="collPatchDropzone" data-action="document.getElementById('collWebUpgradeFileInput').click()" style="background:#ffffff; border:2px dashed #7dd3fc; border-radius:8px; padding:0.65rem 0.75rem; text-align:center; cursor:pointer; margin-bottom:0.65rem; transition:all 0.2s ease;">
-        <input type="file" id="collWebUpgradeFileInput" accept=".zip" style="display:none;" data-action-change="onUpgradeFileSelected(this)">
-        <div style="display:flex; align-items:center; justify-content:center; gap:0.45rem;">
-          <svg class="icon-svg" viewBox="0 0 24 24" style="width:20px; height:20px; color:#0284c7;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          <span style="font-size:0.8rem; font-weight:700; color:#0369a1;" id="collPatchFileSelectTitle">点击或拖拽上传补丁包 (.zip)</span>
+  <!-- 顶部 3 列平衡卡片布局 -->
+  <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:0.85rem; align-items:stretch;">
+    
+    <!-- 卡片 1：HMAC 防篡改签名秘钥维护 -->
+    <div style="background:#ffffff; border:1px solid var(--border-color); border-radius:8px; padding:0.85rem; display:flex; flex-direction:column; justify-content:space-between;">
+      <div>
+        <h4 style="font-size:0.85rem; font-weight:700; color:var(--text-main); margin-bottom:0.45rem; display:flex; align-items:center; gap:0.4rem;">
+          <svg class="icon-svg" viewBox="0 0 24 24" style="color:var(--primary); width:16px; height:16px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          HMAC-SHA256 数字签名秘钥
+        </h4>
+        <div style="font-size:0.75rem; color:var(--text-sub); margin-bottom:0.65rem; line-height:1.45;">
+          视频网数据包打包时自动使用此秘钥计算签名。<span style="color:var(--danger); font-weight:600;">必须与中台一致！</span>
         </div>
-        <div style="font-size:0.725rem; color:#64748b; margin-top:3px;" id="collPatchFileSelectSub">支持选择 vfusion-patch-v*.zip 增量升级文件</div>
+        <div class="form-group" style="gap:0.25rem; margin-bottom:0.55rem;">
+          <label style="font-size:0.725rem; font-weight:600;">当前生效秘钥：</label>
+          <div style="font-family:monospace; font-size:0.775rem; color:var(--primary); background:#f8fafc; padding:0.35rem 0.55rem; border-radius:6px; border:1px solid var(--border-color); word-break:break-all;" id="collectorCurrentHmacKeyStr">加载中...</div>
+        </div>
+        <div class="form-group" style="gap:0.25rem; margin-bottom:0.65rem;">
+          <label style="font-size:0.725rem; font-weight:600;">更新 / 轮换新秘钥：</label>
+          <input type="text" id="collectorHmacSecretInput" placeholder="输入新的 64 位 HMAC 秘钥" style="padding:0.35rem 0.55rem; font-size:0.75rem; font-family:monospace;" autocomplete="off">
+        </div>
       </div>
-
-      <button class="btn btn-primary" style="width:100%; justify-content:center; padding:0.45rem; font-size:0.775rem; background:#0284c7; border-color:#0284c7;" data-action="uploadCollectorWebPatchUpgrade()">
-        上传补丁包并一键无损更新
+      <button class="btn btn-primary" style="width:100%; justify-content:center; padding:0.42rem; font-size:0.775rem;" data-action="saveCollectorHmacSecret()">
+        保存并更新签名秘钥
       </button>
-      <div id="collWebUpgradeStatusBox" style="display:none; margin-top:0.45rem; font-size:0.75rem; padding:0.45rem 0.6rem; border-radius:6px; font-family:monospace;"></div>
     </div>
 
-    <!-- 高德离线地图瓦片与选点配置卡片 -->
+    <!-- 卡片 2：高德离线地图瓦片与选点配置 -->
     <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:0.85rem; display:flex; flex-direction:column; justify-content:space-between;">
       <div>
-        <h4 style="font-size:0.85rem; font-weight:700; color:#1e293b; margin:0 0 0.4rem; display:flex; align-items:center; gap:0.4rem;">
-          <span>🗺️</span> 高德离线地图瓦片配置
+        <h4 style="font-size:0.85rem; font-weight:700; color:#1e293b; margin-bottom:0.45rem; display:flex; align-items:center; gap:0.4rem;">
+          <svg class="icon-svg" viewBox="0 0 24 24" style="color:var(--primary); width:16px; height:16px;"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+          高德离线地图瓦片配置
         </h4>
         <div style="font-size:0.75rem; color:#64748b; margin-bottom:0.65rem; line-height:1.45;">
-          离线瓦片保存在 <code>storage/tiles/{z}/{x}/{y}.png</code>，可自定义局域网切片服务器地址及默认中心。
+          离线瓦片保存在 <code>storage/tiles/{z}/{x}/{y}.png</code>，可自定义局域网切片地址及默认中心。
         </div>
-        <div style="display:flex; flex-direction:column; gap:0.45rem; margin-bottom:0.6rem;">
-          <div class="form-group" style="margin:0;">
-            <label style="font-size:0.725rem;">瓦片 URL 模板</label>
-            <input id="collectorMapTileUrl" style="font-size:0.75rem; padding:0.3rem 0.5rem;" placeholder="/api/map/tiles/{z}/{x}/{y}.png" value="/api/map/tiles/{z}/{x}/{y}.png">
+        <div style="display:flex; flex-direction:column; gap:0.45rem; margin-bottom:0.65rem;">
+          <div class="form-group" style="margin:0; gap:0.25rem;">
+            <label style="font-size:0.725rem; font-weight:600;">瓦片 URL 模板</label>
+            <input id="collectorMapTileUrl" style="font-size:0.75rem; padding:0.35rem 0.55rem;" placeholder="/api/map/tiles/{z}/{x}/{y}.png" value="/api/map/tiles/{z}/{x}/{y}.png">
           </div>
           <div style="display:grid; grid-template-columns:1.5fr 1fr; gap:0.4rem;">
-            <div class="form-group" style="margin:0;">
-              <label style="font-size:0.725rem;">默认中心坐标 (经度, 纬度)</label>
-              <input id="collectorMapDefaultCenter" style="font-size:0.75rem; padding:0.3rem 0.5rem;" placeholder="116.397428, 39.909230" value="116.397428, 39.909230">
+            <div class="form-group" style="margin:0; gap:0.25rem;">
+              <label style="font-size:0.725rem; font-weight:600;">默认中心 (经度, 纬度)</label>
+              <input id="collectorMapDefaultCenter" style="font-size:0.75rem; padding:0.35rem 0.55rem;" placeholder="116.397428, 39.909230" value="116.397428, 39.909230">
             </div>
-            <div class="form-group" style="margin:0;">
-              <label style="font-size:0.725rem;">默认缩放级别</label>
-              <input id="collectorMapDefaultZoom" type="number" min="3" max="18" style="font-size:0.75rem; padding:0.3rem 0.5rem;" placeholder="12" value="12">
+            <div class="form-group" style="margin:0; gap:0.25rem;">
+              <label style="font-size:0.725rem; font-weight:600;">默认级别</label>
+              <input id="collectorMapDefaultZoom" type="number" min="3" max="18" style="font-size:0.75rem; padding:0.35rem 0.55rem;" placeholder="12" value="12">
             </div>
           </div>
         </div>
       </div>
-      <button class="btn btn-secondary" style="width:100%; justify-content:center; padding:0.4rem; font-size:0.775rem;" data-action="saveCollectorMapConfig()">
+      <button class="btn btn-secondary" style="width:100%; justify-content:center; padding:0.42rem; font-size:0.775rem;" data-action="saveCollectorMapConfig()">
         保存地图参数
       </button>
     </div>
+
+    <!-- 卡片 3：Web 一键在线无损热升级 -->
+    <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:0.85rem; display:flex; flex-direction:column; justify-content:space-between;">
+      <div>
+        <h4 style="font-size:0.85rem; font-weight:700; color:#0369a1; margin-bottom:0.45rem; display:flex; align-items:center; gap:0.4rem;">
+          <svg class="icon-svg" viewBox="0 0 24 24" style="color:#0284c7; width:16px; height:16px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Web 一键无损热升级 (系统补丁)
+        </h4>
+        <div style="font-size:0.75rem; color:#0369a1; margin-bottom:0.65rem; line-height:1.45;">
+          上传增量补丁包（<code>vfusion-patch-v*.zip</code>），系统将自动平滑重载生效。
+        </div>
+
+        <div class="patch-upload-dropzone" id="collPatchDropzone" data-action="document.getElementById('collWebUpgradeFileInput').click()" style="background:#ffffff; border:2px dashed #7dd3fc; border-radius:8px; padding:0.6rem 0.75rem; text-align:center; cursor:pointer; margin-bottom:0.65rem; transition:all 0.2s ease;">
+          <input type="file" id="collWebUpgradeFileInput" accept=".zip" style="display:none;" data-action-change="onUpgradeFileSelected(this)">
+          <div style="display:flex; align-items:center; justify-content:center; gap:0.45rem;">
+            <svg class="icon-svg" viewBox="0 0 24 24" style="width:18px; height:18px; color:#0284c7;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span style="font-size:0.775rem; font-weight:700; color:#0369a1;" id="collPatchFileSelectTitle">点击或拖拽上传补丁包 (.zip)</span>
+          </div>
+          <div style="font-size:0.72rem; color:#64748b; margin-top:2px;" id="collPatchFileSelectSub">支持选择 vfusion-patch-v*.zip 文件</div>
+        </div>
+      </div>
+
+      <div>
+        <button class="btn btn-primary" style="width:100%; justify-content:center; padding:0.42rem; font-size:0.775rem; background:#0284c7; border-color:#0284c7;" data-action="uploadCollectorWebPatchUpgrade()">
+          上传补丁包并一键无损更新
+        </button>
+        <div id="collWebUpgradeStatusBox" style="display:none; margin-top:0.45rem; font-size:0.75rem; padding:0.45rem 0.6rem; border-radius:6px; font-family:monospace;"></div>
+      </div>
+    </div>
+
   </div>
 
+  <!-- 下部：监控点位台账与经纬度管理表 -->
   <div style="margin-top:0.85rem; background:#ffffff; border:1px solid var(--border-color); border-radius:8px; padding:0.85rem;">
-    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.75rem; margin-bottom:0.65rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:0.75rem; margin-bottom:0.75rem; flex-wrap:wrap;">
       <div>
-        <h4 style="font-size:0.85rem; font-weight:700; color:var(--text-main); margin:0 0 0.25rem;">监控点位与经纬度对应表</h4>
-        <div style="font-size:0.74rem; color:var(--text-sub); line-height:1.45;">点位坐标以现场测绘、设备台账或管理员核准结果为准。发布人员从点位表选择，系统自动带出坐标，不使用互联网地图或采集端当前位置。</div>
+        <h4 style="font-size:0.85rem; font-weight:700; color:var(--text-main); margin:0 0 0.2rem; display:flex; align-items:center; gap:0.35rem;">
+          <svg class="icon-svg" viewBox="0 0 24 24" style="color:var(--primary); width:16px; height:16px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          监控点位与经纬度对应表
+        </h4>
+        <div style="font-size:0.74rem; color:var(--text-sub);">点位坐标以现场测绘、设备台账为准。发布人员从点位表选择或在地图上拾取，系统自动带出坐标。</div>
       </div>
       <div style="display:flex; gap:0.35rem; flex-wrap:wrap; justify-content:flex-end;">
-        <button class="btn btn-secondary" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" data-action="openCollectorPointMapPicker()">🗺️ 地图选点</button>
+        <button class="btn btn-secondary" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" data-action="openCollectorPointMapPicker()">🗺️ 打开点位全景地图</button>
         <button class="btn btn-secondary" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" data-action="exportMonitoringPoints('csv')">导出 CSV</button>
         <button class="btn btn-secondary" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" data-action="exportMonitoringPoints('json')">导出 JSON</button>
         <label class="btn btn-secondary" style="padding:0.38rem 0.65rem; font-size:0.75rem; cursor:pointer;">导入文件<input type="file" id="monitoringPointImportFile" accept=".csv,.json,text/csv,application/json" hidden data-action-change="importMonitoringPoints(this)"></label>
         <button class="btn btn-primary" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" data-action="resetMonitoringPointForm();">＋ 新建点位</button>
       </div>
     </div>
-    <form id="monitoringPointForm" data-action-submit="saveMonitoringPoint(event)" style="display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:0.5rem; align-items:end; margin-bottom:0.75rem;" autocomplete="off">
+
+    <!-- 点位编辑/录入表单 -->
+    <form id="monitoringPointForm" data-action-submit="saveMonitoringPoint(event)" style="display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:0.5rem; align-items:end; margin-bottom:0.75rem; background:#f8fafc; padding:0.75rem; border-radius:6px; border:1px solid #e2e8f0;" autocomplete="off">
       <input type="hidden" id="monitoringPointEditingId">
       <div class="form-group"><label>点位编号 *</label><input id="monitoringPointId" required maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,63}" placeholder="如 GATE_NORTH_01" autocomplete="off"></div>
       <div class="form-group"><label>点位名称 *</label><input id="monitoringPointName" required maxlength="128" placeholder="如 厂区北门1号机" autocomplete="off"></div>
-      <div class="form-group">
-        <label style="display:flex; justify-content:space-between; align-items:center;">
-          <span>经度（可选）</span>
-          <a href="javascript:void(0)" data-action="openCollectorPointMapPicker()" style="color:var(--primary); font-weight:600; text-decoration:none; font-size:0.75rem;">🗺️ 地图选点</a>
-        </label>
-        <input id="monitoringPointLongitude" inputmode="decimal" placeholder="-180 至 180" autocomplete="off">
-      </div>
-      <div class="form-group">
-        <label style="display:flex; justify-content:space-between; align-items:center;">
-          <span>纬度（可选）</span>
-          <a href="javascript:void(0)" data-action="openCollectorPointMapPicker()" style="color:var(--primary); font-weight:600; text-decoration:none; font-size:0.75rem;">🗺️ 地图选点</a>
-        </label>
-        <input id="monitoringPointLatitude" inputmode="decimal" placeholder="-90 至 90" autocomplete="off">
-      </div>
+      <div class="form-group"><label>经度（可选）</label><input id="monitoringPointLongitude" inputmode="decimal" placeholder="-180 至 180 (如 116.3974)" autocomplete="off"></div>
+      <div class="form-group"><label>纬度（可选）</label><input id="monitoringPointLatitude" inputmode="decimal" placeholder="-90 至 90 (如 39.9092)" autocomplete="off"></div>
       <div class="form-group"><label>点位说明</label><input id="monitoringPointDescription" maxlength="500" placeholder="测绘批次、设备编号等" autocomplete="off"></div>
       <div style="grid-column:1/-1; display:flex; gap:0.5rem; justify-content:flex-end;">
-        <button class="btn btn-secondary" type="button" style="padding:0.4rem 0.8rem; font-size:0.75rem;" data-action="openCollectorPointMapPicker()">🗺️ 打开地图拾取坐标</button>
-        <button class="btn btn-primary" type="submit" style="padding:0.4rem 0.8rem; font-size:0.75rem;">保存点位</button>
-        <button class="btn" type="button" style="padding:0.4rem 0.8rem; font-size:0.75rem;" data-action="resetMonitoringPointForm();">取消</button>
+        <button class="btn btn-secondary" type="button" style="padding:0.4rem 0.85rem; font-size:0.75rem;" data-action="openCollectorPointMapPicker()">🗺️ 打开地图拾取坐标</button>
+        <button class="btn btn-primary" type="submit" style="padding:0.4rem 0.85rem; font-size:0.75rem;">保存点位</button>
+        <button class="btn" type="button" style="padding:0.4rem 0.85rem; font-size:0.75rem;" data-action="resetMonitoringPointForm();">取消</button>
       </div>
     </form>
+
+    <!-- 查询与表格 -->
     <div style="display:flex; gap:0.4rem; margin-bottom:0.45rem;">
       <input id="monitoringPointAdminQuery" type="search" placeholder="搜索编号、名称或说明" data-action-input="scheduleMonitoringPointAdminSearch()" style="max-width:320px;">
       <button class="btn" type="button" data-action="loadMonitoringPointAdminTable(1)">查询</button>
@@ -142,3 +147,4 @@
     <div id="monitoringPointAdminPagination" style="display:flex; justify-content:flex-end; gap:0.5rem; align-items:center; margin-top:0.45rem; font-size:0.75rem; color:#64748b;"></div>
   </div>
 </div>
+

@@ -400,25 +400,41 @@ function getMapConfig() {
 let cachedTileSubdirs = null;
 let lastTileSubdirsCheck = 0;
 
+function findTileRoots(dir, depth = 0) {
+  if (depth > 4 || !fs.existsSync(dir)) return [];
+  const roots = [];
+  try {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    let hasNumericDir = false;
+    for (const ent of entries) {
+      if (ent.isDirectory()) {
+        if (!isNaN(Number(ent.name)) || /^L\d+$/i.test(ent.name)) {
+          hasNumericDir = true;
+        }
+      }
+    }
+    if (hasNumericDir) {
+      roots.push(dir);
+    }
+    for (const ent of entries) {
+      if (ent.isDirectory() && isNaN(Number(ent.name))) {
+        roots.push(...findTileRoots(path.join(dir, ent.name), depth + 1));
+      }
+    }
+  } catch (_) {}
+  return [...new Set(roots)];
+}
+
 function getTileBaseDirs() {
   const now = Date.now();
   if (cachedTileSubdirs && now - lastTileSubdirsCheck < 15000) {
     return cachedTileSubdirs;
   }
-  const dirs = [MAP_TILES_DIR];
-  try {
-    if (fs.existsSync(MAP_TILES_DIR)) {
-      const topEntries = fs.readdirSync(MAP_TILES_DIR, { withFileTypes: true });
-      for (const ent of topEntries) {
-        if (ent.isDirectory() && isNaN(Number(ent.name))) {
-          dirs.push(path.join(MAP_TILES_DIR, ent.name));
-        }
-      }
-    }
-  } catch (_) {}
-  cachedTileSubdirs = dirs;
+  let roots = findTileRoots(MAP_TILES_DIR);
+  if (roots.length === 0) roots = [MAP_TILES_DIR];
+  cachedTileSubdirs = roots;
   lastTileSubdirsCheck = now;
-  return dirs;
+  return roots;
 }
 
 function getTileStats() {
@@ -431,21 +447,15 @@ function getTileStats() {
   };
   if (!result.exists) return result;
   try {
-    const entries = fs.readdirSync(MAP_TILES_DIR, { withFileTypes: true });
-    for (const ent of entries) {
-      if (ent.isDirectory()) {
-        if (!isNaN(Number(ent.name))) {
-          result.zoom_levels.push(parseInt(ent.name, 10));
-        } else {
-          result.subdirs.push(ent.name);
-          try {
-            const nested = fs.readdirSync(path.join(MAP_TILES_DIR, ent.name), { withFileTypes: true });
-            for (const n of nested) {
-              if (n.isDirectory() && !isNaN(Number(n.name))) {
-                result.zoom_levels.push(parseInt(n.name, 10));
-              }
-            }
-          } catch (_) {}
+    const roots = getTileBaseDirs();
+    for (const root of roots) {
+      const entries = fs.readdirSync(root, { withFileTypes: true });
+      for (const ent of entries) {
+        if (ent.isDirectory()) {
+          const num = Number(ent.name.replace(/^L/i, ''));
+          if (!isNaN(num) && num >= 0 && num <= 22) {
+            result.zoom_levels.push(num);
+          }
         }
       }
     }
@@ -493,7 +503,13 @@ app.get('/api/map/tiles/:z/:x/:y', (req, res) => {
       path.join(baseDir, z, x, `${y}.webp`),
       path.join(baseDir, z, x, y),
       path.join(baseDir, `L${z}`, x, `${y}.${ext}`),
-      path.join(baseDir, `L${z.padStart(2, '0')}`, x, `${y}.${ext}`)
+      path.join(baseDir, `L${z.padStart(2, '0')}`, x, `${y}.${ext}`),
+      path.join(baseDir, z, y, `${x}.${ext}`),
+      path.join(baseDir, z, y, `${x}.png`),
+      path.join(baseDir, z, y, `${x}.jpg`),
+      path.join(baseDir, z, `${x}_${y}.${ext}`),
+      path.join(baseDir, z, `${x}_${y}.png`),
+      path.join(baseDir, `${z}_${x}_${y}.png`)
     ];
 
     if (tmsY !== null && tmsY !== y) {

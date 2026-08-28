@@ -206,6 +206,11 @@
     const { lng, lat } = parseCoordinates(config.default_center);
     const tileTemplate = config.tile_url_template || '/api/map/tiles/{z}/{x}/{y}.png';
 
+    const tileStats = config.tile_stats || {};
+    const zoomLevels = Array.isArray(tileStats.zoom_levels) && tileStats.zoom_levels.length > 0 ? tileStats.zoom_levels : null;
+    const detectedMaxZoom = zoomLevels ? Math.max(...zoomLevels) : (config.max_zoom || 18);
+    const detectedMinZoom = zoomLevels ? Math.min(...zoomLevels) : (config.min_zoom || 3);
+
     if (!mapInstance) {
       mapInstance = L.map('vfusionLeafletMapContainer', {
         center: [lat, lng],
@@ -219,6 +224,8 @@
       currentTileLayer = L.tileLayer(tileTemplate, {
         maxZoom: config.max_zoom || 18,
         minZoom: config.min_zoom || 3,
+        maxNativeZoom: detectedMaxZoom,
+        minNativeZoom: detectedMinZoom,
         tileSize: 256,
         zoomOffset: 0
       }).addTo(mapInstance);
@@ -239,6 +246,10 @@
     } else {
       if (currentTileLayer) {
         currentTileLayer.setUrl(tileTemplate);
+        if (typeof currentTileLayer.options === 'object') {
+          currentTileLayer.options.maxNativeZoom = detectedMaxZoom;
+          currentTileLayer.options.minNativeZoom = detectedMinZoom;
+        }
       }
       mapInstance.setMinZoom(config.min_zoom || 3);
       mapInstance.setMaxZoom(config.max_zoom || 18);

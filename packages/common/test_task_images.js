@@ -138,6 +138,7 @@ async function runTaskImagesTest() {
   const afterDeleteImages = await storage.getTaskImages('TASK_TEST_001', 'ASC');
   check('删除后剩余2张图片', afterDeleteImages.length === 2);
   check('被删除图片不在列表中', !afterDeleteImages.some(i => i.id === 'img_evt002_1'));
+  check('图片删除后对应单据事件与点位也被清理', (await storage.getEventByEventId('EVT_002')) === null);
 
   // 5. 删除任务测试
   console.log('\n[5/5] 删除任务测试');

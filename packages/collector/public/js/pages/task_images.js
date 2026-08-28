@@ -232,7 +232,7 @@ async function handleSaveImageEdit(e) {
 }
 
 async function handleDeleteImage(imageId) {
-  if (!confirm('确定要删除该张现场照片吗？此操作不可恢复。')) return;
+  if (!confirm('确定要删除该现场抓拍照片及关联的单据信息与点位记录吗？此操作不可恢复。')) return;
 
   try {
     const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;

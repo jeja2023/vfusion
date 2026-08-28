@@ -872,8 +872,16 @@ app.delete('/api/images/:id', async (req, res) => {
     }
 
     await coreSqlite.deleteImage(id);
-    addAuditLog('TASK_IMAGE_DELETE', `删除任务 [${img.task_code}] 下的图片 [${id}]`, 'WARN');
-    res.json({ success: true, message: '图片已成功删除' });
+    try {
+      const db = readDb();
+      if (db.events) {
+        db.events = db.events.filter(e => e.event_id !== img.event_id);
+        saveDb(db);
+      }
+    } catch (e) {}
+
+    addAuditLog('TASK_IMAGE_DELETE', `删除任务 [${img.task_code}] 下的图片及关联单据点位信息 [${id}]`, 'WARN');
+    res.json({ success: true, message: '图片及关联单据、信息与点位记录已成功删除' });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }

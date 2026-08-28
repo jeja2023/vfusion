@@ -628,15 +628,43 @@ class SQLiteStorageEngine {
     return updatedFile;
   }
 
-  // 删除图片
+  // 删除单据事件记录
+  deleteEvent(eventId) {
+    if (!eventId) return Promise.resolve(false);
+    if (this.isNative && this.db) {
+      const operation = () => new Promise((resolve, reject) => {
+        this.db.run('DELETE FROM events WHERE event_id = ?', [eventId], function(err) {
+          if (err) return reject(err);
+          resolve(this.changes > 0);
+        });
+      });
+      this.pendingWrites = this.pendingWrites.catch(() => {}).then(operation);
+      return this.pendingWrites;
+    }
+    try {
+      const eventJsonPath = `${this.dbPath}.fallback.json`;
+      if (fs.existsSync(eventJsonPath)) {
+        let events = this.getAllFallbackEvents();
+        const beforeLen = events.length;
+        events = events.filter(event => event.event_id !== eventId);
+        this.writeFallback(eventJsonPath, events);
+        return Promise.resolve(events.length < beforeLen);
+      }
+    } catch (e) { return Promise.reject(e); }
+    return Promise.resolve(false);
+  }
+
+  // 删除图片及关联单据/点位信息
   async deleteImage(imageId) {
     const allEvents = await this.getEvents(null, { limit: 100000 });
     let targetEvent = null;
+    let deletedFile = null;
 
     for (const evt of allEvents) {
       const files = evt.files || [];
       const idx = files.findIndex((f, i) => (f.id || `${evt.event_id}_img_${i}`) === imageId);
       if (idx >= 0) {
+        deletedFile = files[idx];
         files.splice(idx, 1);
         targetEvent = evt;
         targetEvent.files = files;
@@ -646,7 +674,44 @@ class SQLiteStorageEngine {
 
     if (!targetEvent) return false;
 
-    await this.saveEvent(targetEvent);
+    // 如果事件下的所有图片均已删除，则直接将该单据事件/点位数据彻底删除
+    if (!targetEvent.files || targetEvent.files.length === 0) {
+      await this.deleteEvent(targetEvent.event_id);
+    } else {
+      await this.saveEvent(targetEvent);
+    }
+
+    // 清理磁盘上的物理文件与事件目录
+    try {
+      if (deletedFile && deletedFile.url) {
+        const urlPath = deletedFile.url.replace(/^\/(?:collector-assets|assets)\//, '');
+        const storageDir = path.dirname(this.dbPath);
+        const candidates = [
+          path.join(storageDir, 'collector_assets', urlPath),
+          path.join(storageDir, 'assets', urlPath),
+          path.join(storageDir, 'collector_assets', String(targetEvent.event_id), deletedFile.filename || ''),
+          path.join(storageDir, 'assets', String(targetEvent.event_id), deletedFile.filename || '')
+        ];
+        for (const filePath of candidates) {
+          if (fs.existsSync(filePath)) {
+            try { fs.unlinkSync(filePath); } catch (e) {}
+          }
+        }
+        const eventDirs = [
+          path.join(storageDir, 'collector_assets', String(targetEvent.event_id)),
+          path.join(storageDir, 'assets', String(targetEvent.event_id))
+        ];
+        for (const dirPath of eventDirs) {
+          if (fs.existsSync(dirPath)) {
+            try {
+              const remaining = fs.readdirSync(dirPath);
+              if (remaining.length === 0) fs.rmdirSync(dirPath);
+            } catch (e) {}
+          }
+        }
+      }
+    } catch (e) {}
+
     return true;
   }
 

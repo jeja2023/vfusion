@@ -36,7 +36,8 @@
     'openCollectorPointMapPicker','openCorePointMapPicker','openPublishMapPicker','openNewPointModalMapPicker',
     'saveCollectorMapConfig','saveCoreMapConfig','openMapPicker','closeMapPicker','confirmMapPickerSelection',
     'clearMapPickerPin','clearMapPin','jumpToManualCoordinates','resetMapPickerCenter','selectExistingPointCoord',
-    'openTaskTrackMap','openTrackMapViewer','prevTrackPoint','nextTrackPoint','fitTrackBounds'
+    'openTaskTrackMap','openTrackMapViewer','prevTrackPoint','nextTrackPoint','fitTrackBounds',
+    'handlePublishSubmit','bindPublishFormSubmit','initPublishPage'
   ];
   knownFunctions.forEach(register);
 

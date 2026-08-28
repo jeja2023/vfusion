@@ -76,6 +76,7 @@ async function initPublishPage() {
   const storedCode = localStorage.getItem('vfusion_selected_task_code') || '';
   if (storedCode) selectedTaskCode = storedCode;
   await selectTaskForPublish(selectedTaskCode);
+  bindPublishFormSubmit();
 }
 
 function validateCoordinateInputs() {
@@ -362,70 +363,87 @@ function initUploadZoneDragAndDrop() {
   }, false);
 }
 
-function bindPublishFormSubmit() {
+async function handlePublishSubmit(e) {
+  if (e && e.preventDefault) e.preventDefault();
   const form = document.getElementById('publishForm');
   if (!form) return;
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (selectedFiles.length === 0) { showToast('请至少上传一张抓拍照片！', 'error'); return; }
-    if (!validateCoordinateInputs()) return;
 
-    const btn = document.getElementById('btnSubmit');
+  if (selectedFiles.length === 0) {
+    showToast('请至少上传一张抓拍照片！', 'error');
+    return;
+  }
+  if (!validateCoordinateInputs()) return;
+
+  const btn = document.getElementById('btnSubmit');
+  if (btn) {
     btn.disabled = true;
     btn.innerHTML = '正在计算摘要校验与数字签名并封装数据包...';
+  }
 
-    const formData = new FormData(e.target);
-    formData.delete('images');
-    selectedFiles.forEach(f => formData.append('images', f));
+  const formData = new FormData(form);
+  formData.delete('images');
+  selectedFiles.forEach(f => formData.append('images', f));
 
-    const appId = 'sys_gate_security';
-    formData.append('app_id', appId);
-    formData.append('event_id', 'EVT_' + Date.now());
+  const appId = 'sys_gate_security';
+  formData.append('app_id', appId);
+  formData.append('event_id', 'EVT_' + Date.now());
 
-    if (currentUser) {
-      formData.append('operator', formatUserWithRealName(currentUser.username, currentUser.name));
-      formData.append('operator_username', currentUser.username);
-      formData.append('operator_name', currentUser.name);
+  const curUser = typeof currentUser !== 'undefined' ? currentUser : null;
+  if (curUser) {
+    formData.append('operator', formatUserWithRealName(curUser.username, curUser.name));
+    formData.append('operator_username', curUser.username);
+    formData.append('operator_name', curUser.name);
+  } else {
+    formData.append('operator', '视频网操作员 (operator)');
+    formData.append('operator_username', 'operator');
+    formData.append('operator_name', '视频网操作员');
+  }
+  formData.append('submit_time', new Date().toISOString());
+
+  try {
+    const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
+    const res = await fetchFn('/api/publish', { method: 'POST', body: formData });
+    const result = await res.json();
+
+    if (result.success) {
+      showToast('发布提交成功！已生成防篡改单据存照并入库，可前往任务图片库查看', 'success');
+
+      const submittedTaskCode = formData.get('task_code') || selectedTaskCode;
+      if (submittedTaskCode) {
+        localStorage.setItem('vfusion_selected_task_code', submittedTaskCode);
+        selectedTaskCode = submittedTaskCode;
+      }
+
+      form.reset();
+      selectedFiles = [];
+      renderFilePreviews();
+
+      await loadTaskOptions();
+      await loadPersonnelList(selectedTaskCode);
+      if (typeof currentSchema !== 'undefined' && currentSchema.fields) {
+        renderDynamicForm(currentSchema.fields);
+      }
     } else {
-      formData.append('operator', 'operator (视频网操作员)');
-      formData.append('operator_username', 'operator');
-      formData.append('operator_name', '视频网操作员');
+      showToast('打包失败: ' + (result.error || '未知错误'), 'error');
     }
-    formData.append('submit_time', new Date().toISOString());
-
-    try {
-      const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
-      const res = await fetchFn('/api/publish', { method: 'POST', body: formData });
-      const result = await res.json();
-
-      if (result.success) {
-        showToast('发布提交成功！已生成防篡改单据存照并入库，可前往任务图片库查看', 'success');
-
-        const submittedTaskCode = formData.get('task_code') || selectedTaskCode;
-        if (submittedTaskCode) {
-          localStorage.setItem('vfusion_selected_task_code', submittedTaskCode);
-          selectedTaskCode = submittedTaskCode;
-        }
-
-        e.target.reset();
-        selectedFiles = [];
-        renderFilePreviews();
-
-        await loadTaskOptions();
-        await loadPersonnelList(selectedTaskCode);
-        if (typeof currentSchema !== 'undefined' && currentSchema.fields) {
-          renderDynamicForm(currentSchema.fields);
-        }
-      } else { showToast('打包失败: ' + result.error, 'error'); }
-    } catch (err) { showToast('提交异常: ' + err.message, 'error'); }
-    finally {
+  } catch (err) {
+    showToast('提交异常: ' + err.message, 'error');
+  } finally {
+    if (btn) {
       btn.disabled = false;
       btn.innerHTML = `
         <svg class="icon-svg" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         确认提交并生成数据摆渡包
       `;
     }
-  });
+  }
+}
+
+function bindPublishFormSubmit() {
+  const form = document.getElementById('publishForm');
+  if (!form || form.dataset.boundSubmit) return;
+  form.dataset.boundSubmit = 'true';
+  form.addEventListener('submit', handlePublishSubmit);
 }
 
 function openPublishMapPicker() {
@@ -458,5 +476,5 @@ function openPublishMapPicker() {
 Object.assign(window.VFusionActions = window.VFusionActions || {}, {
   handleFileSelect, autoFillPersonnel, loadPersonnelList, loadTaskOptions,
   selectTaskForPublish, publishToTask, clearAllSelectedFiles, removeSelectedFile,
-  openPublishMapPicker, initPublishPage
+  openPublishMapPicker, initPublishPage, handlePublishSubmit, bindPublishFormSubmit
 });

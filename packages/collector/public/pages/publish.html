@@ -13,7 +13,7 @@
     </button>
   </div>
 
-  <form id="publishForm" style="display:flex; flex-direction:column; flex:1;" autocomplete="off">
+  <form id="publishForm" data-action-submit="event.preventDefault(); handlePublishSubmit(event);" style="display:flex; flex-direction:column; flex:1;" autocomplete="off">
     <div class="split-layout" style="grid-template-columns: 0.85fr 1.15fr;">
       <!-- 左栏：现场抓拍照片上传与大图预览 -->
       <div class="split-col">

@@ -595,6 +595,19 @@ function handleTileRequest(req, res) {
 
   for (const baseDir of baseDirs) {
     const candidatePaths = [
+      // 1. 文件夹内包含独立 tile.png 格式 (每个瓦片命名为 tile.png)
+      path.join(baseDir, z, x, y, `tile.${ext}`),
+      path.join(baseDir, z, x, y, 'tile.png'),
+      path.join(baseDir, z, x, y, 'tile.jpg'),
+      path.join(baseDir, z, x, y, 'tile.jpeg'),
+      path.join(baseDir, z, x, y, 'tile.webp'),
+      path.join(baseDir, z, x, y, 'tile'),
+      path.join(baseDir, `L${z}`, x, y, 'tile.png'),
+      path.join(baseDir, `L${z.padStart(2, '0')}`, x, y, 'tile.png'),
+      path.join(baseDir, z, y, x, 'tile.png'),
+      path.join(baseDir, z, y, x, 'tile.jpg'),
+
+      // 2. 单文件直接命名格式 (x/y.png)
       path.join(baseDir, z, x, `${y}.${ext}`),
       path.join(baseDir, z, x, `${y}.png`),
       path.join(baseDir, z, x, `${y}.jpg`),
@@ -614,6 +627,10 @@ function handleTileRequest(req, res) {
 
     if (tmsY !== null && tmsY !== y) {
       candidatePaths.push(
+        path.join(baseDir, z, x, tmsY, 'tile.png'),
+        path.join(baseDir, z, x, tmsY, 'tile.jpg'),
+        path.join(baseDir, z, x, tmsY, 'tile.webp'),
+        path.join(baseDir, z, tmsY, x, 'tile.png'),
         path.join(baseDir, z, x, `${tmsY}.${ext}`),
         path.join(baseDir, z, x, `${tmsY}.png`),
         path.join(baseDir, z, x, `${tmsY}.jpg`),

@@ -156,7 +156,7 @@ function onUpgradeFileSelected(input) {
     const sizeKB = (file.size / 1024).toFixed(1);
     const sizeStr = file.size > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
 
-    if (titleEl) titleEl.innerText = `✓ 已选择: ${file.name}`;
+    if (titleEl) titleEl.innerText = `[已选择] ${file.name}`;
     if (subEl) subEl.innerText = `文件体积: ${sizeStr} (点击更换文件)`;
     if (dropzone) {
       dropzone.style.background = '#f0fdf4';

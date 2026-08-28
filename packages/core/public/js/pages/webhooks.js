@@ -213,7 +213,7 @@ async function testWebhook(id) {
         box.style.background = '#f0fdf4';
         box.style.border = '1px solid #bbf7d0';
         box.style.color = '#15803d';
-        box.innerText = `✓ ${json.message}`;
+        box.innerText = `[成功] ${json.message}`;
       }
       showToast('Webhook 测试消息推送成功！');
     } else {
@@ -221,7 +221,7 @@ async function testWebhook(id) {
         box.style.background = '#fef2f2';
         box.style.border = '1px solid #fecaca';
         box.style.color = '#b91c1c';
-        box.innerText = `✕ 测试推送失败: ${json.error}`;
+        box.innerText = `[失败] 测试推送失败: ${json.error}`;
       }
       showToast(json.error || '测试推送失败', 'error');
     }
@@ -230,7 +230,7 @@ async function testWebhook(id) {
       box.style.background = '#fef2f2';
       box.style.border = '1px solid #fecaca';
       box.style.color = '#b91c1c';
-      box.innerText = `✕ 网络错误: ${e.message}`;
+      box.innerText = `[错误] 网络错误: ${e.message}`;
     }
     showToast('发起测试推送发生网络错误', 'error');
   }

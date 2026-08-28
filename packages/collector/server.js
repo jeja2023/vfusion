@@ -206,6 +206,7 @@ app.use((req, res, next) => {
 app.use(cors({ origin: true }));
 app.use(express.json({ limit: '2mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/storage/tiles', express.static(MAP_TILES_DIR));
 app.disable('x-powered-by');
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -215,9 +216,9 @@ app.use((req, res, next) => {
 });
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
-// 统一鉴权：除登录与静态资源外，所有 /api 路由必须携带有效 Token
+// 统一鉴权：除登录、地图瓦片与静态资源外，所有 /api 路由必须携带有效 Token
 app.use('/api', authMiddleware({
-  publicPaths: ['/auth/login'],
+  publicPaths: ['/auth/login', '/config/map'],
   loadUser: (id) => (readCollectorDb().users || []).find(u => u.id === id) || null
 }));
 const FALLBACK_IMAGE_SVG = Buffer.from(

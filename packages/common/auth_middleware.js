@@ -88,15 +88,20 @@ function authMiddleware(opts = {}) {
   const exempt = new Set([...skipPaths, ...publicPaths]);
 
   return async (req, res, next) => {
-    // 静态资源放行
+    // 静态资源与离线地图瓦片放行
     const urlPath = req.path;
     if (urlPath.startsWith('/assets/') ||
         urlPath.startsWith('/collector-assets/') ||
+        urlPath.startsWith('/api/map/tiles/') ||
+        urlPath.startsWith('/map/tiles/') ||
+        urlPath.startsWith('/storage/tiles/') ||
+        urlPath === '/api/config/map' ||
+        urlPath === '/config/map' ||
         urlPath.startsWith('/favicon') ||
         urlPath === '/') {
       return next();
     }
-    // 登录接口放行
+    // 登录接口与显式白名单放行
     if (urlPath === '/api/auth/login' || urlPath === '/auth/login' || exempt.has(urlPath)) return next();
 
     const header = req.headers.authorization || '';

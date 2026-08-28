@@ -211,6 +211,7 @@ app.use((req, res, next) => {
 app.use(cors({ origin: true }));
 app.use(express.json({ limit: '2mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/storage/tiles', express.static(MAP_TILES_DIR));
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 app.disable('x-powered-by');
 app.use((req, res, next) => {
@@ -222,6 +223,7 @@ app.use((req, res, next) => {
 
 // 统一身份认证：登录接口与静态资源之外的所有 API 均需有效 Token
 app.use(authMiddleware({
+  publicPaths: ['/api/auth/login', '/api/config/map'],
   loadUser: (id) => readUsers().find(u => u.id === id) || null
 }));
 

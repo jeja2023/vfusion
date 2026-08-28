@@ -84,7 +84,7 @@
           <!-- 弹窗底栏操作 -->
           <div style="padding:0.75rem 1.4rem; border-top:1px solid #e2e8f0; background:#f8fafc; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
             <div style="font-size:0.78rem; color:#64748b; display:flex; align-items:center; gap:0.4rem;">
-              <span>离线瓦片托管于本地 <code style="background:#e2e8f0; padding:0.15rem 0.4rem; border-radius:4px; font-family:monospace; color:#334155;">storage/tiles/{z}/{x}/{y}.png</code> 目录</span>
+              <span>点击地图任意位置拾取坐标，点击确认自动回填表单</span>
             </div>
             <div style="display:flex; gap:0.65rem;">
               <button type="button" class="btn btn-secondary" style="padding:0.45rem 1rem; font-size:0.82rem;" data-action="closeMapPicker()">取消</button>

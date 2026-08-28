@@ -38,7 +38,13 @@ fs.copyFileSync(path.join(ROOT_DIR, 'package.json'), path.join(PATCH_DIR, 'packa
 fs.copyFileSync(path.join(ROOT_DIR, 'README.md'), path.join(PATCH_DIR, 'README.md'));
 fs.copyFileSync(path.join(ROOT_DIR, '更新日志.md'), path.join(PATCH_DIR, '更新日志.md'));
 
-const upgradeKey = process.env.VFUSION_UPGRADE_SIGNING_KEY;
+let upgradeKey = process.env.VFUSION_UPGRADE_SIGNING_KEY;
+if (!upgradeKey) {
+  try {
+    const sec = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, 'storage', 'security.json'), 'utf8'));
+    upgradeKey = sec.upgrade_signing_key || sec.hmac_secret;
+  } catch (e) {}
+}
 if (!upgradeKey || upgradeKey.length < 32) {
   console.error('构建补丁包失败: 请设置 VFUSION_UPGRADE_SIGNING_KEY（至少 32 个字符），并将同一密钥配置到目标 storage/security.json');
   process.exitCode = 1;

@@ -80,6 +80,9 @@ function openCollectorPointMapPicker() {
   }
 }
 
+window.openCollectorPointMapPicker = openCollectorPointMapPicker;
+window.saveCollectorMapConfig = saveCollectorMapConfig;
+
 Object.assign(window.VFusionActions = window.VFusionActions || {}, {
   loadCollectorSystemConfig, loadMonitoringPointAdminTable, scheduleMonitoringPointAdminSearch,
   exportMonitoringPoints, importMonitoringPoints, resetMonitoringPointForm, editMonitoringPoint,

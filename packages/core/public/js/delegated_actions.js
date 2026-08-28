@@ -32,7 +32,10 @@
     'openAddUserModal','openEditUserModal','loadCollectorSystemConfig','loadMonitoringPointAdminTable','scheduleMonitoringPointAdminSearch',
     'exportMonitoringPoints','importMonitoringPoints','resetMonitoringPointForm','editMonitoringPoint','saveMonitoringPoint',
     'toggleMonitoringPoint','saveCollectorHmacSecret','uploadCollectorWebPatchUpgrade','selectTaskForPublish','handleFileSelect',
-    'viewGalleryImageLightbox','handleDeleteTaskPersonnel','openShareTaskModal','openTaskPersonnelModal'
+    'viewGalleryImageLightbox','handleDeleteTaskPersonnel','openShareTaskModal','openTaskPersonnelModal',
+    'openCollectorPointMapPicker','openCorePointMapPicker','openPublishMapPicker','openNewPointModalMapPicker',
+    'saveCollectorMapConfig','saveCoreMapConfig','openMapPicker','closeMapPicker','confirmMapPickerSelection',
+    'clearMapPickerPin','clearMapPin','jumpToManualCoordinates','resetMapPickerCenter','selectExistingPointCoord'
   ];
   knownFunctions.forEach(register);
 
@@ -115,9 +118,12 @@
       const call = statement.match(/^([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)?)\s*\(([\s\S]*)\)$/);
       if (!call) continue;
       const name = call[1];
-      if (!actionNames.has(name) && name !== 'openImageLightbox') continue;
       const fn = (global.VFusionActions && global.VFusionActions[name]) || name.split('.').reduce((target, key) => target && target[key], global);
-      if (typeof fn === 'function') fn(...splitArgs(call[2]).map(arg => resolveValue(arg, event, element)));
+      if (typeof fn === 'function') {
+        fn(...splitArgs(call[2]).map(arg => resolveValue(arg, event, element)));
+      } else if (actionNames.has(name) && typeof global[name] === 'function') {
+        global[name](...splitArgs(call[2]).map(arg => resolveValue(arg, event, element)));
+      }
     }
   }
   function dispatch(event, attribute) {

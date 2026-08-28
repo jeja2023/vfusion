@@ -530,6 +530,9 @@ function openCorePointMapPicker() {
   }
 }
 
+window.openCorePointMapPicker = openCorePointMapPicker;
+window.saveCoreMapConfig = saveCoreMapConfig;
+
 Object.assign(window.VFusionActions = window.VFusionActions || {}, {
   loadSystemHealth, loadCoreMonitoringPointTable, renderCoreMonitoringPointPagination,
   scheduleCoreMonitoringPointSearch, exportCoreMonitoringPoints, importCoreMonitoringPoints,

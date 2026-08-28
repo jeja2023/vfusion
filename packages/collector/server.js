@@ -72,6 +72,7 @@ function maskSecret(value) {
     sec = {
       hmac_secret: crypto.randomBytes(32).toString('hex'),
       token_secret: crypto.randomBytes(32).toString('hex'),
+      upgrade_signing_key: crypto.randomBytes(32).toString('hex'),
       pkg_prefix: 'vfusion_'
     };
     writeJsonAtomic(SECURITY_CONFIG_FILE, sec);
@@ -85,6 +86,10 @@ function maskSecret(value) {
   }
   if (!sec.token_secret) {
     sec.token_secret = crypto.randomBytes(32).toString('hex');
+    mutated = true;
+  }
+  if (!sec.upgrade_signing_key) {
+    sec.upgrade_signing_key = crypto.randomBytes(32).toString('hex');
     mutated = true;
   }
   if (mutated) writeJsonAtomic(SECURITY_CONFIG_FILE, sec);
@@ -1502,7 +1507,7 @@ function getLocalIps() {
 const httpServer = app.listen(PORT, '0.0.0.0', () => {
   const localIps = getLocalIps();
   console.log(`===================================================`);
-  console.log(` 视频网数据采集/发布终端 (VFusion Collector v0.21.0) 已启动`);
+  console.log(` 视频网数据采集/发布终端 (VFusion Collector v0.22.0) 已启动`);
   console.log(` 本机访问地址: http://localhost:${PORT}`);
   localIps.forEach(ip => {
     console.log(` 局域网/其他电脑访问地址: http://${ip}:${PORT}`);

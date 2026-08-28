@@ -111,7 +111,7 @@ function renderMonitoringPointResults(points) {
     return;
   }
   box.innerHTML = monitoringPoints.map((point, index) => `
-    <button type="button" class="monitoring-point-result" onclick="chooseMonitoringPoint(${index})">
+    <button type="button" class="monitoring-point-result" data-action="chooseMonitoringPoint(${index})">
       <span><strong>${escapeHtml(point.name)}</strong><small>${escapeHtml(point.location || '')} · ${escapeHtml(point.point_id)}</small></span>
       <code>${point.longitude === null ? '暂无坐标' : `${escapeHtml(point.longitude)}, ${escapeHtml(point.latitude)}`}</code>
     </button>
@@ -265,7 +265,7 @@ function renderDynamicForm(fields) {
       <span>本任务涉事人员档案 (点击选择一键填入)</span>
       <span style="font-size:0.75rem; font-weight:normal; color:#64748b;">本任务已有 ${registeredPersonnel.length} 人</span>
     </label>
-    <select id="personnelSelectBox" style="width:100%; border:1px solid #cbd5e1; background:#ffffff; font-size:0.85rem; font-weight:500; color:#1e293b; padding:0.5rem 0.75rem; border-radius:6px; outline:none; cursor:pointer;" onchange="autoFillPersonnel(this.value)">
+    <select id="personnelSelectBox" style="width:100%; border:1px solid #cbd5e1; background:#ffffff; font-size:0.85rem; font-weight:500; color:#1e293b; padding:0.5rem 0.75rem; border-radius:6px; outline:none; cursor:pointer;" data-action-change="autoFillPersonnel(this.value)">
       <option value="">-- 点击选择已登记人员 (自动关联关联姓名/身份证/户籍) --</option>
       ${optsHtml}
     </select>
@@ -279,12 +279,12 @@ function renderDynamicForm(fields) {
   pointGroup.className = 'form-group full-width monitoring-point-picker';
   pointGroup.innerHTML = `
     <label>监控点位 <span style="font-size:0.72rem; font-weight:normal; color:#64748b;">优先选择点位表中的标准坐标</span></label>
-    <input id="monitoringPointSearch" type="search" placeholder="输入点位编号、名称或地点关键词" autocomplete="off" oninput="scheduleMonitoringPointSearch()" onkeydown="if(event.key==='Enter'){event.preventDefault();searchMonitoringPoints();}">
+    <input id="monitoringPointSearch" type="search" placeholder="输入点位编号、名称或地点关键词" autocomplete="off" data-action-input="scheduleMonitoringPointSearch()" data-action-keydown="if (event.key === 'Enter') { event.preventDefault(); searchMonitoringPoints(); }">
     <input type="hidden" id="monitoringPointSelect" name="monitoring_point_id" value="">
     <div id="monitoringPointResults" class="monitoring-point-results"></div>
     <div style="display:flex; gap:0.4rem; align-items:center; margin-top:0.4rem;">
-      <button type="button" class="btn" onclick="openNewMonitoringPointForm()">新增本次点位</button>
-      <button type="button" class="btn" onclick="clearMonitoringPointSelection()">清除选择，手工填写</button>
+      <button type="button" class="btn" data-action="openNewMonitoringPointForm()">新增本次点位</button>
+      <button type="button" class="btn" data-action="clearMonitoringPointSelection()">清除选择，手工填写</button>
       <span id="locationPickerStatus" aria-live="polite">点位和经纬度均可不填写。</span>
     </div>
     <div id="newMonitoringPointPanel" class="new-monitoring-point-panel" hidden>
@@ -294,7 +294,7 @@ function renderDynamicForm(fields) {
         <input id="newMonitoringPointLongitude" placeholder="经度（可选）" inputmode="decimal">
         <input id="newMonitoringPointLatitude" placeholder="纬度（可选）" inputmode="decimal">
       </div>
-      <div style="display:flex; gap:0.4rem; margin-top:0.4rem;"><button type="button" class="btn btn-primary" onclick="saveNewMonitoringPoint()">保存并使用</button><button type="button" class="btn" onclick="closeNewMonitoringPointForm()">取消</button></div>
+      <div style="display:flex; gap:0.4rem; margin-top:0.4rem;"><button type="button" class="btn btn-primary" data-action="saveNewMonitoringPoint()">保存并使用</button><button type="button" class="btn" data-action="closeNewMonitoringPointForm()">取消</button></div>
     </div>
     <div id="locationPickerStatus" aria-live="polite">点位表由管理员维护；不调用互联网地图或设备当前位置。</div>
   `;
@@ -400,21 +400,21 @@ function renderFilePreviews() {
 
   previewEl.innerHTML = `
     <div style="display:flex; flex-direction:column; width:100%; height:100%; min-height:280px; position:relative; background:#0f172a; border-radius:10px; overflow:hidden;">
-      <div style="flex:1; display:flex; align-items:center; justify-content:center; padding:0.75rem; position:relative; min-height:220px; overflow:hidden;" onclick="event.stopPropagation(); if(typeof openImageLightbox === 'function') openImageLightbox('${imgUrl}', '抓拍照片预览: ${escapeHtml(file.name)}')">
+      <div style="flex:1; display:flex; align-items:center; justify-content:center; padding:0.75rem; position:relative; min-height:220px; overflow:hidden;" data-action="event.stopPropagation(); openImageLightbox('${imgUrl}', '抓拍照片预览: ${escapeHtml(file.name)}')">
         <img src="${imgUrl}" style="max-width:100%; max-height:250px; width:auto; height:auto; object-fit:contain; border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.5); cursor:pointer;" title="点击放大预览: ${escapeHtml(file.name)}">
         <div style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px); color:#fff; font-size:0.725rem; padding:3px 8px; border-radius:12px; border:1px solid rgba(255,255,255,0.2); pointer-events:none; display:flex; align-items:center; gap:0.25rem;">
           <svg viewBox="0 0 24 24" style="width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:2;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> 点击放大预览
         </div>
       </div>
-      <div style="background:rgba(15,23,42,0.92); backdrop-filter:blur(4px); padding:0.6rem 0.85rem; border-top:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; color:#fff; font-size:0.8rem; z-index:10;" onclick="event.stopPropagation()">
+      <div style="background:rgba(15,23,42,0.92); backdrop-filter:blur(4px); padding:0.6rem 0.85rem; border-top:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; color:#fff; font-size:0.8rem; z-index:10;" data-action="event.stopPropagation()">
         <div style="display:flex; align-items:center; gap:0.5rem; overflow:hidden;">
           <span style="color:#94a3b8;">已选抓拍照片:</span>
           <strong style="color:#60a5fa; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:180px;" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</strong>
           <span style="color:#cbd5e1; font-size:0.75rem; font-family:monospace; background:rgba(255,255,255,0.1); padding:1px 6px; border-radius:4px;">${(file.size / 1024).toFixed(0)}KB</span>
         </div>
         <div style="display:flex; gap:0.4rem; flex-shrink:0;">
-          <button type="button" class="btn" style="padding:0.25rem 0.65rem; font-size:0.75rem; background:#2563eb; color:#fff; border:none; border-radius:4px; cursor:pointer;" onclick="document.getElementById('photoInput').click()">重新选择</button>
-          <button type="button" class="btn btn-danger" style="padding:0.25rem 0.65rem; font-size:0.75rem;" onclick="clearAllSelectedFiles()">清空图片</button>
+          <button type="button" class="btn" style="padding:0.25rem 0.65rem; font-size:0.75rem; background:#2563eb; color:#fff; border:none; border-radius:4px; cursor:pointer;" data-action="document.getElementById('photoInput').click()">重新选择</button>
+          <button type="button" class="btn btn-danger" style="padding:0.25rem 0.65rem; font-size:0.75rem;" data-action="clearAllSelectedFiles()">清空图片</button>
         </div>
       </div>
     </div>

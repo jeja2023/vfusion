@@ -8,7 +8,7 @@
       <p style="font-size:0.725rem; margin-top:1px;">管理视频网前端用户账号、指派角色与账号状态</p>
     </div>
     <div style="display:flex; gap:0.4rem; align-items:center;">
-      <button class="btn-submit" style="width:auto; padding:0.3rem 0.65rem; font-size:0.75rem; display:flex; align-items:center; gap:0.3rem;" onclick="openAddUserModal()">
+      <button class="btn-submit" style="width:auto; padding:0.3rem 0.65rem; font-size:0.75rem; display:flex; align-items:center; gap:0.3rem;" data-action="openAddUserModal()">
         <svg class="icon-svg" viewBox="0 0 24 24" style="width:14px; height:14px;"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/></svg>
         + 新增视频网账号
       </button>
@@ -39,13 +39,13 @@
         <span>第 <strong id="usersCurrentPageText">1</strong> / <strong id="usersTotalPagesText">1</strong> 页</span>
       </div>
       <div class="pagination-controls">
-        <select id="usersPageSizeSelect" onchange="changeUsersPageSize(this.value)">
+        <select id="usersPageSizeSelect" data-action-change="changeUsersPageSize(this.value)">
           <option value="10">10 条/页</option>
           <option value="20">20 条/页</option>
           <option value="50">50 条/页</option>
         </select>
-        <button class="btn-page" id="usersPrevBtn" onclick="prevUsersPage()">上一页</button>
-        <button class="btn-page" id="usersNextBtn" onclick="nextUsersPage()">下一页</button>
+        <button class="btn-page" id="usersPrevBtn" data-action="prevUsersPage()">上一页</button>
+        <button class="btn-page" id="usersNextBtn" data-action="nextUsersPage()">下一页</button>
       </div>
     </div>
   </div>
@@ -59,10 +59,10 @@
         <svg class="icon-svg" viewBox="0 0 24 24" style="width:16px; height:16px;"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/></svg>
         新增视频网用户账号
       </div>
-      <button type="button" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--text-muted);" onclick="closeAddUserModal()">&times;</button>
+      <button type="button" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--text-muted);" data-action="closeAddUserModal()">&times;</button>
     </div>
 
-    <form onsubmit="handleCreateUserSubmit(event)" autocomplete="off">
+    <form data-action-submit="handleCreateUserSubmit(event)" autocomplete="off">
       <div class="form-group" style="margin-bottom:0.6rem;">
         <label style="font-size:0.775rem; font-weight:600;">用户名 (登录账号) <span style="color:red;">*</span></label>
         <input type="text" id="newUsername" placeholder="例如: zhangsan" required style="padding:0.35rem 0.6rem; font-size:0.8rem; height:32px;" autocomplete="username">
@@ -88,7 +88,7 @@
       </div>
 
       <div style="display:flex; justify-content:flex-end; gap:0.5rem;">
-        <button type="button" class="btn-submit" style="width:auto; background:#f1f5f9; color:#475569; padding:0.3rem 0.75rem; font-size:0.75rem;" onclick="closeAddUserModal()">取消</button>
+        <button type="button" class="btn-submit" style="width:auto; background:#f1f5f9; color:#475569; padding:0.3rem 0.75rem; font-size:0.75rem;" data-action="closeAddUserModal()">取消</button>
         <button type="submit" class="btn-submit" style="width:auto; padding:0.3rem 0.85rem; font-size:0.75rem;">确认创建用户</button>
       </div>
     </form>
@@ -100,10 +100,10 @@
   <div class="card" style="width:480px; max-width:92vw; background:#fff; border-radius:10px; padding:1.25rem; box-shadow:0 12px 30px rgba(0,0,0,0.2);">
     <div style="font-size:0.925rem; font-weight:700; color:var(--text-main); margin-bottom:0.8rem; border-bottom:1px solid var(--border-color); padding-bottom:0.5rem; display:flex; align-items:center; justify-content:space-between;">
       <div>编辑视频网用户信息</div>
-      <button type="button" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--text-muted);" onclick="closeEditUserModal()">&times;</button>
+      <button type="button" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--text-muted);" data-action="closeEditUserModal()">&times;</button>
     </div>
 
-    <form onsubmit="handleSaveUser(event)" autocomplete="off">
+    <form data-action-submit="handleSaveUser(event)" autocomplete="off">
       <input type="hidden" id="editUserId">
       <div class="form-group" style="margin-bottom:0.6rem;">
         <label style="font-size:0.775rem; font-weight:600;">用户名</label>
@@ -133,7 +133,7 @@
       </div>
 
       <div style="display:flex; justify-content:flex-end; gap:0.5rem;">
-        <button type="button" class="btn-submit" style="width:auto; background:#f1f5f9; color:#475569; padding:0.3rem 0.75rem; font-size:0.75rem;" onclick="closeEditUserModal()">取消</button>
+        <button type="button" class="btn-submit" style="width:auto; background:#f1f5f9; color:#475569; padding:0.3rem 0.75rem; font-size:0.75rem;" data-action="closeEditUserModal()">取消</button>
         <button type="submit" class="btn-submit" style="width:auto; padding:0.3rem 0.85rem; font-size:0.75rem;">保存修改</button>
       </div>
     </form>

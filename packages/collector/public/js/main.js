@@ -382,9 +382,9 @@ function switchTab(tabId) {
   const titleEl = document.getElementById('currentPageTitle');
   if (titleEl) {
     if (tabId === 'tab-task-images') {
-      titleEl.innerHTML = `<a href="javascript:void(0)" onclick="switchTab('tab-tasks')" style="color:var(--text-muted); text-decoration:none; transition:color 0.15s;" onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='var(--text-muted)'">任务管理中心</a> <span style="color:#cbd5e1; margin:0 0.35rem;">/</span> <span style="color:var(--primary); font-weight:700;">任务现场图片库</span>`;
+      titleEl.innerHTML = `<a href="#" data-action="event.preventDefault(); switchTab('tab-tasks')" style="color:var(--text-muted); text-decoration:none; transition:color 0.15s;" data-action-mouseover="this.style.color='var(--primary)'" data-action-mouseout="this.style.color='var(--text-muted)'">任务管理中心</a> <span style="color:#cbd5e1; margin:0 0.35rem;">/</span> <span style="color:var(--primary); font-weight:700;">任务现场图片库</span>`;
     } else if (tabId === 'tab-publish') {
-      titleEl.innerHTML = `<a href="javascript:void(0)" onclick="switchTab('tab-tasks')" style="color:var(--text-muted); text-decoration:none; transition:color 0.15s;" onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='var(--text-muted)'">任务管理中心</a> <span style="color:#cbd5e1; margin:0 0.35rem;">/</span> <span style="color:var(--primary); font-weight:700;">上传现场图片</span>`;
+      titleEl.innerHTML = `<a href="#" data-action="event.preventDefault(); switchTab('tab-tasks')" style="color:var(--text-muted); text-decoration:none; transition:color 0.15s;" data-action-mouseover="this.style.color='var(--primary)'" data-action-mouseout="this.style.color='var(--text-muted)'">任务管理中心</a> <span style="color:#cbd5e1; margin:0 0.35rem;">/</span> <span style="color:var(--primary); font-weight:700;">上传现场图片</span>`;
     } else if (pageTitles[tabId]) {
       titleEl.innerText = pageTitles[tabId];
     }
@@ -400,7 +400,7 @@ function switchTab(tabId) {
   if (tabId === 'tab-system' && typeof loadSystemInfo === 'function') loadSystemInfo();
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
+  document.addEventListener('DOMContentLoaded', async () => {
   await loadPageTemplates();
   await checkAuth();
-});
+  });

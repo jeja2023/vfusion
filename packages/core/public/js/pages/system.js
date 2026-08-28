@@ -89,8 +89,8 @@ async function loadCoreMonitoringPointTable(page = coreMonitoringPointPage) {
         <td>${escapeHtml(point.description || '-')}</td>
         <td><span class="status-badge ${point.enabled === false ? 'status-disabled' : 'status-active'}">${point.enabled === false ? '已停用' : '启用'}</span></td>
         <td style="white-space:nowrap;">
-          <button class="btn btn-sm" type="button" onclick="editCoreMonitoringPoint(${index})">编辑</button>
-          <button class="btn btn-sm" type="button" onclick="toggleCoreMonitoringPoint(${index})">${point.enabled === false ? '启用' : '停用'}</button>
+          <button class="btn btn-sm" type="button" data-action="editCoreMonitoringPoint(${index})">编辑</button>
+          <button class="btn btn-sm" type="button" data-action="toggleCoreMonitoringPoint(${index})">${point.enabled === false ? '启用' : '停用'}</button>
         </td>
       </tr>
     `).join('');
@@ -104,8 +104,8 @@ function renderCoreMonitoringPointPagination(total) {
   const box = document.getElementById('coreMonitoringPointPagination');
   if (!box) return;
   box.innerHTML = `<span>共 ${total} 条，第 ${coreMonitoringPointPage}/${coreMonitoringPointPages} 页</span>
-    <button class="btn btn-sm" ${coreMonitoringPointPage <= 1 ? 'disabled' : ''} onclick="loadCoreMonitoringPointTable(${coreMonitoringPointPage - 1})">上一页</button>
-    <button class="btn btn-sm" ${coreMonitoringPointPage >= coreMonitoringPointPages ? 'disabled' : ''} onclick="loadCoreMonitoringPointTable(${coreMonitoringPointPage + 1})">下一页</button>`;
+    <button class="btn btn-sm" ${coreMonitoringPointPage <= 1 ? 'disabled' : ''} data-action="loadCoreMonitoringPointTable(${coreMonitoringPointPage - 1})">上一页</button>
+    <button class="btn btn-sm" ${coreMonitoringPointPage >= coreMonitoringPointPages ? 'disabled' : ''} data-action="loadCoreMonitoringPointTable(${coreMonitoringPointPage + 1})">下一页</button>`;
 }
 
 function scheduleCoreMonitoringPointSearch() {

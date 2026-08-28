@@ -8,12 +8,12 @@
       <p style="font-size:0.725rem; margin-top:1px;">独立新增或修改表单字段 Schema 规范，配置保存后自动同步生效</p>
     </div>
     <div style="display:flex; gap:0.4rem; align-items:center;">
-      <button class="btn btn-primary" style="padding:0.35rem 0.75rem; font-size:0.75rem; font-weight:600; display:flex; align-items:center; gap:0.3rem;" onclick="openAddFieldModal()">
+      <button class="btn btn-primary" style="padding:0.35rem 0.75rem; font-size:0.75rem; font-weight:600; display:flex; align-items:center; gap:0.3rem;" data-action="openAddFieldModal()">
         <svg class="icon-svg" viewBox="0 0 24 24" style="width:14px; height:14px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
         + 新增表单字段
       </button>
-      <button type="button" style="padding:0.35rem 0.75rem; font-size:0.75rem; font-weight:600; background:#f1f5f9; border:1px solid #cbd5e1; color:#334155; border-radius:6px; cursor:pointer;" onclick="exportSchemaJson()">导出 JSON</button>
-      <button type="button" style="padding:0.35rem 0.75rem; font-size:0.75rem; font-weight:600; background:#16a34a; border:1px solid #15803d; color:#ffffff; border-radius:6px; cursor:pointer;" onclick="saveSchemaConfig()">保存表单配置并跨网同步</button>
+      <button type="button" style="padding:0.35rem 0.75rem; font-size:0.75rem; font-weight:600; background:#f1f5f9; border:1px solid #cbd5e1; color:#334155; border-radius:6px; cursor:pointer;" data-action="exportSchemaJson()">导出 JSON</button>
+      <button type="button" style="padding:0.35rem 0.75rem; font-size:0.75rem; font-weight:600; background:#16a34a; border:1px solid #15803d; color:#ffffff; border-radius:6px; cursor:pointer;" data-action="saveSchemaConfig()">保存表单配置并跨网同步</button>
     </div>
   </div>
 
@@ -41,13 +41,13 @@
         <span>第 <strong id="schemaCurrentPageText">1</strong> / <strong id="schemaTotalPagesText">1</strong> 页</span>
       </div>
       <div class="pagination-controls">
-        <select id="schemaPageSizeSelect" onchange="changeSchemaPageSize(this.value)">
+        <select id="schemaPageSizeSelect" data-action-change="changeSchemaPageSize(this.value)">
           <option value="10">10 条/页</option>
           <option value="20">20 条/页</option>
           <option value="50">50 条/页</option>
         </select>
-        <button class="btn-page" id="schemaPrevBtn" onclick="prevSchemaPage()">上一页</button>
-        <button class="btn-page" id="schemaNextBtn" onclick="nextSchemaPage()">下一页</button>
+        <button class="btn-page" id="schemaPrevBtn" data-action="prevSchemaPage()">上一页</button>
+        <button class="btn-page" id="schemaNextBtn" data-action="nextSchemaPage()">下一页</button>
       </div>
     </div>
   </div>
@@ -61,10 +61,10 @@
         <svg class="icon-svg" viewBox="0 0 24 24" style="width:16px; height:16px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
         新增动态表单字段
       </div>
-      <button type="button" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--text-muted);" onclick="closeAddFieldModal()">&times;</button>
+      <button type="button" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--text-muted);" data-action="closeAddFieldModal()">&times;</button>
     </div>
 
-    <form onsubmit="handleAddFieldSubmit(event)" autocomplete="off">
+    <form data-action-submit="handleAddFieldSubmit(event)" autocomplete="off">
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.6rem; margin-bottom:0.6rem;">
         <div class="form-group" style="margin:0;">
           <label style="font-size:0.75rem; font-weight:600;">字段键名 (Key) <span style="color:red;">*</span></label>
@@ -93,7 +93,7 @@
       </div>
 
       <div style="display:flex; justify-content:flex-end; gap:0.4rem;">
-        <button type="button" class="btn btn-secondary" style="padding:0.3rem 0.75rem; font-size:0.75rem;" onclick="closeAddFieldModal()">取消</button>
+        <button type="button" class="btn btn-secondary" style="padding:0.3rem 0.75rem; font-size:0.75rem;" data-action="closeAddFieldModal()">取消</button>
         <button type="submit" class="btn btn-primary" style="padding:0.3rem 0.85rem; font-size:0.75rem;">添加到表单</button>
       </div>
     </form>
@@ -105,10 +105,10 @@
   <div class="card modal-dialog" style="width:460px; max-width:90vw; flex:none; margin:auto; background:#fff; border-radius:10px; padding:1.2rem; box-shadow:0 12px 30px rgba(0,0,0,0.2);">
     <div style="font-size:0.9rem; font-weight:700; color:var(--text-main); margin-bottom:0.75rem; border-bottom:1px solid var(--border-color); padding-bottom:0.45rem; display:flex; align-items:center; justify-content:space-between;">
       <div>编辑动态字段属性</div>
-      <button type="button" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--text-muted);" onclick="closeEditFieldModal()">&times;</button>
+      <button type="button" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--text-muted);" data-action="closeEditFieldModal()">&times;</button>
     </div>
 
-    <form onsubmit="handleSaveField(event)" autocomplete="off">
+    <form data-action-submit="handleSaveField(event)" autocomplete="off">
       <input type="hidden" id="editFieldIndex">
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.6rem; margin-bottom:0.6rem;">
         <div class="form-group" style="margin:0;">
@@ -138,7 +138,7 @@
       </div>
 
       <div style="display:flex; justify-content:flex-end; gap:0.4rem;">
-        <button type="button" class="btn btn-secondary" style="padding:0.3rem 0.75rem; font-size:0.75rem;" onclick="closeEditFieldModal()">取消</button>
+        <button type="button" class="btn btn-secondary" style="padding:0.3rem 0.75rem; font-size:0.75rem;" data-action="closeEditFieldModal()">取消</button>
         <button type="submit" class="btn btn-primary" style="padding:0.3rem 0.85rem; font-size:0.75rem;">保存字段修改</button>
       </div>
     </form>

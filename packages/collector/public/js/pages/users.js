@@ -50,9 +50,9 @@ function renderUsers() {
           ? '<span style="color:var(--success); font-weight:600;">启用</span>'
           : '<span style="color:var(--danger); font-weight:600;">已禁用</span>'}</td>
         <td style="display:flex; gap:0.4rem;">
-          ${item.username !== 'admin' ? `<button class="btn-submit" style="width:auto; min-width:45px; margin-top:0; padding:0.25rem 0.55rem; font-size:0.75rem; background:var(--primary); white-space:nowrap; flex-shrink:0;" onclick="openEditUserModal(${item.id})">编辑</button>` : ''}
-          <button class="btn-submit" style="width:auto; min-width:55px; margin-top:0; padding:0.25rem 0.55rem; font-size:0.75rem; white-space:nowrap; flex-shrink:0;" onclick="resetUserPassword(${item.id})">重置密码</button>
-          ${item.username !== 'admin' ? `<button class="btn-submit" style="width:auto; min-width:45px; margin-top:0; padding:0.25rem 0.55rem; font-size:0.75rem; background:var(--danger); white-space:nowrap; flex-shrink:0;" onclick="deleteUser(${item.id})">删除</button>` : ''}
+          ${item.username !== 'admin' ? `<button class="btn-submit" style="width:auto; min-width:45px; margin-top:0; padding:0.25rem 0.55rem; font-size:0.75rem; background:var(--primary); white-space:nowrap; flex-shrink:0;" data-action="openEditUserModal(${item.id})">编辑</button>` : ''}
+          <button class="btn-submit" style="width:auto; min-width:55px; margin-top:0; padding:0.25rem 0.55rem; font-size:0.75rem; white-space:nowrap; flex-shrink:0;" data-action="resetUserPassword(${item.id})">重置密码</button>
+          ${item.username !== 'admin' ? `<button class="btn-submit" style="width:auto; min-width:45px; margin-top:0; padding:0.25rem 0.55rem; font-size:0.75rem; background:var(--danger); white-space:nowrap; flex-shrink:0;" data-action="deleteUser(${item.id})">删除</button>` : ''}
         </td>
       </tr>
     `;

@@ -15,13 +15,13 @@
       </div>
 
       <div style="display:flex; gap:0.6rem; align-items:center;">
-        <button class="btn" id="btnSortOrderToggle" style="background:#f8fafc; border:1px solid #cbd5e1; color:#334155; font-size:0.8rem; font-weight:600; padding:0.45rem 0.85rem; display:flex; align-items:center; gap:0.4rem; cursor:pointer;" onclick="toggleImageSortOrder()">
+        <button class="btn" id="btnSortOrderToggle" style="background:#f8fafc; border:1px solid #cbd5e1; color:#334155; font-size:0.8rem; font-weight:600; padding:0.45rem 0.85rem; display:flex; align-items:center; gap:0.4rem; cursor:pointer;" data-action="toggleImageSortOrder()">
           <span id="sortOrderLabel">时间正序 (从早到晚)</span>
         </button>
-        <button class="btn" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#334155; font-size:0.8rem; font-weight:600; padding:0.45rem 0.85rem;" onclick="loadTaskImagesPage()">
+        <button class="btn" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#334155; font-size:0.8rem; font-weight:600; padding:0.45rem 0.85rem;" data-action="loadTaskImagesPage()">
           刷新图片
         </button>
-        <button class="btn btn-primary" style="font-size:0.8rem; font-weight:700; padding:0.45rem 0.9rem; cursor:pointer; display:inline-flex; align-items:center; gap:0.35rem;" onclick="switchTab('tab-tasks')">
+        <button class="btn btn-primary" style="font-size:0.8rem; font-weight:700; padding:0.45rem 0.9rem; cursor:pointer; display:inline-flex; align-items:center; gap:0.35rem;" data-action="switchTab('tab-tasks')">
           <svg class="icon-svg" viewBox="0 0 24 24" style="width:14px; height:14px;"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
           返回任务列表
         </button>
@@ -32,14 +32,14 @@
     <div style="display:flex; gap:0.85rem; flex-wrap:wrap; align-items:center;">
       <div style="flex:1; min-width:220px;">
         <label style="font-size:0.75rem; font-weight:600; color:#475569; display:block; margin-bottom:0.3rem;">选择展示任务：</label>
-        <select id="galleryTaskSelect" style="width:100%; padding:0.45rem 0.75rem; border-radius:6px; border:1px solid #cbd5e1; font-size:0.85rem; background:#fff;" onchange="loadTaskImagesPage()">
+        <select id="galleryTaskSelect" style="width:100%; padding:0.45rem 0.75rem; border-radius:6px; border:1px solid #cbd5e1; font-size:0.85rem; background:#fff;" data-action-change="loadTaskImagesPage()">
           <option value="">加载中...</option>
         </select>
       </div>
 
       <div style="flex:1.5; min-width:240px;">
         <label style="font-size:0.75rem; font-weight:600; color:#475569; display:block; margin-bottom:0.3rem;">关键词搜索：</label>
-        <input type="text" id="gallerySearchKeyword" placeholder="搜索图片描述、地点、上传者账号/姓名..." style="width:100%; padding:0.45rem 0.75rem; border-radius:6px; border:1px solid #cbd5e1; font-size:0.85rem;" oninput="renderGalleryGrid()" autocomplete="off">
+        <input type="text" id="gallerySearchKeyword" placeholder="搜索图片描述、地点、上传者账号/姓名..." style="width:100%; padding:0.45rem 0.75rem; border-radius:6px; border:1px solid #cbd5e1; font-size:0.85rem;" data-action-input="renderGalleryGrid()" autocomplete="off">
       </div>
 
       <div style="align-self:flex-end;">
@@ -57,16 +57,16 @@
 </div>
 
 <!-- 修改图片描述与元数据 Modal -->
-<div id="editImageModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); z-index:1150; align-items:center; justify-content:center;" onclick="closeEditImageModal()">
-  <div style="position:relative; width:440px; max-width:92vw; background:#ffffff; border-radius:12px; padding:1.5rem; box-shadow:0 20px 25px -5px rgba(0,0,0,0.3); border:1px solid #e2e8f0;" onclick="event.stopPropagation()">
+<div id="editImageModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); z-index:1150; align-items:center; justify-content:center;" data-action="closeEditImageModal()">
+  <div style="position:relative; width:440px; max-width:92vw; background:#ffffff; border-radius:12px; padding:1.5rem; box-shadow:0 20px 25px -5px rgba(0,0,0,0.3); border:1px solid #e2e8f0;" data-action="event.stopPropagation()">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; padding-bottom:0.75rem; border-bottom:1px solid #e2e8f0;">
       <h3 style="font-size:1.05rem; font-weight:700; color:#1e293b; display:flex; align-items:center; gap:0.5rem;">
         编辑图片信息
       </h3>
-      <button onclick="closeEditImageModal()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#64748b;">✕</button>
+      <button data-action="closeEditImageModal()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#64748b;">✕</button>
     </div>
 
-    <form id="editImageForm" onsubmit="handleSaveImageEdit(event)" autocomplete="off">
+    <form id="editImageForm" data-action-submit="handleSaveImageEdit(event)" autocomplete="off">
       <input type="hidden" id="editImgId">
       <div style="margin-bottom:1rem;">
         <label style="display:block; font-size:0.8rem; font-weight:600; color:#334155; margin-bottom:0.35rem;">图片描述 / 备注：</label>
@@ -79,7 +79,7 @@
       </div>
 
       <div style="display:flex; justify-content:flex-end; gap:0.6rem;">
-        <button type="button" class="btn" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#475569;" onclick="closeEditImageModal()">取消</button>
+        <button type="button" class="btn" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#475569;" data-action="closeEditImageModal()">取消</button>
         <button type="submit" class="btn btn-primary">保存修改</button>
       </div>
     </form>

@@ -1,12 +1,12 @@
 <div class="card">
   <div class="card-title">
     <span>系统安全审计日志</span>
-    <button class="btn btn-export" onclick="exportAuditLogsCsv()">导出审计日志 (CSV)</button>
+    <button class="btn btn-export" data-action="exportAuditLogsCsv()">导出审计日志 (CSV)</button>
   </div>
   
   <div class="filter-bar">
-    <input type="text" id="auditKeyword" placeholder="搜索审计事件/描述信息..." oninput="loadFullAuditLogs()" autocomplete="off">
-    <select id="auditStatusFilter" onchange="loadFullAuditLogs()">
+    <input type="text" id="auditKeyword" placeholder="搜索审计事件/描述信息..." data-action-input="loadFullAuditLogs()" autocomplete="off">
+    <select id="auditStatusFilter" data-action-change="loadFullAuditLogs()">
       <option value="">所有状态级别</option>
       <option value="SUCCESS">成功 (SUCCESS)</option>
       <option value="INFO">信息 (INFO)</option>
@@ -27,13 +27,13 @@
       <span>第 <strong id="auditCurrentPageText">1</strong> / <strong id="auditTotalPagesText">1</strong> 页</span>
     </div>
     <div class="pagination-controls">
-      <select id="auditPageSizeSelect" onchange="changeAuditPageSize(this.value)">
+      <select id="auditPageSizeSelect" data-action-change="changeAuditPageSize(this.value)">
         <option value="10">10 条/页</option>
         <option value="20">20 条/页</option>
         <option value="50">50 条/页</option>
       </select>
-      <button class="btn-page" id="auditPrevBtn" onclick="prevAuditPage()">上一页</button>
-      <button class="btn-page" id="auditNextBtn" onclick="nextAuditPage()">下一页</button>
+      <button class="btn-page" id="auditPrevBtn" data-action="prevAuditPage()">上一页</button>
+      <button class="btn-page" id="auditNextBtn" data-action="nextAuditPage()">下一页</button>
     </div>
   </div>
 </div>

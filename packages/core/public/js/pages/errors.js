@@ -43,8 +43,8 @@ function renderErrors() {
         <td><code>${escapeHtml(new Date(item.mtime).toLocaleString())}</code></td>
         <td><span class="badge-level 高">HMAC校验/文件破坏</span></td>
         <td style="display:flex; gap:0.4rem;">
-          <button class="btn btn-primary" style="padding:0.25rem 0.55rem; font-size:0.75rem; white-space:nowrap;" onclick="retryError('${escapeJsString(item.filename)}')">重试解析</button>
-          <button class="btn btn-danger" style="padding:0.25rem 0.55rem; font-size:0.75rem; white-space:nowrap;" onclick="deleteError('${escapeJsString(item.filename)}')">删除</button>
+          <button class="btn btn-primary" style="padding:0.25rem 0.55rem; font-size:0.75rem; white-space:nowrap;" data-action="retryError('${escapeJsString(item.filename)}')">重试解析</button>
+          <button class="btn btn-danger" style="padding:0.25rem 0.55rem; font-size:0.75rem; white-space:nowrap;" data-action="deleteError('${escapeJsString(item.filename)}')">删除</button>
         </td>
       </tr>
     `;

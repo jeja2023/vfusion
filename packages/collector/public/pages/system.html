@@ -27,7 +27,7 @@
         <label style="font-size:0.75rem; font-weight:600;">更新 / 轮换新秘钥：</label>
         <input type="text" id="collectorHmacSecretInput" placeholder="输入新的 64 位 HMAC 秘钥" style="padding:0.4rem 0.6rem; font-size:0.775rem; font-family:monospace;" autocomplete="off">
       </div>
-      <button class="btn btn-primary" style="width:100%; justify-content:center; padding:0.45rem; font-size:0.775rem;" onclick="saveCollectorHmacSecret()">
+      <button class="btn btn-primary" style="width:100%; justify-content:center; padding:0.45rem; font-size:0.775rem;" data-action="saveCollectorHmacSecret()">
         保存并更新 HMAC 签名秘钥
       </button>
     </div>
@@ -43,8 +43,8 @@
       </div>
 
       <!-- 高质感拖拽与选择文件按钮 -->
-      <div class="patch-upload-dropzone" id="collPatchDropzone" onclick="document.getElementById('collWebUpgradeFileInput').click()" style="background:#ffffff; border:2px dashed #7dd3fc; border-radius:8px; padding:0.65rem 0.75rem; text-align:center; cursor:pointer; margin-bottom:0.65rem; transition:all 0.2s ease;">
-        <input type="file" id="collWebUpgradeFileInput" accept=".zip" style="display:none;" onchange="onUpgradeFileSelected(this)">
+      <div class="patch-upload-dropzone" id="collPatchDropzone" data-action="document.getElementById('collWebUpgradeFileInput').click()" style="background:#ffffff; border:2px dashed #7dd3fc; border-radius:8px; padding:0.65rem 0.75rem; text-align:center; cursor:pointer; margin-bottom:0.65rem; transition:all 0.2s ease;">
+        <input type="file" id="collWebUpgradeFileInput" accept=".zip" style="display:none;" data-action-change="onUpgradeFileSelected(this)">
         <div style="display:flex; align-items:center; justify-content:center; gap:0.45rem;">
           <svg class="icon-svg" viewBox="0 0 24 24" style="width:20px; height:20px; color:#0284c7;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
           <span style="font-size:0.8rem; font-weight:700; color:#0369a1;" id="collPatchFileSelectTitle">点击或拖拽上传补丁包 (.zip)</span>
@@ -52,7 +52,7 @@
         <div style="font-size:0.725rem; color:#64748b; margin-top:3px;" id="collPatchFileSelectSub">支持选择 vfusion-patch-v*.zip 增量升级文件</div>
       </div>
 
-      <button class="btn btn-primary" style="width:100%; justify-content:center; padding:0.45rem; font-size:0.775rem; background:#0284c7; border-color:#0284c7;" onclick="uploadCollectorWebPatchUpgrade()">
+      <button class="btn btn-primary" style="width:100%; justify-content:center; padding:0.45rem; font-size:0.775rem; background:#0284c7; border-color:#0284c7;" data-action="uploadCollectorWebPatchUpgrade()">
         上传补丁包并一键无损更新
       </button>
       <div id="collWebUpgradeStatusBox" style="display:none; margin-top:0.45rem; font-size:0.75rem; padding:0.45rem 0.6rem; border-radius:6px; font-family:monospace;"></div>
@@ -66,13 +66,13 @@
         <div style="font-size:0.74rem; color:var(--text-sub); line-height:1.45;">点位坐标以现场测绘、设备台账或管理员核准结果为准。发布人员从点位表选择，系统自动带出坐标，不使用互联网地图或采集端当前位置。</div>
       </div>
       <div style="display:flex; gap:0.35rem; flex-wrap:wrap; justify-content:flex-end;">
-        <button class="btn" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" onclick="exportMonitoringPoints('csv')">导出 CSV</button>
-        <button class="btn" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" onclick="exportMonitoringPoints('json')">导出 JSON</button>
-        <label class="btn" style="padding:0.38rem 0.65rem; font-size:0.75rem; cursor:pointer;">导入文件<input type="file" id="monitoringPointImportFile" accept=".csv,.json,text/csv,application/json" hidden onchange="importMonitoringPoints(this)"></label>
-        <button class="btn" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" onclick="resetMonitoringPointForm();">新建点位</button>
+        <button class="btn" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" data-action="exportMonitoringPoints('csv')">导出 CSV</button>
+        <button class="btn" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" data-action="exportMonitoringPoints('json')">导出 JSON</button>
+        <label class="btn" style="padding:0.38rem 0.65rem; font-size:0.75rem; cursor:pointer;">导入文件<input type="file" id="monitoringPointImportFile" accept=".csv,.json,text/csv,application/json" hidden data-action-change="importMonitoringPoints(this)"></label>
+        <button class="btn" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" data-action="resetMonitoringPointForm();">新建点位</button>
       </div>
     </div>
-    <form id="monitoringPointForm" onsubmit="saveMonitoringPoint(event)" style="display:grid; grid-template-columns:repeat(6, minmax(0, 1fr)); gap:0.5rem; align-items:end; margin-bottom:0.75rem;" autocomplete="off">
+    <form id="monitoringPointForm" data-action-submit="saveMonitoringPoint(event)" style="display:grid; grid-template-columns:repeat(6, minmax(0, 1fr)); gap:0.5rem; align-items:end; margin-bottom:0.75rem;" autocomplete="off">
       <input type="hidden" id="monitoringPointEditingId">
       <div class="form-group"><label>点位编号 *</label><input id="monitoringPointId" required maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,63}" placeholder="如 GATE_NORTH_01" autocomplete="off"></div>
       <div class="form-group"><label>点位名称 *</label><input id="monitoringPointName" required maxlength="128" placeholder="如 厂区北门1号机" autocomplete="off"></div>
@@ -82,12 +82,12 @@
       <div class="form-group"><label>点位说明</label><input id="monitoringPointDescription" maxlength="500" placeholder="测绘批次、设备编号等" autocomplete="off"></div>
       <div style="grid-column:1/-1; display:flex; gap:0.5rem; justify-content:flex-end;">
         <button class="btn btn-primary" type="submit" style="padding:0.4rem 0.8rem; font-size:0.75rem;">保存点位</button>
-        <button class="btn" type="button" style="padding:0.4rem 0.8rem; font-size:0.75rem;" onclick="resetMonitoringPointForm();">取消</button>
+        <button class="btn" type="button" style="padding:0.4rem 0.8rem; font-size:0.75rem;" data-action="resetMonitoringPointForm();">取消</button>
       </div>
     </form>
     <div style="display:flex; gap:0.4rem; margin-bottom:0.45rem;">
-      <input id="monitoringPointAdminQuery" type="search" placeholder="搜索编号、名称或地点" oninput="scheduleMonitoringPointAdminSearch()" style="max-width:320px;">
-      <button class="btn" type="button" onclick="loadMonitoringPointAdminTable(1)">查询</button>
+      <input id="monitoringPointAdminQuery" type="search" placeholder="搜索编号、名称或地点" data-action-input="scheduleMonitoringPointAdminSearch()" style="max-width:320px;">
+      <button class="btn" type="button" data-action="loadMonitoringPointAdminTable(1)">查询</button>
     </div>
     <div style="overflow-x:auto;">
       <table class="data-table" style="min-width:780px; font-size:0.75rem;">

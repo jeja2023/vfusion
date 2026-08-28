@@ -7,15 +7,15 @@
       </h2>
       <p>查看本终端全量已成功打包投递至网闸发送目录的历史单据、抓拍照片与录入信息</p>
     </div>
-    <button class="btn btn-diode" onclick="loadPublishedHistory()">
+    <button class="btn btn-diode" data-action="loadPublishedHistory()">
       <svg class="icon-svg" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
       刷新历史记录
     </button>
   </div>
 
   <div class="filter-bar">
-    <input type="text" id="historyKeyword" placeholder="搜索事件编号/任务名称/地点/涉事人员..." oninput="renderPublishedHistory()" autocomplete="off">
-    <select id="historyTaskFilter" onchange="renderPublishedHistory()">
+    <input type="text" id="historyKeyword" placeholder="搜索事件编号/任务名称/地点/涉事人员..." data-action-input="renderPublishedHistory()" autocomplete="off">
+    <select id="historyTaskFilter" data-action-change="renderPublishedHistory()">
       <option value="">所有任务名称 (全量)</option>
     </select>
   </div>
@@ -49,13 +49,13 @@
       <span>第 <strong id="historyCurrentPageText">1</strong> / <strong id="historyTotalPagesText">1</strong> 页</span>
     </div>
     <div class="pagination-controls">
-      <select id="historyPageSizeSelect" onchange="changeHistoryPageSize(this.value)">
+      <select id="historyPageSizeSelect" data-action-change="changeHistoryPageSize(this.value)">
         <option value="10">10 条/页</option>
         <option value="20">20 条/页</option>
         <option value="50">50 条/页</option>
       </select>
-      <button class="btn-page" id="historyPrevBtn" onclick="prevHistoryPage()">上一页</button>
-      <button class="btn-page" id="historyNextBtn" onclick="nextHistoryPage()">下一页</button>
+      <button class="btn-page" id="historyPrevBtn" data-action="prevHistoryPage()">上一页</button>
+      <button class="btn-page" id="historyNextBtn" data-action="nextHistoryPage()">下一页</button>
     </div>
   </div>
 </div>

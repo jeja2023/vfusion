@@ -12,6 +12,7 @@ const {
 const { normalizeCoordinates, normalizeMonitoringPoint, findMonitoringPoint, applyMonitoringPoint } = require('./monitoring_points');
 const { writeJsonAtomic, readJson } = require('./json_store');
 const { generateToken, verifyToken, setTokenSecret } = require('./auth_middleware');
+const { generateWebhookSecret, signWebhookPayload, verifyWebhookSignature, WEBHOOK_SIGNATURE_HEADER } = require('./webhook_signing');
 
 let passed = 0;
 let failed = 0;
@@ -53,6 +54,12 @@ try {
   check('API Token audience 校验生效', Boolean(verifyToken(apiToken, { audience: 'test-service' })));
   check('资产 Token scope 校验生效', Boolean(verifyToken(assetToken, { audience: 'test-service', allowedScopes: ['asset'] })));
   check('API 中间件拒绝资产 Token', verifyToken(assetToken, { audience: 'test-service', allowedScopes: ['api'] }) === null);
+  const webhookSecret = generateWebhookSecret();
+  const webhookBody = JSON.stringify({ event: 'EVENT_INGESTED', data: { id: 1 } });
+  const webhookSignature = signWebhookPayload(webhookBody, webhookSecret);
+  check('Webhook 使用独立随机密钥签名', webhookSecret.length === 64 && WEBHOOK_SIGNATURE_HEADER === 'X-VFusion-Signature');
+  check('Webhook 签名可验证', verifyWebhookSignature(webhookBody, webhookSignature, webhookSecret));
+  check('数据包密钥不能验证 Webhook 签名', !verifyWebhookSignature(webhookBody, webhookSignature, 'different-package-secret-012345678901234567'));
 } finally {
   fs.rmSync(tempDir, { recursive: true, force: true });
 }

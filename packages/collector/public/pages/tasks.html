@@ -43,15 +43,15 @@
 <div class="card" style="background:#ffffff; border:1px solid var(--border-color); border-radius:10px; padding:0.75rem 1rem; box-shadow:0 1px 3px rgba(0,0,0,0.05); overflow:hidden;">
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.45rem; flex-wrap:wrap; gap:0.5rem;">
     <div style="display:flex; align-items:center; gap:0.75rem; flex:1; min-width:280px;">
-      <input type="text" id="taskSearchKeyword" placeholder="搜索任务名称/编号/描述/创建人..." oninput="renderTaskCards()" style="padding:0.45rem 0.75rem; border:1px solid var(--border-color); border-radius:6px; font-size:0.85rem; width:260px;" autocomplete="off">
-      <select id="taskStatusFilter" onchange="renderTaskCards()" style="padding:0.45rem 0.75rem; border:1px solid var(--border-color); border-radius:6px; font-size:0.85rem; background:#fff; cursor:pointer;">
+      <input type="text" id="taskSearchKeyword" placeholder="搜索任务名称/编号/描述/创建人..." data-action-input="renderTaskCards()" style="padding:0.45rem 0.75rem; border:1px solid var(--border-color); border-radius:6px; font-size:0.85rem; width:260px;" autocomplete="off">
+      <select id="taskStatusFilter" data-action-change="renderTaskCards()" style="padding:0.45rem 0.75rem; border:1px solid var(--border-color); border-radius:6px; font-size:0.85rem; background:#fff; cursor:pointer;">
         <option value="">全部任务状态</option>
         <option value="ACTIVE" selected>进行中</option>
         <option value="COMPLETED">已完成</option>
       </select>
     </div>
     <div style="display:flex; gap:0.6rem;">
-      <button class="btn btn-primary" style="padding:0.45rem 0.95rem; font-size:0.825rem; font-weight:600; display:flex; align-items:center; gap:0.35rem; border-radius:6px; cursor:pointer;" onclick="openCreateTaskModal()">
+      <button class="btn btn-primary" style="padding:0.45rem 0.95rem; font-size:0.825rem; font-weight:600; display:flex; align-items:center; gap:0.35rem; border-radius:6px; cursor:pointer;" data-action="openCreateTaskModal()">
         <svg class="icon-svg" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         新建任务
       </button>
@@ -86,29 +86,29 @@
       <span>第 <strong id="taskCurrentPageText">1</strong> / <strong id="taskTotalPagesText">1</strong> 页</span>
     </div>
     <div class="pagination-controls">
-      <select id="taskPageSizeSelect" onchange="changeTaskPageSize(this.value)">
+      <select id="taskPageSizeSelect" data-action-change="changeTaskPageSize(this.value)">
         <option value="10">10 条/页</option>
         <option value="20">20 条/页</option>
         <option value="50">50 条/页</option>
       </select>
-      <button class="btn-page" id="taskPrevBtn" onclick="prevTaskPage()">上一页</button>
-      <button class="btn-page" id="taskNextBtn" onclick="nextTaskPage()">下一页</button>
+      <button class="btn-page" id="taskPrevBtn" data-action="prevTaskPage()">上一页</button>
+      <button class="btn-page" id="taskNextBtn" data-action="nextTaskPage()">下一页</button>
     </div>
   </div>
 </div>
 
 <!-- 新建任务 Modal -->
-<div id="createTaskModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); z-index:1150; align-items:center; justify-content:center;" onclick="closeCreateTaskModal()">
-  <div style="position:relative; width:460px; max-width:92vw; background:#ffffff; border-radius:12px; padding:1.5rem; box-shadow:0 20px 25px -5px rgba(0,0,0,0.3); border:1px solid #e2e8f0;" onclick="event.stopPropagation()">
+<div id="createTaskModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); z-index:1150; align-items:center; justify-content:center;" data-action="closeCreateTaskModal()">
+  <div style="position:relative; width:460px; max-width:92vw; background:#ffffff; border-radius:12px; padding:1.5rem; box-shadow:0 20px 25px -5px rgba(0,0,0,0.3); border:1px solid #e2e8f0;" data-action="event.stopPropagation()">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; padding-bottom:0.75rem; border-bottom:1px solid #e2e8f0;">
       <h3 style="font-size:1.05rem; font-weight:700; color:#1e293b; display:flex; align-items:center; gap:0.5rem;">
         <svg class="icon-svg" viewBox="0 0 24 24" style="color:var(--primary);"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
         创建新任务
       </h3>
-      <button onclick="closeCreateTaskModal()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#64748b; font-weight:bold;">✕</button>
+      <button data-action="closeCreateTaskModal()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#64748b; font-weight:bold;">✕</button>
     </div>
 
-    <form onsubmit="handleCreateTask(event)" autocomplete="off">
+    <form data-action-submit="handleCreateTask(event)" autocomplete="off">
       <div style="display:flex; flex-direction:column; gap:1rem;">
         <div>
           <label style="display:block; font-size:0.85rem; font-weight:600; color:var(--text-main); margin-bottom:0.35rem;">任务名称 <span style="color:red;">*</span></label>
@@ -135,7 +135,7 @@
       </div>
 
       <div style="margin-top:1.5rem; text-align:right; display:flex; justify-content:flex-end; gap:0.5rem;">
-        <button type="button" class="btn" style="background:#f1f5f9; color:#475569;" onclick="closeCreateTaskModal()">取消</button>
+        <button type="button" class="btn" style="background:#f1f5f9; color:#475569;" data-action="closeCreateTaskModal()">取消</button>
         <button type="submit" class="btn btn-primary" style="padding:0.5rem 1.25rem;">保存并生成任务</button>
       </div>
     </form>
@@ -143,17 +143,17 @@
 </div>
 
 <!-- 设置任务共享用户 Modal -->
-<div id="shareTaskModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); z-index:1150; align-items:center; justify-content:center;" onclick="closeShareTaskModal()">
-  <div style="position:relative; width:480px; max-width:92vw; background:#ffffff; border-radius:12px; padding:1.5rem; box-shadow:0 20px 25px -5px rgba(0,0,0,0.3); border:1px solid #e2e8f0;" onclick="event.stopPropagation()">
+<div id="shareTaskModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); z-index:1150; align-items:center; justify-content:center;" data-action="closeShareTaskModal()">
+  <div style="position:relative; width:480px; max-width:92vw; background:#ffffff; border-radius:12px; padding:1.5rem; box-shadow:0 20px 25px -5px rgba(0,0,0,0.3); border:1px solid #e2e8f0;" data-action="event.stopPropagation()">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; padding-bottom:0.75rem; border-bottom:1px solid #e2e8f0;">
       <div>
         <h3 id="shareTaskModalTitle" style="font-size:1.05rem; font-weight:700; color:#1e293b;">分配任务共享用户</h3>
         <p id="shareTaskModalSub" style="font-size:0.775rem; color:#64748b; margin-top:2px;"></p>
       </div>
-      <button onclick="closeShareTaskModal()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#64748b; font-weight:bold;">✕</button>
+      <button data-action="closeShareTaskModal()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#64748b; font-weight:bold;">✕</button>
     </div>
 
-    <form onsubmit="handleSaveTaskShare(event)">
+    <form data-action-submit="handleSaveTaskShare(event)">
       <input type="hidden" id="shareTaskCodeInput">
       <div style="display:flex; flex-direction:column; gap:1rem;">
         <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:0.75rem; display:flex; align-items:center; justify-content:space-between;">
@@ -173,7 +173,7 @@
       </div>
 
       <div style="margin-top:1.5rem; text-align:right; display:flex; justify-content:flex-end; gap:0.5rem;">
-        <button type="button" class="btn" style="background:#f1f5f9; color:#475569;" onclick="closeShareTaskModal()">取消</button>
+        <button type="button" class="btn" style="background:#f1f5f9; color:#475569;" data-action="closeShareTaskModal()">取消</button>
         <button type="submit" class="btn btn-primary" style="padding:0.5rem 1.25rem;">确认分配共享</button>
       </div>
     </form>
@@ -181,14 +181,14 @@
 </div>
 
 <!-- 任务综合详情与管理 Modal -->
-<div id="taskDetailModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); z-index:1150; align-items:center; justify-content:center;" onclick="closeTaskDetailModal()">
-  <div style="position:relative; width:820px; max-width:94vw; max-height:88vh; background:#ffffff; border-radius:12px; padding:1.5rem; box-shadow:0 20px 25px -5px rgba(0,0,0,0.3); border:1px solid #e2e8f0; display:flex; flex-direction:column; overflow:hidden;" onclick="event.stopPropagation()">
+<div id="taskDetailModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); z-index:1150; align-items:center; justify-content:center;" data-action="closeTaskDetailModal()">
+  <div style="position:relative; width:820px; max-width:94vw; max-height:88vh; background:#ffffff; border-radius:12px; padding:1.5rem; box-shadow:0 20px 25px -5px rgba(0,0,0,0.3); border:1px solid #e2e8f0; display:flex; flex-direction:column; overflow:hidden;" data-action="event.stopPropagation()">
     <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:0.75rem; border-bottom:1px solid #e2e8f0;">
       <div>
         <h3 id="taskDetailModalTitle" style="font-size:1.15rem; font-weight:700; color:#0f172a;">任务综合详情</h3>
         <p id="taskDetailModalCode" style="font-size:0.8rem; color:#2563eb; font-family:monospace; margin-top:3px; font-weight:600;"></p>
       </div>
-      <button onclick="closeTaskDetailModal()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#64748b; font-weight:bold;">✕</button>
+      <button data-action="closeTaskDetailModal()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#64748b; font-weight:bold;">✕</button>
     </div>
 
     <div id="taskDetailModalContent" style="flex:1; overflow-y:auto; padding-top:1rem; display:flex; flex-direction:column; gap:1.2rem;"></div>
@@ -196,16 +196,16 @@
 </div>
 
 <!-- 编辑任务 Modal -->
-<div id="editTaskModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); z-index:1150; align-items:center; justify-content:center;" onclick="closeEditTaskModal()">
-  <div style="position:relative; width:480px; max-width:92vw; background:#ffffff; border-radius:12px; padding:1.5rem; box-shadow:0 20px 25px -5px rgba(0,0,0,0.3); border:1px solid #e2e8f0;" onclick="event.stopPropagation()">
+<div id="editTaskModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); z-index:1150; align-items:center; justify-content:center;" data-action="closeEditTaskModal()">
+  <div style="position:relative; width:480px; max-width:92vw; background:#ffffff; border-radius:12px; padding:1.5rem; box-shadow:0 20px 25px -5px rgba(0,0,0,0.3); border:1px solid #e2e8f0;" data-action="event.stopPropagation()">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; padding-bottom:0.75rem; border-bottom:1px solid #e2e8f0;">
       <h3 style="font-size:1.05rem; font-weight:700; color:#1e293b; display:flex; align-items:center; gap:0.5rem;">
         编辑任务
       </h3>
-      <button onclick="closeEditTaskModal()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#64748b; font-weight:bold;">✕</button>
+      <button data-action="closeEditTaskModal()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#64748b; font-weight:bold;">✕</button>
     </div>
 
-    <form onsubmit="handleSaveTaskEdit(event)" autocomplete="off">
+    <form data-action-submit="handleSaveTaskEdit(event)" autocomplete="off">
       <input type="hidden" id="editTaskCode">
       <div style="display:flex; flex-direction:column; gap:1rem;">
         <div>
@@ -236,7 +236,7 @@
       </div>
 
       <div style="margin-top:1.5rem; text-align:right; display:flex; justify-content:flex-end; gap:0.5rem;">
-        <button type="button" class="btn" style="background:#f1f5f9; color:#475569;" onclick="closeEditTaskModal()">取消</button>
+        <button type="button" class="btn" style="background:#f1f5f9; color:#475569;" data-action="closeEditTaskModal()">取消</button>
         <button type="submit" class="btn btn-primary" style="padding:0.5rem 1.25rem;">保存修改</button>
       </div>
     </form>
@@ -244,19 +244,19 @@
 </div>
 
 <!-- 任务涉事人员登记与管理 Modal -->
-<div id="taskPersonnelModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); z-index:1150; align-items:center; justify-content:center;" onclick="closeTaskPersonnelModal()">
-  <div style="position:relative; width:640px; max-width:94vw; max-height:85vh; background:#ffffff; border-radius:12px; padding:1.5rem; box-shadow:0 20px 25px -5px rgba(0,0,0,0.3); border:1px solid #e2e8f0; display:flex; flex-direction:column; overflow:hidden;" onclick="event.stopPropagation()">
+<div id="taskPersonnelModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); z-index:1150; align-items:center; justify-content:center;" data-action="closeTaskPersonnelModal()">
+  <div style="position:relative; width:640px; max-width:94vw; max-height:85vh; background:#ffffff; border-radius:12px; padding:1.5rem; box-shadow:0 20px 25px -5px rgba(0,0,0,0.3); border:1px solid #e2e8f0; display:flex; flex-direction:column; overflow:hidden;" data-action="event.stopPropagation()">
     <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:0.75rem; border-bottom:1px solid #e2e8f0;">
       <div>
         <h3 id="taskPersonnelModalTitle" style="font-size:1.05rem; font-weight:700; color:#0f172a;">登记并管理任务涉事人员档案</h3>
         <p id="taskPersonnelModalSub" style="font-size:0.775rem; color:#64748b; margin-top:2px;"></p>
       </div>
-      <button onclick="closeTaskPersonnelModal()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#64748b; font-weight:bold;">✕</button>
+      <button data-action="closeTaskPersonnelModal()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#64748b; font-weight:bold;">✕</button>
     </div>
 
     <div style="flex:1; overflow-y:auto; padding-top:1rem; display:flex; flex-direction:column; gap:1.25rem;">
       <!-- 新增人员录入表单 -->
-      <form onsubmit="handleAddTaskPersonnel(event)" autocomplete="off" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:1rem;">
+      <form data-action-submit="handleAddTaskPersonnel(event)" autocomplete="off" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:1rem;">
         <h4 style="font-size:0.875rem; font-weight:700; color:#1e293b; margin-bottom:0.75rem;">登记新涉事人员信息</h4>
         <input type="hidden" id="tpTaskCode">
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem; margin-bottom:0.75rem;">
@@ -302,13 +302,13 @@
             <span>第 <strong id="tpCurrentPageText">1</strong> / <strong id="tpTotalPagesText">1</strong> 页</span>
           </div>
           <div class="pagination-controls">
-            <select id="tpPageSizeSelect" onchange="changeTpPageSize(this.value)">
+            <select id="tpPageSizeSelect" data-action-change="changeTpPageSize(this.value)">
               <option value="5">5 条/页</option>
               <option value="10">10 条/页</option>
               <option value="20">20 条/页</option>
             </select>
-            <button class="btn-page" id="tpPrevBtn" onclick="prevTpPage()">上一页</button>
-            <button class="btn-page" id="tpNextBtn" onclick="nextTpPage()">下一页</button>
+            <button class="btn-page" id="tpPrevBtn" data-action="prevTpPage()">上一页</button>
+            <button class="btn-page" id="tpNextBtn" data-action="nextTpPage()">下一页</button>
           </div>
         </div>
       </div>

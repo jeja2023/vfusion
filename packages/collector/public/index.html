@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self' 'unsafe-inline'; connect-src 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>视汇 - 视频网发布终端</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><path d=%22M50 10 L85 25 V50 C85 70 50 90 50 90 C50 90 15 70 15 50 V25 Z%22 fill=%22%232563eb%22/></svg>">
@@ -30,7 +30,7 @@
       <h2 style="font-size:1.3rem; font-weight:700; color:var(--text-main);">视频网采集发布端登录</h2>
       <p style="font-size:0.85rem; color:var(--text-muted); margin-top:0.35rem; margin-bottom:1.75rem;">隔离网络采集发布身份验证</p>
 
-      <form id="loginForm" onsubmit="handleLogin(event)">
+      <form id="loginForm" data-action-submit="handleLogin(event)">
         <div class="form-group" style="text-align:left; margin-bottom:1rem;">
           <label>用户名</label>
           <input type="text" id="loginUsername" placeholder="请输入用户名" required autocomplete="username">
@@ -64,31 +64,31 @@
       </div>
 
       <nav class="sidebar-nav">
-        <button class="nav-item active" id="tabBtn-tasks" onclick="switchTab('tab-tasks')">
+        <button class="nav-item active" id="tabBtn-tasks" data-action="switchTab('tab-tasks')">
           <svg class="icon-svg" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
           <span>任务管理中心</span>
         </button>
-        <button class="nav-item" id="tabBtn-history" onclick="switchTab('tab-history')">
+        <button class="nav-item" id="tabBtn-history" data-action="switchTab('tab-history')">
           <svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           <span>已提交历史存照</span>
         </button>
-        <button class="nav-item" id="tabBtn-builder" onclick="switchTab('tab-builder')">
+        <button class="nav-item" id="tabBtn-builder" data-action="switchTab('tab-builder')">
           <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
           <span>视频网表单设计器</span>
         </button>
-        <button class="nav-item" id="tabBtn-ftp" onclick="switchTab('tab-ftp')">
+        <button class="nav-item" id="tabBtn-ftp" data-action="switchTab('tab-ftp')">
           <svg class="icon-svg" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
           <span>FTP 通道配置</span>
         </button>
-        <button class="nav-item" id="tabBtn-audits" onclick="switchTab('tab-audits')">
+        <button class="nav-item" id="tabBtn-audits" data-action="switchTab('tab-audits')">
           <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
           <span>系统审计日志</span>
         </button>
-        <button class="nav-item" id="tabBtn-users" onclick="switchTab('tab-users')">
+        <button class="nav-item" id="tabBtn-users" data-action="switchTab('tab-users')">
           <svg class="icon-svg" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 1 0 7.75"/></svg>
           <span>用户与权限管理</span>
         </button>
-        <button class="nav-item" id="tabBtn-system" onclick="switchTab('tab-system')">
+        <button class="nav-item" id="tabBtn-system" data-action="switchTab('tab-system')">
           <svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           <span>系统配置与维护</span>
         </button>
@@ -96,7 +96,7 @@
 
       <div class="sidebar-footer">
         <span id="userInfoTag" style="font-size:0.825rem; font-weight:600; color:var(--text-sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></span>
-        <button class="btn-submit" style="width:auto; min-width:60px; margin-top:0; padding:0.35rem 0.75rem; font-size:0.8rem; background:var(--danger); white-space:nowrap; flex-shrink:0;" onclick="handleLogout()">退出</button>
+        <button class="btn-submit" style="width:auto; min-width:60px; margin-top:0; padding:0.35rem 0.75rem; font-size:0.8rem; background:var(--danger); white-space:nowrap; flex-shrink:0;" data-action="handleLogout()">退出</button>
       </div>
     </aside>
 
@@ -126,23 +126,23 @@
   </div>
 
   <!-- 照片放大弹窗 Modal Lightbox -->
-  <div id="imageLightboxOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.85); backdrop-filter:blur(6px); z-index:20000; align-items:center; justify-content:center;" onclick="closeImageLightbox()">
-    <div style="position:relative; max-width:85vw; max-height:85vh; display:flex; flex-direction:column; align-items:center; background:#ffffff; border-radius:12px; padding:1.25rem; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);" onclick="event.stopPropagation()">
-      <button onclick="closeImageLightbox()" style="position:absolute; top:-12px; right:-12px; width:32px; height:32px; border-radius:50%; background:#ef4444; color:#ffffff; border:none; font-size:1.1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:bold; box-shadow:0 4px 6px -1px rgba(0,0,0,0.3);">✕</button>
+  <div id="imageLightboxOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.85); backdrop-filter:blur(6px); z-index:20000; align-items:center; justify-content:center;" data-action="closeImageLightbox()">
+    <div style="position:relative; max-width:85vw; max-height:85vh; display:flex; flex-direction:column; align-items:center; background:#ffffff; border-radius:12px; padding:1.25rem; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);" data-action="event.stopPropagation()">
+      <button data-action="closeImageLightbox()" style="position:absolute; top:-12px; right:-12px; width:32px; height:32px; border-radius:50%; background:#ef4444; color:#ffffff; border:none; font-size:1.1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:bold; box-shadow:0 4px 6px -1px rgba(0,0,0,0.3);">✕</button>
       <img id="lightboxImg" src="" style="max-width:80vw; max-height:75vh; object-fit:contain; border-radius:8px; border:1px solid #e2e8f0; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);">
       <div id="lightboxCaption" style="margin-top:0.75rem; font-size:0.875rem; font-weight:600; color:var(--text-main);">现场照片放大预览</div>
     </div>
   </div>
 
   <!-- 涉事人员详细档案弹窗 Modal -->
-  <div id="personDetailModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); z-index:1150; align-items:center; justify-content:center;" onclick="closePersonDetailModal()">
-    <div style="position:relative; width:420px; max-width:90vw; background:#ffffff; border-radius:12px; padding:1.5rem; box-shadow:0 20px 25px -5px rgba(0,0,0,0.3); border:1px solid #e2e8f0;" onclick="event.stopPropagation()">
+  <div id="personDetailModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); z-index:1150; align-items:center; justify-content:center;" data-action="closePersonDetailModal()">
+    <div style="position:relative; width:420px; max-width:90vw; background:#ffffff; border-radius:12px; padding:1.5rem; box-shadow:0 20px 25px -5px rgba(0,0,0,0.3); border:1px solid #e2e8f0;" data-action="event.stopPropagation()">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; padding-bottom:0.75rem; border-bottom:1px solid #e2e8f0;">
         <h3 style="font-size:1.05rem; font-weight:700; color:#1e293b; display:flex; align-items:center; gap:0.5rem;">
           <svg class="icon-svg" viewBox="0 0 24 24" style="color:#2563eb;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 1 0 7.75"/></svg>
           涉事人员详细档案
         </h3>
-        <button onclick="closePersonDetailModal()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#64748b; font-weight:bold;">✕</button>
+        <button data-action="closePersonDetailModal()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#64748b; font-weight:bold;">✕</button>
       </div>
       <div style="display:flex; flex-direction:column; gap:0.85rem; font-size:0.875rem;">
         <div style="display:flex; justify-content:space-between; background:#f8fafc; padding:0.65rem 0.85rem; border-radius:6px;">
@@ -159,12 +159,13 @@
         </div>
       </div>
       <div style="margin-top:1.25rem; text-align:right;">
-        <button class="btn btn-primary" onclick="closePersonDetailModal()">关闭档案</button>
+        <button class="btn btn-primary" data-action="closePersonDetailModal()">关闭档案</button>
       </div>
     </div>
   </div>
 
   <script src="js/main.js"></script>
+  <script src="js/delegated_actions.js"></script>
   <script src="js/pages/tasks.js"></script>
   <script src="js/pages/task_images.js"></script>
   <script src="js/pages/publish.js"></script>

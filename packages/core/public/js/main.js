@@ -14,7 +14,7 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-// 用于嵌入 onclick="fn('...')" 这类内联属性的字符串字面量
+// 用于嵌入 data-action="fn('...')" 这类内联属性的字符串字面量
 function escapeJsString(value) {
   if (value === null || value === undefined) return '';
   return String(value)
@@ -472,9 +472,9 @@ function openEventDrawer(eventId) {
   const files = evt.files || [];
   const imgsHtml = files.length > 0
     ? files.map(f => `
-        <div style="display:flex; flex-direction:column; gap:0.35rem; background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:0.5rem; cursor:pointer;" onclick="openImageLightbox('${escapeJsString(assetUrl(f.url))}', { description:'${escapeJsString(f.description || '')}', timestamp:'${escapeJsString(f.timestamp || '')}', location:'${escapeJsString(f.location || '')}', uploader:'${escapeJsString((f.uploader_name || f.uploader_username || '').split('(')[0].trim())}' })">
+        <div style="display:flex; flex-direction:column; gap:0.35rem; background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:0.5rem; cursor:pointer;" data-action="openImageLightbox('${escapeJsString(assetUrl(f.url))}', { description:'${escapeJsString(f.description || '')}', timestamp:'${escapeJsString(f.timestamp || '')}', location:'${escapeJsString(f.location || '')}', uploader:'${escapeJsString((f.uploader_name || f.uploader_username || '').split('(')[0].trim())}' })">
           <div style="width:100%; height:110px; background:#0f172a; border-radius:6px; overflow:hidden;">
-            <img src="${escapeHtml(assetUrl(f.url))}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none'">
+            <img src="${escapeHtml(assetUrl(f.url))}" style="width:100%; height:100%; object-fit:cover;" data-action-error="this.style.display='none'">
           </div>
           <div style="font-size:0.7rem; color:#64748b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(f.filename || '')}">${escapeHtml(f.filename || '图片')}</div>
         </div>`).join('')
@@ -510,7 +510,7 @@ function openEventDrawer(eventId) {
         <div style="font-size:0.775rem; font-weight:700; color:#15803d; margin-bottom:0.6rem; text-transform:uppercase; letter-spacing:0.5px;">现场信息</div>
         ${field('发生地点', escapeHtml(p.location || '-'))}
         ${field('交通方式', escapeHtml(p.transportation || '-'))}
-        ${p.person_name ? field('涉事姓名', `<strong style="color:var(--primary); cursor:pointer;" onclick="event.stopPropagation(); showPersonDetailModal('${escapeJsString(encodeURIComponent(JSON.stringify(p)))}')">${escapeHtml(p.person_name)}</strong>`) : ''}
+        ${p.person_name ? field('涉事姓名', `<strong style="color:var(--primary); cursor:pointer;" data-action="event.stopPropagation(); showPersonDetailModal('${escapeJsString(encodeURIComponent(JSON.stringify(p)))}')">${escapeHtml(p.person_name)}</strong>`) : ''}
         ${p.person_id_card ? field('身份证号', escapeHtml(p.person_id_card), true) : ''}
         ${p.person_domicile ? field('户籍地址', escapeHtml(p.person_domicile)) : ''}
         ${p.description ? field('现场描述', escapeHtml(p.description)) : ''}

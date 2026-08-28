@@ -79,11 +79,11 @@ function renderPublishedHistory() {
     const p = item.payload || {};
 
     const imgsHtml = (item.files || []).map(f =>
-      `<img src="${escapeHtml(assetUrl(f.url))}" style="width:28px; height:28px; object-fit:cover; border-radius:4px; border:1px solid var(--border-color); cursor:pointer; transition:transform 0.15s;" onerror="this.style.opacity='0.4';" onclick="event.stopPropagation(); openImageLightbox('${escapeJsString(assetUrl(f.url))}', '现场照片放大预览 (${escapeJsString(f.filename || '001.jpg')})')" title="点击在弹窗中放大查看">`
+      `<img src="${escapeHtml(assetUrl(f.url))}" style="width:28px; height:28px; object-fit:cover; border-radius:4px; border:1px solid var(--border-color); cursor:pointer; transition:transform 0.15s;" data-action-error="this.style.opacity='0.4';" data-action="event.stopPropagation(); openImageLightbox('${escapeJsString(assetUrl(f.url))}', '现场照片放大预览 (${escapeJsString(f.filename || '001.jpg')})')" title="点击在弹窗中放大查看">`
     ).join(' ');
 
     const personStr = p.person_name
-      ? `<strong style="color:var(--primary); cursor:pointer; text-decoration:none; font-size:0.775rem;" onclick="event.stopPropagation(); showPersonDetailModal('${escapeJsString(encodeURIComponent(JSON.stringify(p)))}')" title="点击弹窗查看涉事人员完整档案">${escapeHtml(p.person_name)}</strong>`
+      ? `<strong style="color:var(--primary); cursor:pointer; text-decoration:none; font-size:0.775rem;" data-action="event.stopPropagation(); showPersonDetailModal('${escapeJsString(encodeURIComponent(JSON.stringify(p)))}')" title="点击弹窗查看涉事人员完整档案">${escapeHtml(p.person_name)}</strong>`
       : '<span style="color:var(--text-muted);">-</span>';
 
     const realOperatorName = formatUserForTable(item.operator_name || item.operator);

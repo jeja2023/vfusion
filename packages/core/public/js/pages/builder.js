@@ -43,8 +43,8 @@ function renderSchemaFields() {
         <td>${escapeHtml(f.type)}</td>
         <td>${escapeHtml((f.options || []).join(', ')) || '-'}</td>
         <td style="display:flex; gap:0.4rem;">
-          <button class="btn btn-secondary" style="padding:0.25rem 0.5rem; font-size:0.75rem; white-space:nowrap;" onclick="openEditFieldModal(${realIdx})">编辑</button>
-          <button class="btn btn-danger" style="padding:0.25rem 0.5rem; font-size:0.75rem; white-space:nowrap;" onclick="removeSchemaField(${realIdx})">删除</button>
+          <button class="btn btn-secondary" style="padding:0.25rem 0.5rem; font-size:0.75rem; white-space:nowrap;" data-action="openEditFieldModal(${realIdx})">编辑</button>
+          <button class="btn btn-danger" style="padding:0.25rem 0.5rem; font-size:0.75rem; white-space:nowrap;" data-action="removeSchemaField(${realIdx})">删除</button>
         </td>
       </tr>
     `;

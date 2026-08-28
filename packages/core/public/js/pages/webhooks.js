@@ -58,7 +58,7 @@ function renderWebhooks() {
         <td>
           <div style="display:flex; align-items:center; gap:0.4rem;">
             <label class="toggle-switch" style="width:32px; height:16px; margin:0;" title="${isEnabled ? '点击停用' : '点击启用'}">
-              <input type="checkbox" ${isEnabled ? 'checked' : ''} onchange="toggleWebhookNode(${item.id}, this.checked)">
+              <input type="checkbox" ${isEnabled ? 'checked' : ''} data-action-change="toggleWebhookNode(${item.id}, this.checked)">
               <span class="toggle-slider"></span>
             </label>
             <span style="font-size:0.75rem; color:${isEnabled ? '#15803d' : '#94a3b8'}; font-weight:600;">
@@ -68,9 +68,10 @@ function renderWebhooks() {
         </td>
         <td>${statusBadge}</td>
         <td style="display:flex; gap:0.35rem;">
-          <button class="btn btn-secondary" style="padding:0.2rem 0.45rem; font-size:0.75rem; white-space:nowrap;" onclick="openEditWebhookModal(${item.id})">编辑</button>
-          <button class="btn btn-primary" style="padding:0.2rem 0.45rem; font-size:0.75rem; white-space:nowrap;" onclick="testWebhook(${item.id})">测试推送</button>
-          <button class="btn btn-danger" style="padding:0.2rem 0.45rem; font-size:0.75rem; white-space:nowrap;" onclick="deleteWebhook(${item.id})">移除</button>
+          <button class="btn btn-secondary" style="padding:0.2rem 0.45rem; font-size:0.75rem; white-space:nowrap;" data-action="openEditWebhookModal(${item.id})">编辑</button>
+          <button class="btn btn-primary" style="padding:0.2rem 0.45rem; font-size:0.75rem; white-space:nowrap;" data-action="testWebhook(${item.id})">测试推送</button>
+          <button class="btn btn-secondary" style="padding:0.2rem 0.45rem; font-size:0.75rem; white-space:nowrap;" data-action="rotateWebhookSecret(${item.id})">轮换密钥</button>
+          <button class="btn btn-danger" style="padding:0.2rem 0.45rem; font-size:0.75rem; white-space:nowrap;" data-action="deleteWebhook(${item.id})">移除</button>
         </td>
       </tr>
     `;
@@ -129,6 +130,11 @@ async function handleAddWebhookSubmit(e) {
     const json = await res.json();
     if (json.success) {
       showToast('第三方订阅节点注册成功！');
+      const box = document.getElementById('webhookSecretStatusBox');
+      if (box && json.data && json.data.secret) {
+        box.style.display = 'block';
+        box.textContent = `请立即将以下独立 Webhook 签名密钥安全交给接收方（仅本次显示）：\n${json.data.secret}`;
+      }
       closeAddWebhookModal();
       loadWebhooks();
     } else {
@@ -237,3 +243,20 @@ async function deleteWebhook(id) {
   loadWebhooks();
 }
 
+async function rotateWebhookSecret(id) {
+  if (!confirm('轮换后旧签名密钥立即失效，确认继续？')) return;
+  try {
+    const res = await fetch(`/api/webhooks/${id}/rotate-secret`, { method: 'POST' });
+    const json = await res.json();
+    if (!json.success) return showToast(json.error || '密钥轮换失败', 'error');
+    const box = document.getElementById('webhookSecretStatusBox');
+    if (box) {
+      box.style.display = 'block';
+      box.textContent = `请立即将以下独立 Webhook 签名密钥安全同步给接收方（旧密钥已失效）：\n${json.data.secret}`;
+    }
+    showToast('Webhook 独立签名密钥已轮换');
+    loadWebhooks();
+  } catch (e) {
+    showToast('密钥轮换请求失败: ' + e.message, 'error');
+  }
+}

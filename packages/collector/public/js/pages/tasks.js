@@ -85,15 +85,15 @@ function renderTaskCards() {
     const latestTime = t.latest_timestamp ? new Date(t.latest_timestamp).toLocaleString() : '未提交';
 
     const editTaskBtn = canManageTask
-      ? `<button class="btn" style="background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8; font-size:0.75rem; padding:0.25rem 0.5rem;" onclick="openEditTaskModal('${escapeJsString(t.task_code)}')">编辑</button>`
+      ? `<button class="btn" style="background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8; font-size:0.75rem; padding:0.25rem 0.5rem;" data-action="openEditTaskModal('${escapeJsString(t.task_code)}')">编辑</button>`
       : `<button class="btn" style="background:#f8fafc; border:1px solid #cbd5e1; color:#94a3b8; font-size:0.75rem; padding:0.25rem 0.5rem; cursor:not-allowed;" title="无操作权限 (仅任务创建者或管理员可修改)" disabled>编辑</button>`;
 
     const deleteTaskBtn = canManageTask
-      ? `<button class="btn" style="background:#fef2f2; border:1px solid #fecaca; color:#dc2626; font-size:0.75rem; padding:0.25rem 0.5rem;" onclick="handleDeleteTask('${escapeJsString(t.task_code)}')">删除</button>`
+      ? `<button class="btn" style="background:#fef2f2; border:1px solid #fecaca; color:#dc2626; font-size:0.75rem; padding:0.25rem 0.5rem;" data-action="handleDeleteTask('${escapeJsString(t.task_code)}')">删除</button>`
       : `<button class="btn" style="background:#f8fafc; border:1px solid #cbd5e1; color:#94a3b8; font-size:0.75rem; padding:0.25rem 0.5rem; cursor:not-allowed;" title="无操作权限 (仅任务创建者或管理员可删除)" disabled>删除</button>`;
 
     const shareManageBtn = canManageTask
-      ? `<button class="btn" style="background:#fdf4ff; border:1px solid #f5d0fe; color:#a21caf; font-weight:600; padding:0.25rem 0.5rem; font-size:0.75rem;" onclick="openShareTaskModal('${escapeJsString(t.task_code)}')">分配共享</button>`
+      ? `<button class="btn" style="background:#fdf4ff; border:1px solid #f5d0fe; color:#a21caf; font-weight:600; padding:0.25rem 0.5rem; font-size:0.75rem;" data-action="openShareTaskModal('${escapeJsString(t.task_code)}')">分配共享</button>`
       : '';
 
     return `
@@ -110,9 +110,9 @@ function renderTaskCards() {
         <td style="font-size:0.775rem; color:#64748b; white-space:nowrap;">${escapeHtml(latestTime)}</td>
         <td style="text-align:center; white-space:nowrap;">
           <div style="display:flex; gap:0.25rem; justify-content:center; align-items:center; flex-wrap:nowrap; white-space:nowrap;">
-            <button class="btn btn-primary" style="padding:0.15rem 0.35rem; font-size:0.7rem; font-weight:600; white-space:nowrap; flex-shrink:0;" onclick="publishToTask('${escapeJsString(t.task_code)}')">上传图片</button>
-            <button class="btn" style="background:#f0f9ff; border:1px solid #bae6fd; color:#0284c7; font-weight:600; padding:0.15rem 0.35rem; font-size:0.7rem; white-space:nowrap; flex-shrink:0;" onclick="selectTaskForGallery('${escapeJsString(t.task_code)}')">图片库</button>
-            <button class="btn" style="background:#f8fafc; border:1px solid #cbd5e1; color:#334155; font-weight:600; padding:0.15rem 0.35rem; font-size:0.7rem; white-space:nowrap; flex-shrink:0;" onclick="openTaskDetailModal('${escapeJsString(t.task_code)}')">任务详情</button>
+            <button class="btn btn-primary" style="padding:0.15rem 0.35rem; font-size:0.7rem; font-weight:600; white-space:nowrap; flex-shrink:0;" data-action="publishToTask('${escapeJsString(t.task_code)}')">上传图片</button>
+            <button class="btn" style="background:#f0f9ff; border:1px solid #bae6fd; color:#0284c7; font-weight:600; padding:0.15rem 0.35rem; font-size:0.7rem; white-space:nowrap; flex-shrink:0;" data-action="selectTaskForGallery('${escapeJsString(t.task_code)}')">图片库</button>
+            <button class="btn" style="background:#f8fafc; border:1px solid #cbd5e1; color:#334155; font-weight:600; padding:0.15rem 0.35rem; font-size:0.7rem; white-space:nowrap; flex-shrink:0;" data-action="openTaskDetailModal('${escapeJsString(t.task_code)}')">任务详情</button>
           </div>
         </td>
       </tr>
@@ -263,7 +263,7 @@ async function openTaskDetail(taskCode) {
           const files = evt.files || [];
           const payload = evt.payload || {};
           const imgsHtml = files.map(f =>
-            `<img src="${escapeHtml(assetUrl(f.url))}" style="width:72px; height:72px; object-fit:cover; border-radius:6px; border:1px solid #cbd5e1; cursor:pointer;" onerror="this.style.opacity='0.4'; this.title='图片无法加载';" onclick="openImageLightbox('${escapeJsString(assetUrl(f.url))}', '${escapeJsString(t.task_name)} - 现场照片')">`
+            `<img src="${escapeHtml(assetUrl(f.url))}" style="width:72px; height:72px; object-fit:cover; border-radius:6px; border:1px solid #cbd5e1; cursor:pointer;" data-action-error="this.style.opacity='0.4'; this.title='图片无法加载';" data-action="openImageLightbox('${escapeJsString(assetUrl(f.url))}', '${escapeJsString(t.task_name)} - 现场照片')">`
           ).join(' ');
 
           return `
@@ -425,7 +425,7 @@ function renderTaskPersonnelTable() {
       <td style="padding:0.45rem 0.6rem; font-family:monospace; color:#2563eb;">${escapeHtml(p.id_card)}</td>
       <td style="padding:0.45rem 0.6rem; color:#475569;">${escapeHtml(p.domicile || '-')}</td>
       <td style="padding:0.45rem 0.6rem; text-align:center;">
-        <button class="btn" style="background:#fef2f2; border:1px solid #fecaca; color:#dc2626; font-size:0.75rem; padding:0.2rem 0.45rem;" onclick="handleDeleteTaskPersonnel('${escapeJsString(p.id)}')">删除</button>
+        <button class="btn" style="background:#fef2f2; border:1px solid #fecaca; color:#dc2626; font-size:0.75rem; padding:0.2rem 0.45rem;" data-action="handleDeleteTaskPersonnel('${escapeJsString(p.id)}')">删除</button>
       </td>
     </tr>
   `).join('');
@@ -582,15 +582,15 @@ async function openTaskDetailModal(taskCode) {
   const statusColor = task.status === 'ACTIVE' ? '#0284c7' : '#64748b';
 
   const shareManageBtnHtml = canManageTask
-    ? `<button class="btn" style="background:#fdf4ff; border:1px solid #f5d0fe; color:#a21caf; font-weight:600; padding:0.4rem 0.85rem; font-size:0.8rem; border-radius:6px; cursor:pointer;" onclick="closeTaskDetailModal(); openShareTaskModal('${escapeJsString(task.task_code)}');">共享权限</button>`
+    ? `<button class="btn" style="background:#fdf4ff; border:1px solid #f5d0fe; color:#a21caf; font-weight:600; padding:0.4rem 0.85rem; font-size:0.8rem; border-radius:6px; cursor:pointer;" data-action="closeTaskDetailModal(); openShareTaskModal('${escapeJsString(task.task_code)}');">共享权限</button>`
     : '';
 
   const editTaskBtnHtml = canManageTask
-    ? `<button class="btn" style="background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8; font-weight:600; padding:0.4rem 0.85rem; font-size:0.8rem; border-radius:6px; cursor:pointer;" onclick="closeTaskDetailModal(); openEditTaskModal('${escapeJsString(task.task_code)}');">编辑任务</button>`
+    ? `<button class="btn" style="background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8; font-weight:600; padding:0.4rem 0.85rem; font-size:0.8rem; border-radius:6px; cursor:pointer;" data-action="closeTaskDetailModal(); openEditTaskModal('${escapeJsString(task.task_code)}');">编辑任务</button>`
     : '';
 
   const deleteTaskBtnHtml = canManageTask
-    ? `<button class="btn" style="background:#fef2f2; border:1px solid #fecaca; color:#dc2626; font-weight:600; padding:0.4rem 0.85rem; font-size:0.8rem; border-radius:6px; cursor:pointer;" onclick="closeTaskDetailModal(); handleDeleteTask('${escapeJsString(task.task_code)}');">删除任务</button>`
+    ? `<button class="btn" style="background:#fef2f2; border:1px solid #fecaca; color:#dc2626; font-weight:600; padding:0.4rem 0.85rem; font-size:0.8rem; border-radius:6px; cursor:pointer;" data-action="closeTaskDetailModal(); handleDeleteTask('${escapeJsString(task.task_code)}');">删除任务</button>`
     : '';
 
   let html = `
@@ -614,9 +614,9 @@ async function openTaskDetailModal(taskCode) {
     <div>
       <label style="font-size:0.825rem; font-weight:700; color:#334155; display:block; margin-bottom:0.5rem;">任务功能合并快捷操作区：</label>
       <div style="display:flex; gap:0.5rem; flex-wrap:wrap; background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:0.75rem;">
-        <button class="btn btn-primary" style="padding:0.4rem 0.85rem; font-size:0.8rem; font-weight:600; border-radius:6px; cursor:pointer;" onclick="closeTaskDetailModal(); publishToTask('${escapeJsString(task.task_code)}');">上传图片</button>
-        <button class="btn" style="background:#f0f9ff; border:1px solid #bae6fd; color:#0284c7; font-weight:600; padding:0.4rem 0.85rem; font-size:0.8rem; border-radius:6px; cursor:pointer;" onclick="closeTaskDetailModal(); selectTaskForGallery('${escapeJsString(task.task_code)}');">图片库</button>
-        <button class="btn" style="background:#f0fdf4; border:1px solid #bbf7d0; color:#15803d; font-weight:600; padding:0.4rem 0.85rem; font-size:0.8rem; border-radius:6px; cursor:pointer;" onclick="openTaskPersonnelModal('${escapeJsString(task.task_code)}');">涉事人员</button>
+        <button class="btn btn-primary" style="padding:0.4rem 0.85rem; font-size:0.8rem; font-weight:600; border-radius:6px; cursor:pointer;" data-action="closeTaskDetailModal(); publishToTask('${escapeJsString(task.task_code)}');">上传图片</button>
+        <button class="btn" style="background:#f0f9ff; border:1px solid #bae6fd; color:#0284c7; font-weight:600; padding:0.4rem 0.85rem; font-size:0.8rem; border-radius:6px; cursor:pointer;" data-action="closeTaskDetailModal(); selectTaskForGallery('${escapeJsString(task.task_code)}');">图片库</button>
+        <button class="btn" style="background:#f0fdf4; border:1px solid #bbf7d0; color:#15803d; font-weight:600; padding:0.4rem 0.85rem; font-size:0.8rem; border-radius:6px; cursor:pointer;" data-action="openTaskPersonnelModal('${escapeJsString(task.task_code)}');">涉事人员</button>
         ${shareManageBtnHtml}
         ${editTaskBtnHtml}
         ${deleteTaskBtnHtml}
@@ -643,8 +643,8 @@ async function openTaskDetailModal(taskCode) {
     const photosGrid = document.getElementById('taskDetailPhotosGrid');
     if (json.success && Array.isArray(json.data) && json.data.length > 0) {
       photosGrid.innerHTML = json.data.map(img => `
-        <div style="position:relative; aspect-ratio:4/3; border-radius:6px; overflow:hidden; border:1px solid #cbd5e1; background:#000; cursor:pointer;" onclick="openImageLightbox('${escapeJsString(assetUrl(img.url))}', '${escapeJsString(img.description || task.task_name)}')">
-          <img src="${escapeHtml(assetUrl(img.url))}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.opacity='0.4';">
+        <div style="position:relative; aspect-ratio:4/3; border-radius:6px; overflow:hidden; border:1px solid #cbd5e1; background:#000; cursor:pointer;" data-action="openImageLightbox('${escapeJsString(assetUrl(img.url))}', '${escapeJsString(img.description || task.task_name)}')">
+          <img src="${escapeHtml(assetUrl(img.url))}" style="width:100%; height:100%; object-fit:cover;" data-action-error="this.style.opacity='0.4';">
           <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.6); color:#fff; font-size:0.65rem; padding:2px 4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
             ${escapeHtml(img.uploader_name || '操作员')}
           </div>

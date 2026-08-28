@@ -47,9 +47,9 @@ function renderUsers() {
           ? '<span style="color:var(--success); font-weight:600;">启用</span>'
           : '<span style="color:var(--danger); font-weight:600;">已禁用</span>'}</td>
         <td style="display:flex; gap:0.4rem;">
-          ${item.username !== 'admin' ? `<button class="btn btn-secondary" style="padding:0.25rem 0.5rem; font-size:0.75rem; white-space:nowrap;" onclick="openEditUserModal(${item.id})">编辑</button>` : ''}
-          <button class="btn btn-primary" style="padding:0.25rem 0.5rem; font-size:0.75rem; white-space:nowrap;" onclick="resetUserPassword(${item.id})">重置密码</button>
-          ${item.username !== 'admin' ? `<button class="btn btn-danger" style="padding:0.25rem 0.5rem; font-size:0.75rem; white-space:nowrap;" onclick="deleteUser(${item.id})">删除</button>` : ''}
+          ${item.username !== 'admin' ? `<button class="btn btn-secondary" style="padding:0.25rem 0.5rem; font-size:0.75rem; white-space:nowrap;" data-action="openEditUserModal(${item.id})">编辑</button>` : ''}
+          <button class="btn btn-primary" style="padding:0.25rem 0.5rem; font-size:0.75rem; white-space:nowrap;" data-action="resetUserPassword(${item.id})">重置密码</button>
+          ${item.username !== 'admin' ? `<button class="btn btn-danger" style="padding:0.25rem 0.5rem; font-size:0.75rem; white-space:nowrap;" data-action="deleteUser(${item.id})">删除</button>` : ''}
         </td>
       </tr>
     `;

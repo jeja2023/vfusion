@@ -129,11 +129,11 @@ function renderGalleryGrid() {
     const canDelete = img.can_delete;
 
     const editBtn = canEdit
-      ? `<button class="btn" style="background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8; font-size:0.75rem; padding:0.3rem 0.55rem; font-weight:600;" onclick="openEditImageModal('${escapeJsString(img.id)}')">编辑</button>`
+      ? `<button class="btn" style="background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8; font-size:0.75rem; padding:0.3rem 0.55rem; font-weight:600;" data-action="openEditImageModal('${escapeJsString(img.id)}')">编辑</button>`
       : `<button class="btn" style="background:#f8fafc; border:1px solid #e2e8f0; color:#94a3b8; font-size:0.75rem; padding:0.3rem 0.55rem; cursor:not-allowed;" title="无编辑权限 (仅上传者/任务创建者/管理员可修改)" disabled>编辑</button>`;
 
     const deleteBtn = canDelete
-      ? `<button class="btn" style="background:#fef2f2; border:1px solid #fecaca; color:#dc2626; font-size:0.75rem; padding:0.3rem 0.55rem; font-weight:600;" onclick="handleDeleteImage('${escapeJsString(img.id)}')">删除</button>`
+      ? `<button class="btn" style="background:#fef2f2; border:1px solid #fecaca; color:#dc2626; font-size:0.75rem; padding:0.3rem 0.55rem; font-weight:600;" data-action="handleDeleteImage('${escapeJsString(img.id)}')">删除</button>`
       : `<button class="btn" style="background:#f8fafc; border:1px solid #e2e8f0; color:#94a3b8; font-size:0.75rem; padding:0.3rem 0.55rem; cursor:not-allowed;" title="无删除权限 (仅上传者/任务创建者/管理员可删除)" disabled>删除</button>`;
 
     return `
@@ -147,8 +147,8 @@ function renderGalleryGrid() {
         </div>
 
         <!-- 图片预览区 -->
-        <div style="position:relative; width:100%; height:185px; background:#0f172a; overflow:hidden; cursor:pointer;" onclick="viewGalleryImageLightbox('${escapeJsString(img.id)}')">
-          <img src="${escapeHtml(assetUrl(img.url))}" style="width:100%; height:100%; object-fit:cover; transition:transform 0.3s ease;" onerror="this.style.opacity='0.4'; this.title='图片未找到或无法加载';" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+        <div style="position:relative; width:100%; height:185px; background:#0f172a; overflow:hidden; cursor:pointer;" data-action="viewGalleryImageLightbox('${escapeJsString(img.id)}')">
+          <img src="${escapeHtml(assetUrl(img.url))}" style="width:100%; height:100%; object-fit:cover; transition:transform 0.3s ease;" data-action-error="this.style.opacity='0.4'; this.title='图片未找到或无法加载';" data-action-mouseover="this.style.transform='scale(1.05)'" data-action-mouseout="this.style.transform='scale(1)'">
           ${isOwn ? `<span style="position:absolute; top:8px; right:8px; background:rgba(37,99,235,0.9); color:#fff; font-size:0.7rem; font-weight:700; padding:0.15rem 0.45rem; border-radius:4px; backdrop-filter:blur(4px);">我上传的</span>` : ''}
         </div>
 
@@ -161,7 +161,7 @@ function renderGalleryGrid() {
 
           <!-- 底部操作按钮组 -->
           <div style="display:flex; gap:0.4rem; justify-content:flex-end; border-top:1px solid #f1f5f9; padding-top:0.55rem; margin-top:0.4rem;">
-            <button class="btn" style="background:#f8fafc; border:1px solid #cbd5e1; color:#334155; font-size:0.75rem; padding:0.3rem 0.55rem; font-weight:600;" onclick="viewGalleryImageLightbox('${escapeJsString(img.id)}')">查看大图</button>
+            <button class="btn" style="background:#f8fafc; border:1px solid #cbd5e1; color:#334155; font-size:0.75rem; padding:0.3rem 0.55rem; font-weight:600;" data-action="viewGalleryImageLightbox('${escapeJsString(img.id)}')">查看大图</button>
             ${editBtn}
             ${deleteBtn}
           </div>

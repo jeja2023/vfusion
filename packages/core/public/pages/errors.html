@@ -1,7 +1,7 @@
 <div class="card">
   <div class="card-title">
     <span>死信隔离区控制台</span>
-    <button class="btn btn-diode" onclick="loadErrors()">刷新隔离区文件</button>
+    <button class="btn btn-diode" data-action="loadErrors()">刷新隔离区文件</button>
   </div>
 
   <!-- 隔离区统计指标卡片 -->
@@ -56,12 +56,12 @@
       <span>第 <strong id="errorCurrentPageText">1</strong> / <strong id="errorTotalPagesText">1</strong> 页</span>
     </div>
     <div class="pagination-controls">
-      <select id="errorPageSizeSelect" onchange="changeErrorPageSize(this.value)">
+      <select id="errorPageSizeSelect" data-action-change="changeErrorPageSize(this.value)">
         <option value="10">10 条/页</option>
         <option value="20">20 条/页</option>
       </select>
-      <button class="btn-page" id="errorPrevBtn" onclick="prevErrorPage()">上一页</button>
-      <button class="btn-page" id="errorNextBtn" onclick="nextErrorPage()">下一页</button>
+      <button class="btn-page" id="errorPrevBtn" data-action="prevErrorPage()">上一页</button>
+      <button class="btn-page" id="errorNextBtn" data-action="nextErrorPage()">下一页</button>
     </div>
   </div>
 </div>

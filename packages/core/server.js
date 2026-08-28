@@ -21,6 +21,7 @@ const { testFtpConnection, uploadToRemoteFtp, downloadFromRemoteFtp } = require(
 const { formidable } = require('formidable');
 const { performOnlineUpgrade } = require('../common/system_upgrader');
 const { createRateLimiter } = require('../common/rate_limiter');
+const { generateWebhookSecret, signWebhookPayload, WEBHOOK_SIGNATURE_HEADER } = require('../common/webhook_signing');
 const { normalizeCoordinates, normalizeMonitoringPoint, readMonitoringPoints, findMonitoringPoint, applyMonitoringPoint, createMonitoringPointId, monitoringPointsToCsv } = require('../common/monitoring_points');
 
 const app = express();
@@ -89,11 +90,42 @@ if (!fs.existsSync(SCHEMA_FILE)) writeJsonAtomic(SCHEMA_FILE, DEFAULT_FORM_SCHEM
 if (!fs.existsSync(WEBHOOKS_FILE)) writeJsonAtomic(WEBHOOKS_FILE, []);
 if (!fs.existsSync(MONITORING_POINTS_FILE)) writeJsonAtomic(MONITORING_POINTS_FILE, []);
 
+function maskWebhookSecret(secret) {
+  if (!secret) return '未设置';
+  const value = String(secret);
+  return value.length <= 8 ? '********' : `${value.slice(0, 4)}...${value.slice(-4)}`;
+}
+
+function serializeWebhook(hook, includeSecret = false) {
+  const safe = { ...hook, secret: undefined, secret_masked: maskWebhookSecret(hook.secret) };
+  delete safe.secret;
+  if (includeSecret && hook.secret) safe.secret = hook.secret;
+  return safe;
+}
+
+function migrateWebhookSecrets() {
+  updateJsonAtomic(WEBHOOKS_FILE, [], list => {
+    if (!Array.isArray(list)) return [];
+    let changed = false;
+    const migrated = list.map(hook => {
+      if (hook && (!hook.secret || typeof hook.secret !== 'string' || hook.secret.length < 32)) {
+        changed = true;
+        return { ...hook, secret: generateWebhookSecret(), secret_version: 2, migrated_at: new Date().toISOString() };
+      }
+      return hook;
+    });
+    return changed ? migrated : list;
+  });
+}
+
+migrateWebhookSecrets();
+
 // 首次启动时生成随机 HMAC / Token 密钥，避免固定密钥随源码分发
 if (!fs.existsSync(SECURITY_CONFIG_FILE)) {
   writeJsonAtomic(SECURITY_CONFIG_FILE, {
     hmac_secret: crypto.randomBytes(32).toString('hex'),
     token_secret: crypto.randomBytes(32).toString('hex'),
+    upgrade_signing_key: crypto.randomBytes(32).toString('hex'),
     auto_diode_interval: 0,
     ftp_in_dir: '',
     ftp_out_dir: '',
@@ -116,6 +148,10 @@ try {
   }
   if (!secConf.token_secret) {
     secConf.token_secret = crypto.randomBytes(32).toString('hex');
+    mutated = true;
+  }
+  if (!secConf.upgrade_signing_key) {
+    secConf.upgrade_signing_key = crypto.randomBytes(32).toString('hex');
     mutated = true;
   }
   if (mutated) writeJsonAtomic(SECURITY_CONFIG_FILE, secConf);
@@ -868,11 +904,10 @@ async function dispatchWebhooks(eventRecord) {
     data: eventRecord
   });
 
-  const hmacSecret = getHmacSecret();
-  const signature = crypto.createHmac('sha256', hmacSecret).update(payloadStr).digest('hex');
-
   for (const hook of hooks) {
     try {
+      if (!hook.secret || typeof hook.secret !== 'string' || hook.secret.length < 32) throw new Error('Webhook 节点未配置独立签名密钥');
+      const signature = signWebhookPayload(payloadStr, hook.secret);
       const urlValidation = await validateHttpUrlResolved(hook.url);
       if (!urlValidation.valid) throw new Error(urlValidation.error);
       const urlObj = urlValidation.url;
@@ -884,7 +919,7 @@ async function dispatchWebhooks(eventRecord) {
         headers: {
           'Content-Type': 'application/json',
           'Content-Length': Buffer.byteLength(payloadStr),
-          'X-VFusion-Signature': signature
+          [WEBHOOK_SIGNATURE_HEADER]: signature
         }
       }, res => {
         addAuditLog('WEBHOOK', `消息分发 [${hook.name}]: HTTP ${res.statusCode}`, res.statusCode < 400 ? 'SUCCESS' : 'WARN');
@@ -1345,6 +1380,29 @@ app.get('/api/ftp/poll-status', (req, res) => {
   });
 });
 
+// FTP 轮询时间间隔与启停配置
+app.post('/api/ftp/poll-interval', requireRole('admin'), (req, res) => {
+  const { interval } = req.body || {};
+  const intervalSec = Math.max(0, parseInt(interval, 10) || 0);
+
+  try {
+    const sec = getFtpConfig() || {};
+    sec.ftp_poll_interval = intervalSec;
+    writeJsonAtomic(SECURITY_CONFIG_FILE, sec);
+
+    setFtpPollInterval(intervalSec);
+
+    const msg = intervalSec > 0
+      ? `已开启 FTP 自动轮询 (周期 ${intervalSec} 秒)`
+      : `已停止 FTP 自动轮询`;
+
+    addAuditLog('FTP_POLL', `更新 FTP 自动轮询间隔为 ${intervalSec} 秒`, 'SUCCESS');
+    res.json({ success: true, message: msg, interval: intervalSec });
+  } catch (err) {
+    res.status(500).json({ success: false, error: '设置轮询间隔失败: ' + err.message });
+  }
+});
+
 // FTP 服务器节点 CRUD 接口
 app.get('/api/ftp/servers', (req, res) => {
   const safeServers = getFtpServers().map(server => ({
@@ -1579,7 +1637,7 @@ app.post('/api/schema', requireRole('admin'), (req, res) => {
 });
 
 app.get('/api/webhooks', requireRole('admin'), (req, res) => {
-  res.json({ success: true, data: readWebhooks() });
+  res.json({ success: true, data: readWebhooks().map(hook => serializeWebhook(hook)) });
 });
 
 app.post('/api/webhooks', requireRole('admin'), async (req, res) => {
@@ -1588,14 +1646,14 @@ app.post('/api/webhooks', requireRole('admin'), async (req, res) => {
   const urlValidation = await validateHttpUrlResolved(url);
   if (!urlValidation.valid) return res.status(400).json({ success: false, error: urlValidation.error });
 
-  const newHook = { id: Date.now(), name: String(name).trim().slice(0, 128), url: urlValidation.url.toString(), enabled: enabled !== false, created_at: new Date().toISOString() };
+  const newHook = { id: Date.now(), name: String(name).trim().slice(0, 128), url: urlValidation.url.toString(), enabled: enabled !== false, secret: generateWebhookSecret(), secret_version: 2, created_at: new Date().toISOString() };
   updateJsonAtomic(WEBHOOKS_FILE, [], list => {
     if (!Array.isArray(list)) list = [];
     list.push(newHook);
     return list;
   });
   addAuditLog('WEBHOOK_ADD', `注册新消息订阅节点: ${name}`, 'SUCCESS');
-  res.json({ success: true, message: '消息订阅节点注册成功', data: newHook });
+  res.json({ success: true, message: '消息订阅节点注册成功，请将本次返回的签名密钥安全交给接收方', data: serializeWebhook(newHook, true) });
 });
 
 app.delete('/api/webhooks/:id', requireRole('admin'), (req, res) => {
@@ -1626,7 +1684,20 @@ app.put('/api/webhooks/:id', requireRole('admin'), async (req, res) => {
     return current;
   });
   addAuditLog('WEBHOOK_UPDATE', `更新消息订阅节点: ${name}`, 'SUCCESS');
-  res.json({ success: true, message: '订阅节点更新成功', data: hook });
+  res.json({ success: true, message: '订阅节点更新成功', data: serializeWebhook(hook) });
+});
+
+app.post('/api/webhooks/:id/rotate-secret', requireRole('admin'), (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const list = readWebhooks();
+  const hook = list.find(item => item.id === id);
+  if (!hook) return res.status(404).json({ success: false, error: '未找到指定的 Webhook 节点' });
+  hook.secret = generateWebhookSecret();
+  hook.secret_version = Number(hook.secret_version || 1) + 1;
+  hook.secret_rotated_at = new Date().toISOString();
+  updateJsonAtomic(WEBHOOKS_FILE, [], current => Array.isArray(current) ? current.map(item => item.id === id ? hook : item) : [hook]);
+  addAuditLog('WEBHOOK_SECRET_ROTATE', `轮换 Webhook [${hook.name}] 独立签名密钥`, 'WARN');
+  res.json({ success: true, message: 'Webhook 签名密钥已轮换，请立即同步给接收方', data: serializeWebhook(hook, true) });
 });
 
 app.patch('/api/webhooks/:id/toggle', requireRole('admin'), (req, res) => {
@@ -1649,13 +1720,8 @@ app.post('/api/webhooks/:id/test', requireRole('admin'), async (req, res) => {
   const hook = list.find(h => String(h.id) === String(req.params.id));
   if (!hook) return res.status(404).json({ success: false, error: '未找到指定的 Webhook 订阅节点' });
 
-  let hmacSecret = getHmacSecret();
-  try {
-    if (fs.existsSync(SECURITY_CONFIG_FILE)) {
-      const sec = JSON.parse(fs.readFileSync(SECURITY_CONFIG_FILE, 'utf8'));
-      if (sec && sec.hmac_secret) hmacSecret = sec.hmac_secret;
-    }
-  } catch (e) {}
+  const webhookSecret = hook.secret;
+  if (!webhookSecret) return res.status(409).json({ success: false, error: 'Webhook 节点未配置独立签名密钥，请先轮换密钥' });
 
   const photoUrl = '/assets/test_photo.jpg';
   const testEvent = {
@@ -1691,7 +1757,7 @@ app.post('/api/webhooks/:id/test', requireRole('admin'), async (req, res) => {
     data: testEvent
   });
 
-  const signature = crypto.createHmac('sha256', hmacSecret).update(payloadStr).digest('hex');
+  const signature = signWebhookPayload(payloadStr, webhookSecret);
 
   try {
     const urlValidation = await validateHttpUrlResolved(hook.url);
@@ -1705,7 +1771,7 @@ app.post('/api/webhooks/:id/test', requireRole('admin'), async (req, res) => {
       headers: {
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(payloadStr),
-        'X-VFusion-Signature': signature
+        [WEBHOOK_SIGNATURE_HEADER]: signature
       },
       timeout: 8000
     }, (testRes) => {
@@ -2047,7 +2113,7 @@ function getLocalIps() {
 const httpServer = app.listen(PORT, '0.0.0.0', () => {
   const localIps = getLocalIps();
   console.log(`===================================================`);
-  console.log(` 内网数据汇聚与管理中台 (VFusion Core v0.21.0) 已启动`);
+  console.log(` 内网数据汇聚与管理中台 (VFusion Core v0.22.0) 已启动`);
   console.log(` 本机访问地址: http://localhost:${PORT}`);
   localIps.forEach(ip => {
     console.log(` 局域网/其他电脑访问地址: http://${ip}:${PORT}`);

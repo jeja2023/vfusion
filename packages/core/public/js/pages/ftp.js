@@ -63,7 +63,7 @@ function renderFtpServers() {
         <td>
           <div style="display:flex; align-items:center; gap:0.4rem;">
             <label class="toggle-switch" style="width:32px; height:16px; margin:0;" title="${isEnabled ? '点击关闭通道' : '点击开启通道'}">
-              <input type="checkbox" ${isEnabled ? 'checked' : ''} onchange="toggleFtpNode('${item.id}', this.checked)">
+              <input type="checkbox" ${isEnabled ? 'checked' : ''} data-action-change="toggleFtpNode('${item.id}', this.checked)">
               <span class="toggle-slider"></span>
             </label>
             <span style="font-size:0.75rem; color:${isEnabled ? '#15803d' : '#94a3b8'}; font-weight:600;">
@@ -78,10 +78,10 @@ function renderFtpServers() {
         </td>
         <td style="text-align:center;">
           <div style="display:inline-flex; gap:0.35rem; align-items:center; justify-content:center;">
-            <button class="btn btn-diode" style="padding:0.25rem 0.55rem; font-size:0.75rem; white-space:nowrap;" onclick="testFtpNode('${item.id}')" title="测试连通性">测试</button>
-            <button class="btn btn-primary" style="padding:0.25rem 0.55rem; font-size:0.75rem; white-space:nowrap;" onclick="manualFtpPullNode('${item.id}')" title="立即拉取">拉取</button>
-            <button class="btn btn-secondary" style="padding:0.25rem 0.55rem; font-size:0.75rem; white-space:nowrap;" onclick="openEditFtpModal('${item.id}')">编辑</button>
-            <button class="btn btn-danger" style="padding:0.25rem 0.55rem; font-size:0.75rem; white-space:nowrap;" onclick="deleteFtpNode('${item.id}')">移除</button>
+            <button class="btn btn-diode" style="padding:0.25rem 0.55rem; font-size:0.75rem; white-space:nowrap;" data-action="testFtpNode('${item.id}')" title="测试连通性">测试</button>
+            <button class="btn btn-primary" style="padding:0.25rem 0.55rem; font-size:0.75rem; white-space:nowrap;" data-action="manualFtpPullNode('${item.id}')" title="立即拉取">拉取</button>
+            <button class="btn btn-secondary" style="padding:0.25rem 0.55rem; font-size:0.75rem; white-space:nowrap;" data-action="openEditFtpModal('${item.id}')">编辑</button>
+            <button class="btn btn-danger" style="padding:0.25rem 0.55rem; font-size:0.75rem; white-space:nowrap;" data-action="deleteFtpNode('${item.id}')">移除</button>
           </div>
         </td>
       </tr>

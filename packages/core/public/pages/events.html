@@ -50,19 +50,19 @@
       <div style="display:flex; align-items:center; gap:0.75rem;">
         <span>跨网任务数据汇聚看板</span>
         <div style="display:inline-flex; background:#f1f5f9; padding:2px; border-radius:6px; border:1px solid #cbd5e1;">
-          <button id="viewBtn-event" class="btn" style="padding:0.25rem 0.65rem; font-size:0.775rem; font-weight:700; background:#ffffff; color:var(--primary); border:none; box-shadow:0 1px 2px rgba(0,0,0,0.1); border-radius:4px;" onclick="switchCoreView('event')">事件列表</button>
-          <button id="viewBtn-task" class="btn" style="padding:0.25rem 0.65rem; font-size:0.775rem; font-weight:500; background:transparent; color:#64748b; border:none; border-radius:4px;" onclick="switchCoreView('task')">任务列表</button>
+          <button id="viewBtn-event" class="btn" style="padding:0.25rem 0.65rem; font-size:0.775rem; font-weight:700; background:#ffffff; color:var(--primary); border:none; box-shadow:0 1px 2px rgba(0,0,0,0.1); border-radius:4px;" data-action="switchCoreView('event')">事件列表</button>
+          <button id="viewBtn-task" class="btn" style="padding:0.25rem 0.65rem; font-size:0.775rem; font-weight:500; background:transparent; color:#64748b; border:none; border-radius:4px;" data-action="switchCoreView('task')">任务列表</button>
         </div>
       </div>
       <span style="font-size:0.775rem; color:var(--text-muted); font-weight:normal;">点击任务或事件可侧滑查看关联现场照片与提交审计</span>
     </div>
 
     <div class="filter-bar" style="margin-bottom:0.45rem;">
-      <input type="text" id="filterKeyword" placeholder="搜索任务名称/编号/事件ID/地点/涉事人员..." oninput="renderCoreDashboard()" autocomplete="off">
-      <select id="filterTask" onchange="renderCoreDashboard()">
+      <input type="text" id="filterKeyword" placeholder="搜索任务名称/编号/事件ID/地点/涉事人员..." data-action-input="renderCoreDashboard()" autocomplete="off">
+      <select id="filterTask" data-action-change="renderCoreDashboard()">
         <option value="">所有任务名称 (全量)</option>
       </select>
-      <select id="filterType" onchange="renderCoreDashboard()">
+      <select id="filterType" data-action-change="renderCoreDashboard()">
         <option value="">所有交通方式</option>
         <option value="步行">步行</option>
         <option value="自行车/电动车">自行车/电动车</option>
@@ -102,13 +102,13 @@
           <span>第 <strong id="taskCurrentPageText">1</strong> / <strong id="taskTotalPagesText">1</strong> 页</span>
         </div>
         <div class="pagination-controls">
-          <select id="taskPageSizeSelect" onchange="changeTaskPageSize(this.value)">
+          <select id="taskPageSizeSelect" data-action-change="changeTaskPageSize(this.value)">
             <option value="10">10 条/页</option>
             <option value="20">20 条/页</option>
             <option value="50">50 条/页</option>
           </select>
-          <button class="btn-page" id="taskPrevBtn" onclick="prevTaskPage()">上一页</button>
-          <button class="btn-page" id="taskNextBtn" onclick="nextTaskPage()">下一页</button>
+          <button class="btn-page" id="taskPrevBtn" data-action="prevTaskPage()">上一页</button>
+          <button class="btn-page" id="taskNextBtn" data-action="nextTaskPage()">下一页</button>
         </div>
       </div>
     </div>
@@ -143,13 +143,13 @@
           <span>第 <strong id="evtCurrentPageText">1</strong> / <strong id="evtTotalPagesText">1</strong> 页</span>
         </div>
         <div class="pagination-controls">
-          <select id="evtPageSizeSelect" onchange="changeEvtPageSize(this.value)">
+          <select id="evtPageSizeSelect" data-action-change="changeEvtPageSize(this.value)">
             <option value="10">10 条/页</option>
             <option value="20">20 条/页</option>
             <option value="50">50 条/页</option>
           </select>
-          <button class="btn-page" id="evtPrevBtn" onclick="prevEvtPage()">上一页</button>
-          <button class="btn-page" id="evtNextBtn" onclick="nextEvtPage()">下一页</button>
+          <button class="btn-page" id="evtPrevBtn" data-action="prevEvtPage()">上一页</button>
+          <button class="btn-page" id="evtNextBtn" data-action="nextEvtPage()">下一页</button>
         </div>
       </div>
     </div>

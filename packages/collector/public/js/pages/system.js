@@ -45,8 +45,8 @@ async function loadMonitoringPointAdminTable(page = monitoringPointAdminPage) {
         <td>${escapeHtml(point.description || '-')}</td>
         <td><span class="status-badge ${point.enabled === false ? 'status-disabled' : 'status-active'}">${point.enabled === false ? '已停用' : '启用'}</span></td>
         <td style="white-space:nowrap;">
-          <button class="btn btn-sm" type="button" onclick="editMonitoringPoint(${index})">编辑</button>
-          <button class="btn btn-sm" type="button" onclick="toggleMonitoringPoint(${index})">${point.enabled === false ? '启用' : '停用'}</button>
+          <button class="btn btn-sm" type="button" data-action="editMonitoringPoint(${index})">编辑</button>
+          <button class="btn btn-sm" type="button" data-action="toggleMonitoringPoint(${index})">${point.enabled === false ? '启用' : '停用'}</button>
         </td>
       </tr>
     `).join('');
@@ -60,8 +60,8 @@ function renderMonitoringPointAdminPagination(total) {
   const box = document.getElementById('monitoringPointAdminPagination');
   if (!box) return;
   box.innerHTML = `<span>共 ${total} 条，第 ${monitoringPointAdminPage}/${monitoringPointAdminPages} 页</span>
-    <button class="btn btn-sm" ${monitoringPointAdminPage <= 1 ? 'disabled' : ''} onclick="loadMonitoringPointAdminTable(${monitoringPointAdminPage - 1})">上一页</button>
-    <button class="btn btn-sm" ${monitoringPointAdminPage >= monitoringPointAdminPages ? 'disabled' : ''} onclick="loadMonitoringPointAdminTable(${monitoringPointAdminPage + 1})">下一页</button>`;
+    <button class="btn btn-sm" ${monitoringPointAdminPage <= 1 ? 'disabled' : ''} data-action="loadMonitoringPointAdminTable(${monitoringPointAdminPage - 1})">上一页</button>
+    <button class="btn btn-sm" ${monitoringPointAdminPage >= monitoringPointAdminPages ? 'disabled' : ''} data-action="loadMonitoringPointAdminTable(${monitoringPointAdminPage + 1})">下一页</button>`;
 }
 
 function scheduleMonitoringPointAdminSearch() {

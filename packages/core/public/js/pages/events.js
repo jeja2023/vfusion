@@ -148,7 +148,7 @@ function renderTaskMatrix() {
     const contributors = rawContributors.map(c => formatUserForTable(c)).join(', ');
 
     return `
-      <tr style="cursor:pointer;" onclick="openTaskDetailDrawer('${escapeJsString(t.task_code)}')">
+      <tr style="cursor:pointer;" data-action="openTaskDetailDrawer('${escapeJsString(t.task_code)}')">
         <td class="col-idx" style="font-weight:600; color:#64748b;">${globalIdx}</td>
         <td>
           <strong style="color:var(--text-main); font-size:0.875rem;">${escapeHtml(t.task_name)}</strong>
@@ -166,7 +166,7 @@ function renderTaskMatrix() {
         <td style="font-size:0.8rem; color:#334155;">${escapeHtml(contributors)}</td>
         <td style="font-size:0.775rem; color:#64748b;">${escapeHtml(latestTime)}</td>
         <td style="text-align:left;">
-          <button class="btn btn-primary" style="padding:0.3rem 0.55rem; font-size:0.75rem; font-weight:600; display:inline-flex; align-items:center; gap:0.25rem;" onclick="event.stopPropagation(); openTaskDetailDrawer('${escapeJsString(t.task_code)}')">
+          <button class="btn btn-primary" style="padding:0.3rem 0.55rem; font-size:0.75rem; font-weight:600; display:inline-flex; align-items:center; gap:0.25rem;" data-action="event.stopPropagation(); openTaskDetailDrawer('${escapeJsString(t.task_code)}')">
             <svg class="icon-svg" viewBox="0 0 24 24" style="width:13px; height:13px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             详情
           </button>
@@ -215,22 +215,22 @@ async function openTaskDetailDrawer(taskCode) {
         const canDelete = p.can_delete;
         const formattedTime = p.timestamp ? new Date(p.timestamp).toLocaleString() : '未知时间';
         const editBtn = canEdit
-          ? `<button class="btn" style="background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8; font-size:0.7rem; padding:0.2rem 0.45rem;" onclick="coreEditImage('${escapeJsString(p.id)}', '${escapeJsString(taskCode)}')">编辑</button>`
+          ? `<button class="btn" style="background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8; font-size:0.7rem; padding:0.2rem 0.45rem;" data-action="coreEditImage('${escapeJsString(p.id)}', '${escapeJsString(taskCode)}')">编辑</button>`
           : '';
         const deleteBtn = canDelete
-          ? `<button class="btn" style="background:#fef2f2; border:1px solid #fecaca; color:#dc2626; font-size:0.7rem; padding:0.2rem 0.45rem;" onclick="coreDeleteImage('${escapeJsString(p.id)}', '${escapeJsString(taskCode)}')">删除</button>`
+          ? `<button class="btn" style="background:#fef2f2; border:1px solid #fecaca; color:#dc2626; font-size:0.7rem; padding:0.2rem 0.45rem;" data-action="coreDeleteImage('${escapeJsString(p.id)}', '${escapeJsString(taskCode)}')">删除</button>`
           : '';
         return `
           <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:0.5rem; display:flex; flex-direction:column; gap:0.35rem; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
-            <div style="width:100%; height:110px; background:#0f172a; border-radius:6px; overflow:hidden; cursor:pointer;" onclick="viewCorePhotoLightbox('${escapeJsString(p.id)}')">
-              <img src="${escapeHtml(assetUrl(p.url))}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none'">
+            <div style="width:100%; height:110px; background:#0f172a; border-radius:6px; overflow:hidden; cursor:pointer;" data-action="viewCorePhotoLightbox('${escapeJsString(p.id)}')">
+              <img src="${escapeHtml(assetUrl(p.url))}" style="width:100%; height:100%; object-fit:cover;" data-action-error="this.style.display='none'">
             </div>
             <div style="font-size:0.7rem; color:#64748b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(formattedTime)}">
               <span style="background:#0284c7; color:#fff; padding:0.05rem 0.3rem; border-radius:3px; font-weight:700; margin-right:0.25rem;">#${idx + 1}</span>${formattedTime}
             </div>
             ${p.uploader_name || p.uploader_username ? `<div style="font-size:0.7rem; color:#64748b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">上传: ${escapeHtml((p.uploader_name || p.uploader_username || '').split('(')[0].trim())}</div>` : ''}
             <div style="display:flex; gap:0.3rem; justify-content:flex-end; border-top:1px solid #f1f5f9; padding-top:0.35rem; margin-top:0.1rem; flex-wrap:wrap;">
-              <button class="btn" style="background:#f8fafc; border:1px solid #cbd5e1; color:#334155; font-size:0.7rem; padding:0.2rem 0.45rem; font-weight:600;" onclick="viewCorePhotoLightbox('${escapeJsString(p.id)}')">查看</button>
+              <button class="btn" style="background:#f8fafc; border:1px solid #cbd5e1; color:#334155; font-size:0.7rem; padding:0.2rem 0.45rem; font-weight:600;" data-action="viewCorePhotoLightbox('${escapeJsString(p.id)}')">查看</button>
               ${editBtn}${deleteBtn}
             </div>
           </div>`;
@@ -404,15 +404,15 @@ function renderEvents() {
     const p = item.payload || {};
 
     const imgsHtml = (item.files || []).map(f =>
-      `<img src="${escapeHtml(assetUrl(f.url))}" style="width:24px; height:24px; object-fit:cover; border-radius:4px; border:1px solid var(--border-color); cursor:pointer; transition:transform 0.15s;" onerror="this.style.opacity='0.4';" onclick="event.stopPropagation(); openImageLightbox('${escapeJsString(assetUrl(f.url))}', '现场照片放大预览 (${escapeJsString(f.filename || '001.jpg')})')" title="点击在弹窗中放大查看">`
+      `<img src="${escapeHtml(assetUrl(f.url))}" style="width:24px; height:24px; object-fit:cover; border-radius:4px; border:1px solid var(--border-color); cursor:pointer; transition:transform 0.15s;" data-action-error="this.style.opacity='0.4';" data-action="event.stopPropagation(); openImageLightbox('${escapeJsString(assetUrl(f.url))}', '现场照片放大预览 (${escapeJsString(f.filename || '001.jpg')})')" title="点击在弹窗中放大查看">`
     ).join(' ');
 
     const personStr = p.person_name
-      ? `<strong style="color:var(--primary); cursor:pointer; text-decoration:none;" onclick="event.stopPropagation(); showPersonDetailModal('${escapeJsString(encodeURIComponent(JSON.stringify(p)))}')" title="点击弹窗查看涉事人员完整档案">${escapeHtml(p.person_name)}</strong>`
+      ? `<strong style="color:var(--primary); cursor:pointer; text-decoration:none;" data-action="event.stopPropagation(); showPersonDetailModal('${escapeJsString(encodeURIComponent(JSON.stringify(p)))}')" title="点击弹窗查看涉事人员完整档案">${escapeHtml(p.person_name)}</strong>`
       : '<span style="color:var(--text-muted);">-</span>';
 
     return `
-      <tr style="cursor:pointer;" onclick="openEventDrawer('${escapeJsString(item.event_id)}')">
+      <tr style="cursor:pointer;" data-action="openEventDrawer('${escapeJsString(item.event_id)}')">
         <td class="col-idx">${globalIdx}</td>
         <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(item.event_id)}"><strong style="color:var(--primary); font-family:monospace; font-size:0.8rem;">${escapeHtml(item.event_id)}</strong></td>
         <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(item.task_name || '')}"><strong style="color:var(--text-main); font-weight:700; font-size:0.8rem;">${escapeHtml(item.task_name || '-')}</strong></td>
@@ -423,7 +423,7 @@ function renderEvents() {
         <td style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${personStr}</td>
         <td><div style="display:flex; gap:0.25rem; flex-wrap:nowrap;">${imgsHtml || '<span style="color:var(--text-muted);">-</span>'}</div></td>
         <td style="text-align:left; white-space:nowrap;">
-          <button class="btn btn-diode" style="padding:0.25rem 0.5rem; font-size:0.75rem;" onclick="event.stopPropagation(); openEventDrawer('${escapeJsString(item.event_id)}')">详情</button>
+          <button class="btn btn-diode" style="padding:0.25rem 0.5rem; font-size:0.75rem;" data-action="event.stopPropagation(); openEventDrawer('${escapeJsString(item.event_id)}')">详情</button>
         </td>
       </tr>
     `;

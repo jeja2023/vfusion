@@ -42,8 +42,8 @@ function renderPersonnelArchive() {
         <td><code>${escapeHtml(item.last_seen ? new Date(item.last_seen).toLocaleString() : '-')}</code></td>
         <td><code>${escapeHtml(item.last_event_id || '-')}</code></td>
         <td>
-          <button class="btn" style="padding:0.2rem 0.45rem; font-size:0.75rem; background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8;" onclick="editPersonnel('${escapeJsString(item.id)}', '${escapeJsString(item.name)}', '${escapeJsString(item.id_card)}', '${escapeJsString(item.domicile)}')">编辑</button>
-          <button class="btn" style="padding:0.2rem 0.45rem; font-size:0.75rem; background:#fef2f2; border:1px solid #fecaca; color:#dc2626;" onclick="deletePersonnel('${escapeJsString(item.id)}')">删除</button>
+          <button class="btn" style="padding:0.2rem 0.45rem; font-size:0.75rem; background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8;" data-action="editPersonnel('${escapeJsString(item.id)}', '${escapeJsString(item.name)}', '${escapeJsString(item.id_card)}', '${escapeJsString(item.domicile)}')">编辑</button>
+          <button class="btn" style="padding:0.2rem 0.45rem; font-size:0.75rem; background:#fef2f2; border:1px solid #fecaca; color:#dc2626;" data-action="deletePersonnel('${escapeJsString(item.id)}')">删除</button>
         </td>
       </tr>
     `;

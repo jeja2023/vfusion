@@ -50,8 +50,8 @@ function renderSchemaFields() {
         <td>${escapeHtml(f.type)}</td>
         <td>${escapeHtml((f.options || []).join(', ')) || '-'}</td>
         <td style="display:flex; gap:0.4rem;">
-          <button class="btn-submit" style="width:auto; min-width:45px; margin-top:0; padding:0.25rem 0.55rem; font-size:0.75rem; background:var(--primary); white-space:nowrap; flex-shrink:0;" onclick="openEditFieldModal(${realIdx})">编辑</button>
-          <button class="btn-submit" style="width:auto; min-width:45px; margin-top:0; padding:0.25rem 0.55rem; font-size:0.75rem; background:var(--danger); white-space:nowrap; flex-shrink:0;" onclick="removeSchemaField(${realIdx})">删除</button>
+          <button class="btn-submit" style="width:auto; min-width:45px; margin-top:0; padding:0.25rem 0.55rem; font-size:0.75rem; background:var(--primary); white-space:nowrap; flex-shrink:0;" data-action="openEditFieldModal(${realIdx})">编辑</button>
+          <button class="btn-submit" style="width:auto; min-width:45px; margin-top:0; padding:0.25rem 0.55rem; font-size:0.75rem; background:var(--danger); white-space:nowrap; flex-shrink:0;" data-action="removeSchemaField(${realIdx})">删除</button>
         </td>
       </tr>
     `;

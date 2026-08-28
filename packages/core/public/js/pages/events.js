@@ -459,6 +459,7 @@ async function openCoreTaskTrackMap(taskCode) {
 
     const trackPoints = [];
     events.forEach(evt => {
+      if (!evt || !Array.isArray(evt.files) || evt.files.length === 0) return;
       const p = evt.payload || {};
       const lng = parseFloat(p.longitude);
       const lat = parseFloat(p.latitude);

@@ -28,7 +28,7 @@ async function loadSystemHealth() {
       const d = mapJson.data;
       if (document.getElementById('coreMapTileUrl')) document.getElementById('coreMapTileUrl').value = d.tile_url_template || '/api/map/tiles/{z}/{x}/{y}.png';
       if (document.getElementById('coreMapDefaultCenter')) {
-        const center = d.default_center || [116.397428, 39.909230];
+        const center = d.default_center || [120.305456, 31.570037];
         document.getElementById('coreMapDefaultCenter').value = Array.isArray(center) ? center.join(', ') : center;
       }
       if (document.getElementById('coreMapDefaultZoom')) document.getElementById('coreMapDefaultZoom').value = d.default_zoom || 12;
@@ -479,7 +479,7 @@ async function saveCoreMapConfig() {
   const rawCenter = document.getElementById('coreMapDefaultCenter')?.value.trim();
   const zoom = parseInt(document.getElementById('coreMapDefaultZoom')?.value, 10) || 12;
 
-  let center = [116.397428, 39.909230];
+  let center = [120.305456, 31.570037];
   if (rawCenter) {
     const parts = rawCenter.split(/[,，\s]+/).filter(Boolean);
     if (parts.length >= 2) {

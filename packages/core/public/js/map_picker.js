@@ -68,7 +68,7 @@
           <!-- 地图操作与快捷定位工具栏 -->
           <div style="padding:0.6rem 1.4rem; background:#ffffff; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-shrink:0;">
             <div style="display:flex; align-items:center; gap:0.5rem; flex:1; max-width:560px;">
-              <input id="mapPickerManualInput" type="text" placeholder="输入经纬度快速定位 (如 116.397428, 39.909230)" style="font-size:0.8rem; padding:0.4rem 0.65rem; width:100%; border:1px solid #cbd5e1; border-radius:6px;" data-action-keydown="if(event.key==='Enter'){event.preventDefault();jumpToManualCoordinates();}">
+              <input id="mapPickerManualInput" type="text" placeholder="输入经纬度快速定位 (如 120.305456, 31.570037)" style="font-size:0.8rem; padding:0.4rem 0.65rem; width:100%; border:1px solid #cbd5e1; border-radius:6px;" data-action-keydown="if(event.key==='Enter'){event.preventDefault();jumpToManualCoordinates();}">
               <button type="button" class="btn btn-secondary" style="padding:0.4rem 0.85rem; font-size:0.8rem; white-space:nowrap;" data-action="jumpToManualCoordinates()">快速定位</button>
             </div>
             <div style="display:flex; align-items:center; gap:0.5rem;">
@@ -116,7 +116,7 @@
     }
     mapConfigCache = {
       tile_url_template: '/api/map/tiles/{z}/{x}/{y}.png',
-      default_center: [116.397428, 39.909230],
+      default_center: [120.305456, 31.570037],
       default_zoom: 12,
       min_zoom: 3,
       max_zoom: 18
@@ -135,10 +135,10 @@
     if (!mapContainer) return;
 
     if (!mapInstance) {
-      const center = config.default_center || [116.397428, 39.909230];
+      const center = config.default_center || [120.305456, 31.570037];
       // Leaflet uses [lat, lng]
-      const initialLat = Array.isArray(center) ? Number(center[1]) : 39.909230;
-      const initialLng = Array.isArray(center) ? Number(center[0]) : 116.397428;
+      const initialLat = Array.isArray(center) ? Number(center[1]) : 31.570037;
+      const initialLng = Array.isArray(center) ? Number(center[0]) : 120.305456;
 
       mapInstance = L.map('vfusionLeafletMapContainer', {
         center: [initialLat, initialLng],
@@ -286,7 +286,7 @@
     } else {
       clearMapPin();
       const config = await fetchMapConfig();
-      const center = config.default_center || [116.397428, 39.909230];
+      const center = config.default_center || [120.305456, 31.570037];
       mapInstance.setView([Number(center[1]), Number(center[0])], config.default_zoom || 12);
     }
 
@@ -336,7 +336,7 @@
 
   async function resetMapPickerCenter() {
     const config = await fetchMapConfig();
-    const center = config.default_center || [116.397428, 39.909230];
+    const center = config.default_center || [120.305456, 31.570037];
     if (mapInstance) {
       mapInstance.setView([Number(center[1]), Number(center[0])], config.default_zoom || 12);
     }

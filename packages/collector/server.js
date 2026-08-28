@@ -390,7 +390,7 @@ function getMapConfig() {
   } catch (e) {}
   return {
     tile_url_template: '/api/map/tiles/{z}/{x}/{y}.png',
-    default_center: [116.397428, 39.909230],
+    default_center: [120.305456, 31.570037],
     default_zoom: 12,
     min_zoom: 3,
     max_zoom: 18
@@ -451,7 +451,7 @@ app.post('/api/config/map', requireRole('admin'), (req, res) => {
     const sec = fs.existsSync(secPath) ? JSON.parse(fs.readFileSync(secPath, 'utf8')) : {};
     sec.map_config = {
       tile_url_template: tile_url_template ? tile_url_template.trim() : '/api/map/tiles/{z}/{x}/{y}.png',
-      default_center: Array.isArray(default_center) && default_center.length === 2 ? default_center : [116.397428, 39.909230],
+      default_center: Array.isArray(default_center) && default_center.length === 2 ? default_center : [120.305456, 31.570037],
       default_zoom: parseInt(default_zoom, 10) || 12,
       min_zoom: parseInt(min_zoom, 10) || 3,
       max_zoom: parseInt(max_zoom, 10) || 18

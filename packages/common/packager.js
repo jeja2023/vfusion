@@ -94,7 +94,7 @@ async function packEventPackage(options) {
 
   return new Promise((resolve, reject) => {
     const output = fs.createWriteStream(tmpZipPath);
-    const archive = archiver('zip', { zlib: { level: 9 } });
+    const archive = archiver('zip', { zlib: { level: 1 } });
 
     output.on('close', () => {
       fs.rename(tmpZipPath, finalZipPath, (err) => {

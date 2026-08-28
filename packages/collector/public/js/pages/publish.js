@@ -363,8 +363,12 @@ function initUploadZoneDragAndDrop() {
   }, false);
 }
 
+let isPublishSubmitting = false;
+
 async function handlePublishSubmit(e) {
   if (e && e.preventDefault) e.preventDefault();
+  if (isPublishSubmitting) return;
+
   const form = document.getElementById('publishForm');
   if (!form) return;
 
@@ -374,10 +378,15 @@ async function handlePublishSubmit(e) {
   }
   if (!validateCoordinateInputs()) return;
 
+  isPublishSubmitting = true;
   const btn = document.getElementById('btnSubmit');
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = '正在计算摘要校验与数字签名并封装数据包...';
+    btn.classList.add('is-submitting');
+    btn.innerHTML = `
+      <svg class="icon-svg spin-animate" viewBox="0 0 24 24"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>
+      正在计算摘要校验与数字签名并封装数据包...
+    `;
   }
 
   const formData = new FormData(form);
@@ -429,8 +438,10 @@ async function handlePublishSubmit(e) {
   } catch (err) {
     showToast('提交异常: ' + err.message, 'error');
   } finally {
+    isPublishSubmitting = false;
     if (btn) {
       btn.disabled = false;
+      btn.classList.remove('is-submitting');
       btn.innerHTML = `
         <svg class="icon-svg" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         确认提交并生成数据摆渡包

@@ -2307,19 +2307,68 @@ app.post('/api/storage/cleanup', requireRole('admin'), (req, res) => {
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.get('/api/audit-logs', (req, res) => {
-  const db = readDb();
-  const { keyword, status, type } = req.query;
+// 内网中台端：系统审计日志 API
+app.get('/api/audit-logs', async (req, res) => {
+  try {
+    const { keyword, status, type } = req.query;
+    const kw = (keyword || '').trim();
+    const st = (status || '').trim();
+    const tp = (type || '').trim();
 
-  let filtered = db.audit_logs;
-  if (keyword) {
-    const kw = keyword.toLowerCase();
-    filtered = filtered.filter(l => l.message.toLowerCase().includes(kw) || l.type.toLowerCase().includes(kw));
+    let logs = await coreSqlite.getAuditLogs(kw, st, tp);
+    if (!Array.isArray(logs) || logs.length === 0) {
+      const db = readDb();
+      let list = Array.isArray(db.audit_logs) ? db.audit_logs : [];
+      if (kw) {
+        const lower = kw.toLowerCase();
+        list = list.filter(l => (l.message && l.message.toLowerCase().includes(lower)) || (l.type && l.type.toLowerCase().includes(lower)));
+      }
+      if (st) list = list.filter(l => l.status === st);
+      if (tp) list = list.filter(l => l.type === tp);
+      logs = list;
+    }
+
+    res.json({ success: true, data: logs });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
   }
-  if (status) filtered = filtered.filter(l => l.status === status);
-  if (type) filtered = filtered.filter(l => l.type === type);
+});
 
-  res.json({ success: true, data: filtered });
+// 内网中台端：导出审计日志 CSV
+app.get('/api/audit-logs/export', async (req, res) => {
+  try {
+    const { keyword, status, type } = req.query;
+    const kw = (keyword || '').trim();
+    const st = (status || '').trim();
+    const tp = (type || '').trim();
+
+    let logs = await coreSqlite.getAuditLogs(kw, st, tp);
+    if (!Array.isArray(logs) || logs.length === 0) {
+      const db = readDb();
+      logs = Array.isArray(db.audit_logs) ? db.audit_logs : [];
+    }
+
+    let csvHeader = ['序号', '记录时间', '事件类型', '详细内容', '执行状态'].join(',');
+    let csvRows = [csvHeader];
+
+    logs.forEach((item, idx) => {
+      const row = [
+        idx + 1,
+        `"${new Date(item.timestamp).toLocaleString()}"`,
+        `"${(item.type || '').replace(/"/g, '""')}"`,
+        `"${(item.message || '').replace(/"/g, '""')}"`,
+        `"${(item.status || '').replace(/"/g, '""')}"`
+      ];
+      csvRows.push(row.join(','));
+    });
+
+    const csvContent = '\uFEFF' + csvRows.join('\n');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename=vfusion_core_audits_${Date.now()}.csv`);
+    res.send(csvContent);
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 app.post('/api/simulate-diode', requireRole('admin'), (req, res) => {

@@ -1729,6 +1729,70 @@ app.get('/api/published-history', async (req, res) => {
   }
 });
 
+// 视频网端：系统审计日志 API
+app.get('/api/audit-logs', async (req, res) => {
+  try {
+    const { keyword, status, type } = req.query;
+    const kw = (keyword || '').trim();
+    const st = (status || '').trim();
+    const tp = (type || '').trim();
+
+    let logs = await collectorSqlite.getAuditLogs(kw, st, tp);
+    if (!Array.isArray(logs) || logs.length === 0) {
+      const db = readCollectorDb();
+      let list = Array.isArray(db.audit_logs) ? db.audit_logs : [];
+      if (kw) {
+        const lower = kw.toLowerCase();
+        list = list.filter(l => (l.message && l.message.toLowerCase().includes(lower)) || (l.type && l.type.toLowerCase().includes(lower)));
+      }
+      if (st) list = list.filter(l => l.status === st);
+      if (tp) list = list.filter(l => l.type === tp);
+      logs = list;
+    }
+
+    res.json({ success: true, data: logs });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// 视频网端：导出审计日志 CSV
+app.get('/api/audit-logs/export', async (req, res) => {
+  try {
+    const { keyword, status, type } = req.query;
+    const kw = (keyword || '').trim();
+    const st = (status || '').trim();
+    const tp = (type || '').trim();
+
+    let logs = await collectorSqlite.getAuditLogs(kw, st, tp);
+    if (!Array.isArray(logs) || logs.length === 0) {
+      const db = readCollectorDb();
+      logs = Array.isArray(db.audit_logs) ? db.audit_logs : [];
+    }
+
+    let csvHeader = ['序号', '记录时间', '事件类型', '详细内容', '执行状态'].join(',');
+    let csvRows = [csvHeader];
+
+    logs.forEach((item, idx) => {
+      const row = [
+        idx + 1,
+        `"${new Date(item.timestamp).toLocaleString()}"`,
+        `"${(item.type || '').replace(/"/g, '""')}"`,
+        `"${(item.message || '').replace(/"/g, '""')}"`,
+        `"${(item.status || '').replace(/"/g, '""')}"`
+      ];
+      csvRows.push(row.join(','));
+    });
+
+    const csvContent = '\uFEFF' + csvRows.join('\n');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename=vfusion_collector_audits_${Date.now()}.csv`);
+    res.send(csvContent);
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 const os = require('os');
 function getLocalIps() {
   const interfaces = os.networkInterfaces();

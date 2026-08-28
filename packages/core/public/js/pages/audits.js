@@ -4,9 +4,9 @@ let cachedAuditData = [];
 function renderAuditLogs() {
   const streamEl = document.getElementById('logStream');
   if (!streamEl) return;
-  streamEl.innerHTML = auditLogs.slice(0, 10).map(log => {
-    const typeCn = auditTypeMap[log.type] || log.type;
-    const statusCn = auditStatusMap[log.status] || log.status;
+  streamEl.innerHTML = (Array.isArray(auditLogs) ? auditLogs : []).slice(0, 10).map(log => {
+    const typeCn = (typeof auditTypeMap !== 'undefined' && auditTypeMap[log.type]) ? auditTypeMap[log.type] : log.type;
+    const statusCn = (typeof auditStatusMap !== 'undefined' && auditStatusMap[log.status]) ? auditStatusMap[log.status] : log.status;
     return `
       <div class="log-item ${escapeHtml(log.status)}">
         <div class="log-time">[${escapeHtml(new Date(log.timestamp).toLocaleTimeString())}] [${escapeHtml(typeCn)}] (${escapeHtml(statusCn)})</div>
@@ -20,9 +20,10 @@ async function loadFullAuditLogs() {
   try {
     const kwInput = document.getElementById('auditKeyword');
     const statusSelect = document.getElementById('auditStatusFilter');
-    const kw = kwInput ? kwInput.value : '';
+    const kw = kwInput ? kwInput.value.trim() : '';
     const status = statusSelect ? statusSelect.value : '';
-    const res = await fetch(`/api/audit-logs?keyword=${encodeURIComponent(kw)}&status=${encodeURIComponent(status)}`);
+    const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
+    const res = await fetchFn(`/api/audit-logs?keyword=${encodeURIComponent(kw)}&status=${encodeURIComponent(status)}`);
     const json = await res.json();
     if (json.success) {
       cachedAuditData = json.data || [];
@@ -54,8 +55,8 @@ function renderFullAuditLogs() {
   const paged = cachedAuditData.slice((auditCurrentPage - 1) * auditPageSize, auditCurrentPage * auditPageSize);
   tbody.innerHTML = paged.map((item, idx) => {
     const globalIdx = (auditCurrentPage - 1) * auditPageSize + idx + 1;
-    const typeCn = auditTypeMap[item.type] || item.type;
-    const statusCn = auditStatusMap[item.status] || item.status;
+    const typeCn = (typeof auditTypeMap !== 'undefined' && auditTypeMap[item.type]) ? auditTypeMap[item.type] : item.type;
+    const statusCn = (typeof auditStatusMap !== 'undefined' && auditStatusMap[item.status]) ? auditStatusMap[item.status] : item.status;
     return `
       <tr>
         <td class="col-idx">${globalIdx}</td>
@@ -72,9 +73,30 @@ function changeAuditPageSize(val) { auditPageSize = parseInt(val); auditCurrentP
 function prevAuditPage() { if (auditCurrentPage > 1) { auditCurrentPage--; renderFullAuditLogs(); } }
 function nextAuditPage() { auditCurrentPage++; renderFullAuditLogs(); }
 
-function exportAuditLogsCsv() {
-  showToast('正在导出审计日志 (CSV)...');
-  window.location.href = '/api/audit-logs/export';
+async function exportAuditLogsCsv() {
+  try {
+    showToast('正在导出审计日志 (CSV)...');
+    const kwInput = document.getElementById('auditKeyword');
+    const statusSelect = document.getElementById('auditStatusFilter');
+    const kw = kwInput ? kwInput.value.trim() : '';
+    const status = statusSelect ? statusSelect.value : '';
+    const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
+    const res = await fetchFn(`/api/audit-logs/export?keyword=${encodeURIComponent(kw)}&status=${encodeURIComponent(status)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `vfusion_core_audits_${Date.now()}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+    showToast('审计日志 CSV 导出成功！', 'success');
+  } catch (e) {
+    console.error('导出审计日志失败:', e);
+    showToast('导出审计日志失败: ' + e.message, 'error');
+  }
 }
 
 Object.assign(window.VFusionActions = window.VFusionActions || {}, {

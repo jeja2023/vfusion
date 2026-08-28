@@ -16,6 +16,12 @@ async function loadUsers() {
   }
 }
 
+Object.assign(window.VFusionActions = window.VFusionActions || {}, {
+  loadUsers, renderUsers, changeUsersPageSize, prevUsersPage, nextUsersPage,
+  openAddUserModal, closeAddUserModal, handleCreateUserSubmit, openEditUserModal,
+  closeEditUserModal, handleSaveUser, resetUserPassword, deleteUser
+});
+
 function renderUsers() {
   const tbody = document.getElementById('usersTableBody');
   if (!tbody) return;

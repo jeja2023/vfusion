@@ -613,3 +613,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   checkAuth();
   setInterval(loadAlerts, 5000);
 });
+
+Object.assign(window.VFusionActions = window.VFusionActions || {}, {
+  checkAuth, handleLogin, handleLogout, switchTab, openImageLightbox, closeImageLightbox,
+  showPersonDetailModal, closePersonDetailModal, toggleAlertDropdown, markAlertsRead,
+  exportCsvReport, openEventDrawer, closeDrawer, downloadEventZip, triggerDiodeSimulation
+});

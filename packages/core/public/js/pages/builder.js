@@ -148,3 +148,10 @@ async function saveSchemaConfig() {
   const json = await res.json();
   if (json.success) showToast(json.message);
 }
+
+Object.assign(window.VFusionActions = window.VFusionActions || {}, {
+  loadSchema, renderSchemaFields, changeSchemaPageSize, prevSchemaPage, nextSchemaPage,
+  openAddFieldModal, closeAddFieldModal, handleAddFieldSubmit, addFieldToSchema,
+  openEditFieldModal, closeEditFieldModal, handleSaveField, removeSchemaField,
+  saveSchemaConfig
+});

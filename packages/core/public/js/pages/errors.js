@@ -76,3 +76,7 @@ async function deleteError(filename) {
     console.error('删除隔离包失败:', e);
   }
 }
+
+Object.assign(window.VFusionActions = window.VFusionActions || {}, {
+  loadErrors, renderErrors, changeErrorPageSize, prevErrorPage, nextErrorPage, retryError, deleteError
+});

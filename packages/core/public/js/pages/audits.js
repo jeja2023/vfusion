@@ -76,3 +76,8 @@ function exportAuditLogsCsv() {
   showToast('正在导出审计日志 (CSV)...');
   window.location.href = '/api/audit-logs/export';
 }
+
+Object.assign(window.VFusionActions = window.VFusionActions || {}, {
+  renderAuditLogs, loadFullAuditLogs, renderFullAuditLogs, changeAuditPageSize,
+  prevAuditPage, nextAuditPage, exportAuditLogsCsv
+});

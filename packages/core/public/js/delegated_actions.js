@@ -116,7 +116,7 @@
       if (!call) continue;
       const name = call[1];
       if (!actionNames.has(name) && name !== 'openImageLightbox') continue;
-      const fn = name.split('.').reduce((target, key) => target && target[key], global);
+      const fn = (global.VFusionActions && global.VFusionActions[name]) || name.split('.').reduce((target, key) => target && target[key], global);
       if (typeof fn === 'function') fn(...splitArgs(call[2]).map(arg => resolveValue(arg, event, element)));
     }
   }

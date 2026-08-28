@@ -175,3 +175,9 @@ async function deleteUser(id) {
   else showToast(json.error, 'error');
 }
 
+Object.assign(window.VFusionActions = window.VFusionActions || {}, {
+  loadUsers, renderUsers, changeUsersPageSize, prevUsersPage, nextUsersPage,
+  openAddUserModal, closeAddUserModal, handleCreateUserSubmit, createNewUser,
+  openEditUserModal, closeEditUserModal, handleSaveUser, resetUserPassword, deleteUser
+});
+

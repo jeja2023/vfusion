@@ -63,6 +63,13 @@ function publishToTask(taskCode) {
   if (typeof switchTab === 'function') switchTab('tab-publish');
 }
 
+Object.assign(window.VFusionActions = window.VFusionActions || {}, {
+  loadPersonnelList, autoFillPersonnel, loadTaskOptions, selectTaskForPublish, publishToTask,
+  chooseMonitoringPoint, clearMonitoringPointSelection, searchMonitoringPoints, scheduleMonitoringPointSearch,
+  openNewMonitoringPointForm, closeNewMonitoringPointForm, saveNewMonitoringPoint, loadMonitoringPoints,
+  handleFileSelect, clearAllSelectedFiles
+});
+
 let monitoringPoints = [];
 let selectedMonitoringPointId = '';
 let monitoringPointSearchTimer = null;

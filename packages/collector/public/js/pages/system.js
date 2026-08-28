@@ -14,6 +14,13 @@ async function loadCollectorSystemConfig() {
   await loadMonitoringPointAdminTable();
 }
 
+Object.assign(window.VFusionActions = window.VFusionActions || {}, {
+  loadCollectorSystemConfig, loadMonitoringPointAdminTable, scheduleMonitoringPointAdminSearch,
+  exportMonitoringPoints, importMonitoringPoints, resetMonitoringPointForm, editMonitoringPoint,
+  saveMonitoringPoint, toggleMonitoringPoint, saveCollectorHmacSecret, uploadCollectorWebPatchUpgrade,
+  onUpgradeFileSelected
+});
+
 let adminMonitoringPoints = [];
 let monitoringPointAdminPage = 1;
 let monitoringPointAdminPages = 1;

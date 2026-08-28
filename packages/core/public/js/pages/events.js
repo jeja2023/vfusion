@@ -433,3 +433,9 @@ function renderEvents() {
 function changeEvtPageSize(val) { evtPageSize = parseInt(val); evtCurrentPage = 1; renderEvents(); }
 function prevEvtPage() { if (evtCurrentPage > 1) { evtCurrentPage--; renderEvents(); } }
 function nextEvtPage() { evtCurrentPage++; renderEvents(); }
+
+Object.assign(window.VFusionActions = window.VFusionActions || {}, {
+  fetchData, viewCorePhotoLightbox, switchCoreView, renderCoreDashboard, renderTaskMatrix,
+  changeTaskPageSize, prevTaskPage, nextTaskPage, openTaskDetailDrawer, coreEditImage,
+  coreDeleteImage, renderEvents, changeEvtPageSize, prevEvtPage, nextEvtPage
+});

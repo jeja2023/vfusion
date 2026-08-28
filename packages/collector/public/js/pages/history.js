@@ -109,3 +109,7 @@ function renderPublishedHistory() {
 function changeHistoryPageSize(val) { historyPageSize = parseInt(val); historyCurrentPage = 1; renderPublishedHistory(); }
 function prevHistoryPage() { if (historyCurrentPage > 1) { historyCurrentPage--; renderPublishedHistory(); } }
 function nextHistoryPage() { historyCurrentPage++; renderPublishedHistory(); }
+
+Object.assign(window.VFusionActions = window.VFusionActions || {}, {
+  loadPublishedHistory, renderPublishedHistory, changeHistoryPageSize, prevHistoryPage, nextHistoryPage
+});

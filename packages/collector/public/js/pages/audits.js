@@ -63,3 +63,7 @@ function exportAuditLogsCsv() {
   showToast('正在导出视频网审计日志 (CSV)...');
   window.location.href = '/api/audit-logs/export';
 }
+
+Object.assign(window.VFusionActions = window.VFusionActions || {}, {
+  loadFullAuditLogs, renderAuditLogs, changeAuditPageSize, prevAuditPage, nextAuditPage, exportAuditLogsCsv
+});

@@ -251,3 +251,9 @@ function selectTaskForGallery(taskCode) {
   }
   switchTab('tab-task-images');
 }
+
+Object.assign(window.VFusionActions = window.VFusionActions || {}, {
+  initTaskImagesPage, loadTaskImagesPage, toggleImageSortOrder, renderGalleryGrid,
+  viewGalleryImageLightbox, openEditImageModal, closeEditImageModal, handleSaveImageEdit, handleDeleteImage,
+  selectTaskForGallery
+});

@@ -459,3 +459,12 @@ function onUpgradeFileSelected(input) {
     }
   }
 }
+
+Object.assign(window.VFusionActions = window.VFusionActions || {}, {
+  loadSystemHealth, loadCoreMonitoringPointTable, renderCoreMonitoringPointPagination,
+  scheduleCoreMonitoringPointSearch, exportCoreMonitoringPoints, importCoreMonitoringPoints,
+  resetCoreMonitoringPointForm, editCoreMonitoringPoint, saveCoreMonitoringPoint,
+  toggleCoreMonitoringPoint, rotateHmacSecret, updateAutoDiodeConfig, cleanupArchives,
+  runOnlineDiagnostics, saveFtpChannelConfig, testFtpServerConnection, uploadWebPatchUpgrade,
+  onUpgradeFileSelected
+});

@@ -348,3 +348,10 @@ async function testCollectorFtpConnection() {
 async function saveCollectorFtpConfig() {
   showToast('提示：请使用列表中单个节点的 Toggle 开关或编辑弹窗进行配置保存');
 }
+
+Object.assign(window.VFusionActions = window.VFusionActions || {}, {
+  loadCollectorFtpConfig, loadCollectorFtpServersList, openAddCollectorFtpModal,
+  closeAddCollectorFtpModal, handleAddCollectorFtpSubmit, openEditCollectorFtpModal,
+  closeEditCollectorFtpModal, handleSaveCollectorFtpServer, toggleCollectorFtpNode,
+  testCollectorFtpNode, deleteCollectorFtpNode, testNewCollectorFtpNodeForm, saveCollectorFtpConfig
+});

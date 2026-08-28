@@ -174,3 +174,9 @@ function exportSchemaJson() {
   downloadAnchor.remove();
   showToast('表单配置文件导出成功');
 }
+
+Object.assign(window.VFusionActions = window.VFusionActions || {}, {
+  loadSchema, renderSchemaFields, changeSchemaPageSize, prevSchemaPage, nextSchemaPage,
+  openAddFieldModal, closeAddFieldModal, handleAddFieldSubmit, openEditFieldModal,
+  closeEditFieldModal, handleSaveField, removeSchemaField, saveSchemaConfig, exportSchemaJson
+});

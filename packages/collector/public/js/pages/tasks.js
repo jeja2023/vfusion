@@ -296,6 +296,16 @@ function closeTaskDetailModal() {
   document.getElementById('taskDetailModal').style.display = 'none';
 }
 
+Object.assign(window.VFusionActions = window.VFusionActions || {}, {
+  loadTaskList, renderTaskCards, changeTaskPageSize, prevTaskPage, nextTaskPage,
+  openCreateTaskModal, closeCreateTaskModal, handleCreateTask, openJoinTaskModal, closeJoinTaskModal,
+  handleJoinTask, publishToTask, toggleTaskStatus, openTaskDetail, closeTaskDetailModal,
+  openEditTaskModal, closeEditTaskModal, handleSaveTaskEdit, handleDeleteTask, openTaskPersonnelModal,
+  closeTaskPersonnelModal, loadTaskPersonnelTable, changeTpPageSize, prevTpPage, nextTpPage,
+  handleAddTaskPersonnel, handleDeleteTaskPersonnel, openShareTaskModal, closeShareTaskModal,
+  handleSaveTaskShare, openTaskDetailModal
+});
+
 function openEditTaskModal(taskCode) {
   const task = cachedTasksData.find(t => t.task_code === taskCode);
   if (!task) return;

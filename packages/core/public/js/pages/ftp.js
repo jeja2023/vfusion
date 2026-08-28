@@ -521,3 +521,10 @@ async function saveFtpPollInterval(overrideInterval) {
 
 // 定时刷新轮询状态 (每 5 秒)
 setInterval(loadFtpPollStatus, 5000);
+
+Object.assign(window.VFusionActions = window.VFusionActions || {}, {
+  loadCoreFtpConfig, loadFtpServersList, renderFtpServers, openAddFtpModal, closeAddFtpModal,
+  handleAddFtpServerSubmit, toggleFtpNode, deleteFtpNode, testFtpNode, testNewFtpNodeForm,
+  manualFtpPullNode, manualFtpPullAll, openEditFtpModal, closeEditFtpModal, handleSaveFtpServer,
+  loadFtpPollStatus, onFtpPollToggleChange, saveFtpPollInterval
+});

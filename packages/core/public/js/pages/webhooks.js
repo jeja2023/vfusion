@@ -260,3 +260,10 @@ async function rotateWebhookSecret(id) {
     showToast('密钥轮换请求失败: ' + e.message, 'error');
   }
 }
+
+Object.assign(window.VFusionActions = window.VFusionActions || {}, {
+  loadWebhooks, renderWebhooks, changeWebhookPageSize, prevWebhookPage, nextWebhookPage,
+  toggleWebhookNode, openAddWebhookModal, closeAddWebhookModal, handleAddWebhookSubmit,
+  addWebhookNode, openEditWebhookModal, closeEditWebhookModal, handleSaveWebhook,
+  testWebhook, deleteWebhook, rotateWebhookSecret
+});

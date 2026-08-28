@@ -154,3 +154,9 @@ async function deletePersonnel(id) {
 function changePersonnelPageSize(val) { personnelPageSize = parseInt(val); personnelCurrentPage = 1; renderPersonnelArchive(); }
 function prevPersonnelPage() { if (personnelCurrentPage > 1) { personnelCurrentPage--; renderPersonnelArchive(); } }
 function nextPersonnelPage() { personnelCurrentPage++; renderPersonnelArchive(); }
+
+Object.assign(window.VFusionActions = window.VFusionActions || {}, {
+  loadPersonnelArchive, renderPersonnelArchive, openAddPersonnelModal, closeAddPersonnelModal,
+  handleAddPersonnelSubmit, editPersonnel, closeEditPersonnelModal, handleSavePersonnel,
+  deletePersonnel, changePersonnelPageSize, prevPersonnelPage, nextPersonnelPage
+});

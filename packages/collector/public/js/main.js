@@ -400,7 +400,12 @@ function switchTab(tabId) {
   if (tabId === 'tab-system' && typeof loadSystemInfo === 'function') loadSystemInfo();
 }
 
-  document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', async () => {
   await loadPageTemplates();
   await checkAuth();
-  });
+});
+
+Object.assign(window.VFusionActions = window.VFusionActions || {}, {
+  checkAuth, handleLogin, handleLogout, switchTab, openImageLightbox, closeImageLightbox,
+  showPersonDetailModal, closePersonDetailModal, showToast
+});

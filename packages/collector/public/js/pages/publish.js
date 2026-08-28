@@ -460,7 +460,6 @@ function bindPublishFormSubmit() {
 function openPublishMapPicker() {
   const lngInput = document.querySelector('#dynamicFormGrid [name="longitude"]');
   const latInput = document.querySelector('#dynamicFormGrid [name="latitude"]');
-  const locInput = document.querySelector('#dynamicFormGrid [name="location"]');
 
   const currentLng = lngInput?.value.trim() || '';
   const currentLat = latInput?.value.trim() || '';
@@ -473,10 +472,6 @@ function openPublishMapPicker() {
       onConfirm: (lng, lat) => {
         if (lngInput) lngInput.value = lng;
         if (latInput) latInput.value = lat;
-        if (locInput && !locInput.value.trim()) {
-          locInput.value = `现场点位 (${lng}, ${lat})`;
-        }
-        showToast(`已从地图拾取坐标: ${lng}, ${lat}`);
       }
     });
   } else {

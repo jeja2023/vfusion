@@ -1095,17 +1095,23 @@ app.post('/api/publish', (req, res) => {
 
     const uploadedTempPaths = [];
     try {
-      const appId = (fields.app_id && fields.app_id[0]) || 'sys_gate_security';
-      const bizType = (fields.biz_type && fields.biz_type[0]) || 'person_snapshot';
-      const taskName = (fields.task_name && fields.task_name[0]) || '厂区周界安防例行巡检';
-      const taskCode = (fields.task_code && fields.task_code[0]) || `TASK_${Date.now()}`;
+      const getField = (val, fallback = '') => {
+        if (Array.isArray(val)) return (val[0] !== undefined && val[0] !== null ? String(val[0]) : fallback);
+        if (val !== undefined && val !== null) return String(val);
+        return fallback;
+      };
+
+      const appId = getField(fields.app_id, 'sys_gate_security');
+      const bizType = getField(fields.biz_type, 'person_snapshot');
+      const taskName = getField(fields.task_name, '厂区周界安防例行巡检');
+      const taskCode = getField(fields.task_code, `TASK_${Date.now()}`);
       if (!isSafeIdentifier(appId) || !isSafeIdentifier(bizType) || !isSafeIdentifier(taskCode)) return res.status(400).json({ success: false, error: '应用、业务类型或任务编号格式无效' });
       const currentUser = req.user || { username: 'operator', name: '视频网操作员' };
       const operatorUsername = currentUser.username;
       const operatorName = currentUser.name || currentUser.username;
       const operator = `${operatorName} (${operatorUsername})`;
-      const submitTime = (fields.submit_time && fields.submit_time[0]) || new Date().toISOString();
-      const eventId = (fields.event_id && fields.event_id[0]) || `${Date.now()}`;
+      const submitTime = getField(fields.submit_time, new Date().toISOString());
+      const eventId = getField(fields.event_id, `EVT_${Date.now()}`);
       if (!isSafeIdentifier(String(eventId))) return res.status(400).json({ success: false, error: '事件编号格式无效' });
 
       const payload = {};

@@ -399,19 +399,20 @@ function bindPublishFormSubmit() {
       const result = await res.json();
 
       if (result.success) {
-        showToast('打包成功！已完成原子重命名并存入发送目录');
+        showToast('发布提交成功！已生成防篡改单据存照并入库，可前往任务图片库查看', 'success');
 
-        const submittedTaskCode = formData.get('task_code');
+        const submittedTaskCode = formData.get('task_code') || selectedTaskCode;
         if (submittedTaskCode) {
           localStorage.setItem('vfusion_selected_task_code', submittedTaskCode);
-          if (typeof selectedTaskCode !== 'undefined') selectedTaskCode = submittedTaskCode;
+          selectedTaskCode = submittedTaskCode;
         }
 
         e.target.reset();
         selectedFiles = [];
         renderFilePreviews();
 
-        await loadPersonnelList();
+        await loadTaskOptions();
+        await loadPersonnelList(selectedTaskCode);
         if (typeof currentSchema !== 'undefined' && currentSchema.fields) {
           renderDynamicForm(currentSchema.fields);
         }

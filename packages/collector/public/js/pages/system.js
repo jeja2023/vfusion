@@ -66,7 +66,7 @@ function openCollectorPointMapPicker() {
     window.openMapPicker({
       initialLng: currentLng ? parseFloat(currentLng) : null,
       initialLat: currentLat ? parseFloat(currentLat) : null,
-      title: `🗺️ 高德离线地图选点拾取 [${name}]`,
+      title: `高德离线地图选点拾取 [${name}]`,
       showExistingPoints: true,
       onConfirm: (lng, lat) => {
         const lngInput = document.getElementById('monitoringPointLongitude');

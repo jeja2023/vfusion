@@ -110,11 +110,11 @@
         <div style="font-size:0.74rem; color:var(--text-sub);">点位坐标以现场测绘、设备台账为准。采集端发布时从点位表选择，核心端按点位编号复核。</div>
       </div>
       <div style="display:flex; gap:0.35rem; flex-wrap:wrap; justify-content:flex-end;">
-        <button class="btn btn-secondary" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" data-action="openCorePointMapPicker()">🗺️ 打开点位全景地图</button>
+        <button class="btn btn-secondary" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" data-action="openCorePointMapPicker()">打开点位全景地图</button>
         <button class="btn btn-secondary" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" data-action="exportCoreMonitoringPoints('csv')">导出 CSV</button>
         <button class="btn btn-secondary" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" data-action="exportCoreMonitoringPoints('json')">导出 JSON</button>
         <label class="btn btn-secondary" style="padding:0.38rem 0.65rem; font-size:0.75rem; cursor:pointer;">导入文件<input type="file" id="coreMonitoringPointImportFile" accept=".csv,.json,text/csv,application/json" hidden data-action-change="importCoreMonitoringPoints(this)"></label>
-        <button class="btn btn-primary" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" data-action="resetCoreMonitoringPointForm();">＋ 新建点位</button>
+        <button class="btn btn-primary" type="button" style="padding:0.38rem 0.65rem; font-size:0.75rem;" data-action="resetCoreMonitoringPointForm();">新建点位</button>
       </div>
     </div>
 
@@ -127,7 +127,7 @@
       <div class="form-group"><label>纬度（可选）</label><input id="coreMonitoringPointLatitude" inputmode="decimal" placeholder="-90 至 90 (如 39.9092)" autocomplete="off"></div>
       <div class="form-group"><label>点位说明</label><input id="coreMonitoringPointDescription" maxlength="500" placeholder="测绘批次、设备编号等" autocomplete="off"></div>
       <div style="grid-column:1/-1; display:flex; gap:0.5rem; justify-content:flex-end;">
-        <button class="btn btn-secondary" type="button" style="padding:0.4rem 0.85rem; font-size:0.75rem;" data-action="openCorePointMapPicker()">🗺️ 打开地图拾取坐标</button>
+        <button class="btn btn-secondary" type="button" style="padding:0.4rem 0.85rem; font-size:0.75rem;" data-action="openCorePointMapPicker()">打开地图拾取坐标</button>
         <button class="btn btn-primary" type="submit" style="padding:0.4rem 0.85rem; font-size:0.75rem;">保存点位</button>
         <button class="btn" type="button" style="padding:0.4rem 0.85rem; font-size:0.75rem;" data-action="resetCoreMonitoringPointForm();">取消</button>
       </div>

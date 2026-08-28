@@ -46,7 +46,7 @@
           <!-- 弹窗顶栏 -->
           <div style="padding:0.75rem 1.25rem; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; background:#f8fafc; flex-shrink:0;">
             <div style="display:flex; align-items:center; gap:0.6rem;">
-              <span style="font-size:1.2rem;">🗺️</span>
+              <svg class="icon-svg" viewBox="0 0 24 24" style="color:var(--primary); width:20px; height:20px;"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
               <div>
                 <h3 id="mapPickerModalTitle" style="font-size:0.95rem; font-weight:700; color:#1e293b; margin:0;">高德离线地图选点拾取</h3>
                 <div style="font-size:0.75rem; color:#64748b;">点击地图任意位置放置选点图钉，支持拖拽图钉微调位置</div>
@@ -58,7 +58,7 @@
                 <span id="mapPickerLngDisplay" style="font-family:monospace; font-weight:600;">-</span> , 
                 <span id="mapPickerLatDisplay" style="font-family:monospace; font-weight:600;">-</span>
               </div>
-              <button type="button" class="btn btn-secondary" style="padding:0.25rem 0.55rem; font-size:0.8rem; border-radius:6px;" data-action="closeMapPicker()">✕ 关闭</button>
+              <button type="button" class="btn btn-secondary" style="padding:0.25rem 0.55rem; font-size:0.8rem; border-radius:6px;" data-action="closeMapPicker()">关闭</button>
             </div>
           </div>
 
@@ -69,8 +69,8 @@
               <button type="button" class="btn btn-secondary" style="padding:0.3rem 0.6rem; font-size:0.75rem;" data-action="jumpToManualCoordinates()">定位</button>
             </div>
             <div style="display:flex; align-items:center; gap:0.4rem;">
-              <button type="button" class="btn btn-secondary" style="padding:0.3rem 0.6rem; font-size:0.75rem;" data-action="resetMapPickerCenter()">🎯 默认中心</button>
-              <button type="button" class="btn btn-secondary" style="padding:0.3rem 0.6rem; font-size:0.75rem;" data-action="clearMapPickerPin()">🧹 清除选点</button>
+              <button type="button" class="btn btn-secondary" style="padding:0.3rem 0.6rem; font-size:0.75rem;" data-action="resetMapPickerCenter()">默认中心</button>
+              <button type="button" class="btn btn-secondary" style="padding:0.3rem 0.6rem; font-size:0.75rem;" data-action="clearMapPickerPin()">清除选点</button>
             </div>
           </div>
 
@@ -82,11 +82,11 @@
           <!-- 弹窗底栏操作 -->
           <div style="padding:0.65rem 1.25rem; border-top:1px solid #e2e8f0; background:#f8fafc; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
             <div style="font-size:0.74rem; color:#64748b; display:flex; align-items:center; gap:0.4rem;">
-              <span>💡 离线瓦片托管于本地 <code style="background:#e2e8f0; padding:0.1rem 0.3rem; border-radius:4px;">storage/tiles/</code> 目录</span>
+              <span>离线瓦片托管于本地 <code style="background:#e2e8f0; padding:0.1rem 0.3rem; border-radius:4px;">storage/tiles/</code> 目录</span>
             </div>
             <div style="display:flex; gap:0.5rem;">
               <button type="button" class="btn btn-secondary" style="padding:0.4rem 0.85rem; font-size:0.8rem;" data-action="closeMapPicker()">取消</button>
-              <button type="button" class="btn btn-primary" style="padding:0.4rem 1.1rem; font-size:0.8rem; font-weight:700;" data-action="confirmMapPickerSelection()">✓ 确认选定坐标并填入</button>
+              <button type="button" class="btn btn-primary" style="padding:0.4rem 1.1rem; font-size:0.8rem; font-weight:700;" data-action="confirmMapPickerSelection()">确认选定坐标并填入</button>
             </div>
           </div>
 

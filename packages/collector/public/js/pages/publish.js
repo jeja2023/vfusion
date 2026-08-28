@@ -287,14 +287,14 @@ function renderDynamicForm(fields) {
   pointGroup.innerHTML = `
     <label style="display:flex; justify-content:space-between; align-items:center;">
       <span>监控点位 <span style="font-size:0.72rem; font-weight:normal; color:#64748b;">优先选择点位表中的标准坐标</span></span>
-      <button type="button" class="btn btn-secondary" style="color:var(--primary); font-weight:700; padding:0.25rem 0.55rem; font-size:0.75rem;" data-action="openPublishMapPicker()">🗺️ 地图选点</button>
+      <button type="button" class="btn btn-secondary" style="color:var(--primary); font-weight:700; padding:0.25rem 0.55rem; font-size:0.75rem;" data-action="openPublishMapPicker()">地图选点</button>
     </label>
     <input id="monitoringPointSearch" type="search" placeholder="输入点位编号或名称关键词搜索" autocomplete="off" data-action-input="scheduleMonitoringPointSearch()" data-action-keydown="if (event.key === 'Enter') { event.preventDefault(); searchMonitoringPoints(); }">
     <input type="hidden" id="monitoringPointSelect" name="monitoring_point_id" value="">
     <div id="monitoringPointResults" class="monitoring-point-results"></div>
     <div style="display:flex; gap:0.4rem; align-items:center; margin-top:0.4rem; flex-wrap:wrap;">
-      <button type="button" class="btn btn-secondary" style="color:var(--primary); font-weight:700;" data-action="openPublishMapPicker()">🗺️ 在高德地图上选点</button>
-      <button type="button" class="btn" data-action="openNewMonitoringPointForm()">＋ 新增本次点位</button>
+      <button type="button" class="btn btn-secondary" style="color:var(--primary); font-weight:700;" data-action="openPublishMapPicker()">地图选点</button>
+      <button type="button" class="btn" data-action="openNewMonitoringPointForm()">新增本次点位</button>
       <button type="button" class="btn" data-action="clearMonitoringPointSelection()">清除选择，手工填写</button>
       <span id="locationPickerStatus" aria-live="polite">点位和经纬度均可不填写。</span>
     </div>
@@ -305,7 +305,7 @@ function renderDynamicForm(fields) {
         <input id="newMonitoringPointLatitude" placeholder="纬度（可选）" inputmode="decimal">
       </div>
       <div style="display:flex; gap:0.4rem; margin-top:0.4rem; flex-wrap:wrap;">
-        <button type="button" class="btn btn-secondary" data-action="openNewPointModalMapPicker()">🗺️ 地图拾取坐标</button>
+        <button type="button" class="btn btn-secondary" data-action="openNewPointModalMapPicker()">地图拾取坐标</button>
         <button type="button" class="btn btn-primary" data-action="saveNewMonitoringPoint()">保存并使用</button>
         <button type="button" class="btn" data-action="closeNewMonitoringPointForm()">取消</button>
       </div>
@@ -557,7 +557,7 @@ function openPublishMapPicker() {
     window.openMapPicker({
       initialLng: currentLng ? parseFloat(currentLng) : null,
       initialLat: currentLat ? parseFloat(currentLat) : null,
-      title: '🗺️ 高德离线地图选点拾取坐标',
+      title: '高德离线地图选点拾取坐标',
       showExistingPoints: true,
       onConfirm: (lng, lat) => {
         const lngInput = getLocationCoordinateInput('longitude');
@@ -583,7 +583,7 @@ function openNewPointModalMapPicker() {
     window.openMapPicker({
       initialLng: currentLng ? parseFloat(currentLng) : null,
       initialLat: currentLat ? parseFloat(currentLat) : null,
-      title: `🗺️ 拾取新点位坐标 [${name}]`,
+      title: `拾取新点位坐标 [${name}]`,
       showExistingPoints: true,
       onConfirm: (lng, lat) => {
         const lngInput = document.getElementById('newMonitoringPointLongitude');

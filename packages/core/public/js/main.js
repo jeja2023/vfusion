@@ -170,16 +170,33 @@ async function loadPageTemplates() {
 }
 
 function showToast(message, type = 'success') {
-  const container = document.getElementById('toast-container');
-  if (!container) return;
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    document.body.appendChild(container);
+  }
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
+
+  let iconSvg = '<svg class="icon-svg" viewBox="0 0 24 24" style="width:16px;height:16px;"><polyline points="20 6 9 17 4 12"/></svg>';
+  if (type === 'error') {
+    iconSvg = '<svg class="icon-svg" viewBox="0 0 24 24" style="width:16px;height:16px;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+  } else if (type === 'warn' || type === 'warning') {
+    iconSvg = '<svg class="icon-svg" viewBox="0 0 24 24" style="width:16px;height:16px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+  }
+
   toast.innerHTML = `
-    <svg class="icon-svg" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+    ${iconSvg}
     <span>${escapeHtml(message)}</span>
   `;
   container.appendChild(toast);
-  setTimeout(() => toast.remove(), 3000);
+  setTimeout(() => {
+    toast.style.transition = 'all 0.25s ease';
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(-10px) scale(0.96)';
+    setTimeout(() => toast.remove(), 250);
+  }, 3000);
 }
 
 document.addEventListener('keydown', (e) => {

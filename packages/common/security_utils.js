@@ -57,35 +57,57 @@ function isPrivateAddress(address) {
   return false;
 }
 
-function validateHttpUrl(value) {
+function isCloudMetadataAddress(address) {
+  const normalized = String(address || '').toLowerCase().replace(/^\[|\]$/g, '');
+  return normalized === '169.254.169.254' || normalized === 'metadata.google.internal';
+}
+
+function validateHttpUrl(value, options = {}) {
+  const allowPrivate = options.allowPrivate !== false; // 视汇作为内网/专网数据中台，默认允许分发至内网与本机系统
   let parsed;
   try { parsed = new URL(value); } catch (e) { return { valid: false, error: 'URL 格式无效' }; }
   if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) {
     return { valid: false, error: '仅允许不带凭据的 HTTP/HTTPS URL' };
   }
   const hostname = parsed.hostname.toLowerCase().replace(/[\[\]]/g, '');
+  if (isCloudMetadataAddress(hostname)) {
+    return { valid: false, error: '禁止访问云元数据服务地址' };
+  }
   const ipVersion = net.isIP(hostname);
-  if ((ipVersion && isPrivateAddress(hostname)) || hostname === 'localhost' || hostname.endsWith('.localhost') || hostname.endsWith('.local') || hostname === 'metadata.google.internal') {
+  if (!allowPrivate && ((ipVersion && isPrivateAddress(hostname)) || hostname === 'localhost' || hostname.endsWith('.localhost') || hostname.endsWith('.local'))) {
     return { valid: false, error: '禁止访问本机、内网或链路本地地址' };
   }
   return { valid: true, url: parsed };
 }
 
-async function validateHttpUrlResolved(value) {
-  const result = validateHttpUrl(value);
+async function validateHttpUrlResolved(value, options = {}) {
+  const allowPrivate = options.allowPrivate !== false;
+  const result = validateHttpUrl(value, options);
   if (!result.valid) return result;
   const hostname = result.url.hostname.replace(/[\[\]]/g, '');
   const literalFamily = net.isIP(hostname);
   if (literalFamily) return { ...result, addresses: [{ address: hostname, family: literalFamily }] };
+  if (hostname === 'localhost') {
+    return { ...result, addresses: [{ address: '127.0.0.1', family: 4 }] };
+  }
   try {
     const addresses = await dns.lookup(hostname, { all: true, verbatim: true });
-    if (!addresses.length || addresses.some(record => isPrivateAddress(record.address))) {
+    if (!addresses.length) {
+      return { valid: false, error: '目标域名解析失败，未找到可用 IP' };
+    }
+    if (addresses.some(record => isCloudMetadataAddress(record.address))) {
+      return { valid: false, error: '禁止访问解析到云元数据服务地址的目标' };
+    }
+    if (!allowPrivate && addresses.some(record => isPrivateAddress(record.address))) {
       return { valid: false, error: '禁止访问解析到内网或链路本地地址的目标' };
     }
+    return { ...result, addresses };
   } catch (e) {
-    return { valid: false, error: '目标域名解析失败' };
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return { ...result, addresses: [{ address: '127.0.0.1', family: 4 }] };
+    }
+    return { valid: false, error: `目标域名解析失败: ${e.message}` };
   }
-  return { ...result, addresses };
 }
 
 function assertJsonObject(value, label = '对象') {

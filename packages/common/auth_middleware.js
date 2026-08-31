@@ -83,7 +83,9 @@ function authMiddleware(opts = {}) {
     publicPaths = [],
     audience,
     allowedScopes = ['api'],
-    allowQueryToken = false
+    allowQueryToken = false,
+    getSyncToken = null,
+    syncToken = null
   } = opts;
   const exempt = new Set([...skipPaths, ...publicPaths]);
 
@@ -117,12 +119,51 @@ function authMiddleware(opts = {}) {
       return next();
     }
 
+    // 优先校验第三方图片同步专用固定令牌 (X-Sync-Token / Authorization / ?sync_token=)
+    const expectedSyncToken = typeof getSyncToken === 'function' ? getSyncToken() : syncToken;
+    if (expectedSyncToken && typeof expectedSyncToken === 'string' && expectedSyncToken.length >= 16) {
+      const candidateTokens = [];
+      const xSyncHeader = req.headers['x-sync-token'];
+      if (typeof xSyncHeader === 'string' && xSyncHeader.trim()) {
+        candidateTokens.push(xSyncHeader.trim());
+      }
+      const rawAuth = req.headers.authorization || '';
+      if (rawAuth.startsWith('Bearer ')) {
+        candidateTokens.push(rawAuth.slice(7).trim());
+      } else if (rawAuth.trim()) {
+        candidateTokens.push(rawAuth.trim());
+      }
+      if (allowQueryToken && req.query) {
+        const qSync = req.query.sync_token || req.query.access_token || req.query.token;
+        if (Array.isArray(qSync)) {
+          if (typeof qSync[0] === 'string' && qSync[0].trim()) candidateTokens.push(qSync[0].trim());
+        } else if (typeof qSync === 'string' && qSync.trim()) {
+          candidateTokens.push(qSync.trim());
+        }
+      }
+
+      const expectedBuf = Buffer.from(expectedSyncToken, 'utf8');
+      for (const cand of candidateTokens) {
+        const candBuf = Buffer.from(cand, 'utf8');
+        if (candBuf.length === expectedBuf.length && crypto.timingSafeEqual(candBuf, expectedBuf)) {
+          req.user = {
+            id: 'svc_sync',
+            username: 'sync_service',
+            name: '第三方固定同步服务',
+            role: 'operator',
+            scope: 'asset'
+          };
+          return next();
+        }
+      }
+    }
+
     const header = req.headers.authorization || '';
     let token = null;
     if (header.startsWith('Bearer ')) {
       token = header.slice(7).trim();
     } else if (allowQueryToken && req.query) {
-      const rawQuery = req.query.access_token || req.query.token;
+      const rawQuery = req.query.access_token || req.query.token || req.query.sync_token;
       if (Array.isArray(rawQuery)) {
         token = typeof rawQuery[0] === 'string' ? rawQuery[0].trim() : null;
       } else if (typeof rawQuery === 'string') {

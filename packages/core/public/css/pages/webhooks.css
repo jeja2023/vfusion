@@ -1,1 +1,429 @@
-/* Webhooks Page Styles */
+/* Webhooks Page Styles - Modern & Enterprise Design */
+
+.webhook-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .webhook-stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.webhook-stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.65rem 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+}
+
+.webhook-stat-card:hover {
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-md);
+}
+
+.webhook-stat-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.webhook-stat-label {
+  font-size: 0.725rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.webhook-stat-value {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1.3;
+}
+
+.webhook-stat-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.webhook-stat-icon.blue { background: #eff6ff; color: var(--primary); }
+.webhook-stat-icon.green { background: #f0fdf4; color: var(--success); }
+.webhook-stat-icon.amber { background: #fffbeb; color: var(--warning); }
+.webhook-stat-icon.red { background: #fef2f2; color: var(--danger); }
+
+/* Webhook Toolbar */
+.webhook-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.webhook-search-box {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1;
+  min-width: 260px;
+}
+
+.webhook-search-input {
+  width: 100%;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.8rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: #ffffff;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.webhook-search-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+}
+
+.webhook-filter-select {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.8rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: #ffffff;
+  color: var(--text-main);
+  outline: none;
+  cursor: pointer;
+  height: 32px;
+}
+
+/* Webhook Table Layout */
+.webhook-table-container {
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: #ffffff;
+  margin-bottom: 0.35rem;
+}
+
+.webhook-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  text-align: left;
+  table-layout: fixed;
+}
+
+.webhook-table th, .webhook-table td {
+  padding: 0.45rem 0.5rem;
+  border: 1px solid var(--border-color);
+  vertical-align: middle;
+}
+
+.webhook-table td:last-child, .webhook-table th:last-child {
+  padding: 0.45rem 0.3rem;
+}
+
+.webhook-table th {
+  background: #f8fafc;
+  color: var(--text-muted);
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.webhook-node-name {
+  font-weight: 700;
+  color: var(--text-main);
+  word-break: break-word;
+}
+
+.webhook-url-box {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 100%;
+}
+
+.webhook-method-tag {
+  font-size: 0.675rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  flex-shrink: 0;
+}
+
+.webhook-url-code {
+  font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.75rem;
+  color: #0f172a;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.webhook-copy-btn {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  border-radius: 4px;
+  padding: 2px 5px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.webhook-copy-btn:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: var(--primary);
+}
+
+.webhook-secret-box {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: #475569;
+}
+
+.webhook-secret-tag {
+  font-size: 0.65rem;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+.webhook-status-badge {
+  display: inline-block;
+  text-align: center;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.webhook-status-badge.success {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.webhook-status-badge.failed {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.webhook-status-badge.pending {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+.webhook-status-badge.disabled {
+  background: #f1f5f9;
+  color: #94a3b8;
+  border: 1px solid #e2e8f0;
+}
+
+.webhook-action-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  flex-wrap: nowrap;
+}
+
+.webhook-act-btn {
+  height: 25px;
+  min-height: 25px;
+  padding: 0 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  line-height: normal;
+  text-decoration: none;
+  border: 1px solid transparent;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+/* 1. 测试按钮 - 浅蓝高质感 */
+.webhook-act-btn.test {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+.webhook-act-btn.test:hover {
+  background: #dbeafe;
+  color: #1e40af;
+  border-color: #93c5fd;
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.12);
+}
+
+/* 2. 补推按钮 - 柔和紫/靛蓝 */
+.webhook-act-btn.replay {
+  background: #f5f3ff;
+  color: #6d28d9;
+  border-color: #ddd6fe;
+}
+.webhook-act-btn.replay:hover {
+  background: #ede9fe;
+  color: #5b21b6;
+  border-color: #c4b5fd;
+  box-shadow: 0 1px 2px rgba(109, 40, 217, 0.12);
+}
+
+/* 3. 编辑按钮 - 中性灰白 */
+.webhook-act-btn.edit {
+  background: #f8fafc;
+  color: #334155;
+  border-color: #cbd5e1;
+}
+.webhook-act-btn.edit:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #94a3b8;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* 4. 密钥按钮 - 琥珀金 */
+.webhook-act-btn.secret {
+  background: #fffbeb;
+  color: #b45309;
+  border-color: #fde68a;
+}
+.webhook-act-btn.secret:hover {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #fcd34d;
+  box-shadow: 0 1px 2px rgba(180, 83, 9, 0.12);
+}
+
+/* 5. 删除按钮 - 浅玫瑰红 */
+.webhook-act-btn.delete {
+  background: #fff1f2;
+  color: #be123c;
+  border-color: #fecdd3;
+}
+.webhook-act-btn.delete:hover {
+  background: #ffe4e6;
+  color: #9f1239;
+  border-color: #fda4af;
+  box-shadow: 0 1px 2px rgba(190, 18, 60, 0.12);
+}
+
+/* 保留旧类名兼容 */
+.webhook-btn-sm {
+  padding: 0.22rem 0.45rem;
+  font-size: 0.725rem;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1.2;
+}
+
+/* Test Result Alert Banner */
+.webhook-result-panel {
+  border-radius: 8px;
+  padding: 0.65rem 0.85rem;
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  animation: toastSlideDown 0.2s ease-out forwards;
+}
+
+.webhook-result-panel.success {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  color: #166534;
+}
+
+.webhook-result-panel.error {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+}
+
+.webhook-result-panel.info {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+}
+
+.webhook-result-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.775rem;
+  flex: 1;
+}
+
+.webhook-result-title {
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* Secret Credential Modal specific */
+.webhook-secret-view {
+  background: #0f172a;
+  color: #38bdf8;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-family: monospace;
+  font-size: 0.85rem;
+  word-break: break-all;
+  user-select: all;
+  border: 1px solid #334155;
+  margin: 0.6rem 0;
+  position: relative;
+}

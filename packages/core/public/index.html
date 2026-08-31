@@ -59,6 +59,10 @@
             <svg class="icon-svg" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             下载
           </button>
+          <button class="btn btn-diode" style="padding:0.35rem 0.65rem;" id="drawerRedispatchBtn" title="将当前单据重新分发/补推至第三方系统">
+            <svg class="icon-svg" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            补推
+          </button>
           <button class="btn btn-diode" style="padding:0.35rem 0.65rem;" data-action="window.print()">
             <svg class="icon-svg" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
             打印
@@ -67,6 +71,43 @@
         </div>
       </div>
       <div id="drawerBody" style="overflow:hidden; min-width:0; word-break:break-word;"></div>
+    </div>
+  </div>
+
+  <!-- 单据手动补推送弹窗 Modal -->
+  <div id="eventRedispatchModal" class="modal-overlay" style="display:none;" data-action="closeEventRedispatchModal()">
+    <div class="card modal-card" style="background:#fff; border-radius:10px; padding:1.25rem; width:480px !important;" data-action="event.stopPropagation()">
+      <div style="font-size:0.95rem; font-weight:700; color:var(--primary); margin-bottom:0.75rem; border-bottom:1px solid var(--border-color); padding-bottom:0.5rem; display:flex; align-items:center; justify-content:space-between;">
+        <div style="display:flex; align-items:center; gap:0.45rem;">
+          <svg class="icon-svg" viewBox="0 0 24 24" style="width:16px; height:16px;"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          <span>单据消息补推送至第三方系统</span>
+        </div>
+        <button type="button" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--text-muted);" data-action="closeEventRedispatchModal()">&times;</button>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:0.75rem;">
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:0.6rem 0.75rem; font-size:0.775rem;">
+          <div><strong>事件编号：</strong><code id="redispatchModalEventId" style="color:var(--primary);">-</code></div>
+          <div style="margin-top:2px;"><strong>所属任务：</strong><span id="redispatchModalTaskName">-</span></div>
+        </div>
+
+        <div class="form-group">
+          <label style="font-size:0.775rem; font-weight:600;">选择目标分发节点</label>
+          <select id="redispatchTargetNodeSelect" style="padding:0.35rem 0.6rem; font-size:0.8rem; height:32px;">
+            <option value="ALL">全部已开启的第三方订阅节点 (广播补推)</option>
+          </select>
+        </div>
+
+        <div id="redispatchResultBox" style="display:none; font-size:0.75rem; padding:0.5rem 0.65rem; border-radius:6px; max-height:140px; overflow-y:auto; font-family:monospace;"></div>
+
+        <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-top:0.25rem;">
+          <button type="button" class="btn btn-secondary" style="padding:0.3rem 0.75rem; font-size:0.75rem;" data-action="closeEventRedispatchModal()">取消</button>
+          <button type="button" class="btn btn-primary" id="btnSubmitRedispatch" style="padding:0.3rem 0.9rem; font-size:0.75rem;" data-action="submitEventRedispatch()">
+            <svg class="icon-svg" viewBox="0 0 24 24" style="width:13px; height:13px;"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            立即执行补推送
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 

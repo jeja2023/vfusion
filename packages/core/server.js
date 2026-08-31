@@ -73,6 +73,11 @@ const ARCHIVE_DIR = path.join(STORAGE_ROOT, 'archive');
 const ERROR_DIR = path.join(STORAGE_ROOT, 'error');
 const ASSETS_DIR = path.join(STORAGE_ROOT, 'assets');
 const COLLECTOR_ASSETS_DIR = path.join(STORAGE_ROOT, 'collector_assets');
+const WEBHOOK_TEST_PHOTO_PATH = path.join(ASSETS_DIR, 'test_photo.jpg');
+const WEBHOOK_TEST_PHOTO = Buffer.from(
+  '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAASABgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwCrRRRX2h8kFFFFABRRRQAUUUUAf//Z',
+  'base64'
+);
 const DB_FILE = path.join(STORAGE_ROOT, 'db.json');
 const SCHEMA_FILE = path.join(STORAGE_ROOT, 'schema.json');
 const WEBHOOKS_FILE = path.join(STORAGE_ROOT, 'webhooks.json');
@@ -82,6 +87,17 @@ const MONITORING_POINTS_FILE = path.join(STORAGE_ROOT, 'monitoring_points.json')
 [STORAGE_ROOT, FTP_OUT_DIR, FTP_IN_DIR, ARCHIVE_DIR, ERROR_DIR, ASSETS_DIR, COLLECTOR_ASSETS_DIR].forEach(dir => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
+
+function ensureWebhookTestPhoto() {
+    // 测试回调也必须引用可被接收端解码的真实图片，不能依赖资源缺失时的 HTML/SVG 回退响应。
+    fs.writeFileSync(WEBHOOK_TEST_PHOTO_PATH, WEBHOOK_TEST_PHOTO);
+}
+
+try {
+  ensureWebhookTestPhoto();
+} catch (err) {
+  console.error('[VFusion Core] 初始化 Webhook 测试图片失败:', err.message);
+}
 
 function writeJsonAtomic(filePath, data) {
   return writeJsonAtomicSafe(filePath, data);
@@ -156,6 +172,10 @@ try {
     secConf.upgrade_signing_key = crypto.randomBytes(32).toString('hex');
     mutated = true;
   }
+  if (!secConf.asset_sync_token) {
+    secConf.asset_sync_token = 'vfusion_sync_' + crypto.randomBytes(24).toString('hex');
+    mutated = true;
+  }
   if (mutated) writeJsonAtomic(SECURITY_CONFIG_FILE, secConf);
 
 let autoDiodeTimer = null;
@@ -197,6 +217,18 @@ function setAutoDiodeInterval(seconds) {
 } catch (e) {
   console.error('[VFusion Core] 读取安全配置失败:', e.message);
   process.exit(1);
+}
+
+function getSecuritySyncToken() {
+  try {
+    if (fs.existsSync(SECURITY_CONFIG_FILE)) {
+      const sec = JSON.parse(fs.readFileSync(SECURITY_CONFIG_FILE, 'utf8'));
+      if (sec && typeof sec.asset_sync_token === 'string' && sec.asset_sync_token.trim()) {
+        return sec.asset_sync_token.trim();
+      }
+    }
+  } catch (e) {}
+  return null;
 }
 
 // CORS 白名单：默认仅允许同源与显式配置的来源，避免任意站点驱动内网 API
@@ -247,7 +279,8 @@ function serveAssetFallback(req, res) {
 }
 
 const protectedAssetAuth = assetAuthMiddleware({
-  loadUser: (id) => readUsers().find(u => u.id === id) || null
+  loadUser: (id) => readUsers().find(u => u.id === id) || null,
+  getSyncToken: () => getSecuritySyncToken()
 });
 app.use('/assets', protectedAssetAuth, express.static(ASSETS_DIR), express.static(COLLECTOR_ASSETS_DIR), serveAssetFallback);
 app.use('/collector-assets', protectedAssetAuth, express.static(COLLECTOR_ASSETS_DIR), express.static(ASSETS_DIR), serveAssetFallback);
@@ -312,10 +345,20 @@ function tagEvent(eventRecord) {
 
 function fixedDnsLookup(addresses) {
   return (hostname, options, callback) => {
-    const requestedFamily = options && options.family ? options.family : 0;
-    const selected = requestedFamily ? addresses.find(item => item.family === requestedFamily) : addresses[0];
-    if (!selected) return callback(new Error('Webhook 目标地址解析失败'));
-    callback(null, selected.address, selected.family);
+    const cb = typeof options === 'function' ? options : callback;
+    const opts = typeof options === 'object' && options !== null ? options : {};
+    if (!addresses || addresses.length === 0) {
+      return cb(new Error('Webhook 目标地址解析失败'));
+    }
+    const requestedFamily = opts.family || 0;
+    const matched = requestedFamily ? addresses.filter(item => item.family === requestedFamily) : addresses;
+    const targetList = matched.length ? matched : addresses;
+
+    if (opts.all) {
+      return cb(null, targetList);
+    }
+    const selected = targetList[0];
+    cb(null, selected.address, selected.family || 4);
   };
 }
 
@@ -1123,9 +1166,11 @@ app.put('/api/users/:id', requireRole('admin'), (req, res) => {
 });
 
 
-async function dispatchWebhooks(eventRecord) {
-  const hooks = readWebhooks().filter(h => h.enabled !== false);
-  if (hooks.length === 0) return;
+async function dispatchToWebhookNode(eventRecord, hook) {
+  if (!hook || hook.enabled === false) return { id: hook?.id, name: hook?.name, ok: false, skipped: true, error: '节点已停用' };
+  if (!hook.secret || typeof hook.secret !== 'string' || hook.secret.length < 32) {
+    return { id: hook.id, name: hook.name, ok: false, error: 'Webhook 节点未配置有效签名密钥' };
+  }
 
   const payloadStr = JSON.stringify({
     event: 'EVENT_INGESTED',
@@ -1133,40 +1178,67 @@ async function dispatchWebhooks(eventRecord) {
     data: eventRecord
   });
 
-  for (const hook of hooks) {
-    try {
-      if (!hook.secret || typeof hook.secret !== 'string' || hook.secret.length < 32) throw new Error('Webhook 节点未配置独立签名密钥');
-      const signature = signWebhookPayload(payloadStr, hook.secret);
-      const urlValidation = await validateHttpUrlResolved(hook.url);
-      if (!urlValidation.valid) throw new Error(urlValidation.error);
-      const urlObj = urlValidation.url;
-      const reqModule = urlObj.protocol === 'https:' ? https : http;
-
-      const req = reqModule.request(hook.url, {
-        method: 'POST',
-        lookup: fixedDnsLookup(urlValidation.addresses || []),
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(payloadStr),
-          [WEBHOOK_SIGNATURE_HEADER]: signature
-        }
-      }, res => {
-        addAuditLog('WEBHOOK', `消息分发 [${hook.name}]: HTTP ${res.statusCode}`, res.statusCode < 400 ? 'SUCCESS' : 'WARN');
-        res.resume();
-      });
-
-      req.setTimeout(8000, () => req.destroy(new Error('Webhook 请求超时')));
-
-      req.on('error', err => {
-        addAuditLog('WEBHOOK', `消息分发失败 [${hook.name}]: ${err.message}`, 'WARN');
-      });
-
-      req.write(payloadStr);
-      req.end();
-    } catch (e) {
-      console.error('Webhook 网址错误:', hook.url);
-    }
+  const signature = signWebhookPayload(payloadStr, hook.secret);
+  const urlValidation = await validateHttpUrlResolved(hook.url);
+  if (!urlValidation.valid) {
+    return { id: hook.id, name: hook.name, ok: false, error: urlValidation.error };
   }
+
+  const urlObj = urlValidation.url;
+  const reqModule = urlObj.protocol === 'https:' ? https : http;
+
+  return new Promise((resolve) => {
+    const startTime = Date.now();
+    const req = reqModule.request(hook.url, {
+      method: 'POST',
+      lookup: fixedDnsLookup(urlValidation.addresses || []),
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payloadStr),
+        [WEBHOOK_SIGNATURE_HEADER]: signature
+      },
+      timeout: 8000
+    }, (res) => {
+      let body = '';
+      res.on('data', chunk => body += chunk);
+      res.on('end', () => {
+        const durationMs = Date.now() - startTime;
+        const isSuccess = res.statusCode >= 200 && res.statusCode < 300;
+        addAuditLog('WEBHOOK', `消息分发 [${hook.name}]: HTTP ${res.statusCode} (${durationMs}ms)`, isSuccess ? 'SUCCESS' : 'WARN');
+        resolve({
+          id: hook.id,
+          name: hook.name,
+          url: hook.url,
+          statusCode: res.statusCode,
+          durationMs,
+          ok: isSuccess,
+          responseBody: body.slice(0, 300)
+        });
+      });
+    });
+
+    req.on('error', (err) => {
+      const durationMs = Date.now() - startTime;
+      addAuditLog('WEBHOOK', `消息分发失败 [${hook.name}]: ${err.message}`, 'WARN');
+      resolve({ id: hook.id, name: hook.name, url: hook.url, ok: false, durationMs, error: err.message });
+    });
+
+    req.on('timeout', () => {
+      req.destroy();
+      const durationMs = Date.now() - startTime;
+      addAuditLog('WEBHOOK', `消息分发超时 [${hook.name}]: 8000ms`, 'WARN');
+      resolve({ id: hook.id, name: hook.name, url: hook.url, ok: false, durationMs, error: '连接目标 Webhook 接口超时 (8秒未响应)' });
+    });
+
+    req.write(payloadStr);
+    req.end();
+  });
+}
+
+async function dispatchWebhooks(eventRecord) {
+  const hooks = readWebhooks().filter(h => h.enabled !== false);
+  if (hooks.length === 0) return [];
+  return Promise.all(hooks.map(hook => dispatchToWebhookNode(eventRecord, hook)));
 }
 
 const processingPackageFiles = new Set();
@@ -1952,6 +2024,13 @@ app.post('/api/webhooks/:id/test', requireRole('admin'), async (req, res) => {
   const webhookSecret = hook.secret;
   if (!webhookSecret) return res.status(409).json({ success: false, error: 'Webhook 节点未配置独立签名密钥，请先轮换密钥' });
 
+  try {
+    ensureWebhookTestPhoto();
+  } catch (err) {
+    addAuditLog('WEBHOOK_TEST', `生成测试图片失败: ${err.message}`, 'WARN');
+    return res.status(500).json({ success: false, error: `生成测试图片失败: ${err.message}` });
+  }
+
   const photoUrl = '/assets/test_photo.jpg';
   const testEvent = {
     id: Date.now(),
@@ -2032,6 +2111,140 @@ app.post('/api/webhooks/:id/test', requireRole('admin'), async (req, res) => {
   } catch (err) {
     res.json({ success: false, error: `URL 格式错误: ${err.message}` });
   }
+});
+
+// 手动补推指定历史单据事件到第三方订阅节点
+app.post('/api/events/:event_id/redispatch', requireRole('admin'), async (req, res) => {
+  try {
+    const { event_id } = req.params;
+    const { node_id } = req.body || {};
+    const events = await coreSqlite.getEvents(null, { limit: 5000 });
+    const event = events.find(e => String(e.event_id) === String(event_id));
+    if (!event) return res.status(404).json({ success: false, error: `未找到事件编号为 [${event_id}] 的单据` });
+
+    const allHooks = readWebhooks();
+    let targetHooks = [];
+    if (node_id && node_id !== 'ALL') {
+      const h = allHooks.find(item => String(item.id) === String(node_id));
+      if (!h) return res.status(404).json({ success: false, error: '指定的第三方订阅节点不存在' });
+      targetHooks = [h];
+    } else {
+      targetHooks = allHooks.filter(h => h.enabled !== false);
+    }
+
+    if (targetHooks.length === 0) {
+      return res.status(400).json({ success: false, error: '暂无已启用的第三方订阅节点可供分发' });
+    }
+
+    const results = await Promise.all(targetHooks.map(hook => dispatchToWebhookNode(event, hook)));
+    const successCount = results.filter(r => r.ok).length;
+    addAuditLog('WEBHOOK_REDISPATCH', `手动重推单据 [${event_id}] 到 ${targetHooks.length} 个节点 (成功 ${successCount} 个)`, successCount > 0 ? 'SUCCESS' : 'WARN');
+
+    res.json({
+      success: true,
+      message: `单据补推送完成：成功 ${successCount}/${targetHooks.length} 个节点`,
+      results
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// 对特定第三方节点批量重放补推历史单据
+app.post('/api/webhooks/:id/batch-redispatch', requireRole('admin'), async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const { task_code, limit = 20, event_ids } = req.body || {};
+    const list = readWebhooks();
+    const hook = list.find(item => item.id === id);
+    if (!hook) return res.status(404).json({ success: false, error: '未找到指定的 Webhook 节点' });
+
+    let targetEvents = [];
+    if (Array.isArray(event_ids) && event_ids.length > 0) {
+      const allEvents = await coreSqlite.getEvents(null, { limit: 5000 });
+      targetEvents = allEvents.filter(e => event_ids.includes(e.event_id));
+    } else if (task_code) {
+      targetEvents = await coreSqlite.getEvents(null, { taskCode: task_code, limit: Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100) });
+    } else {
+      const maxCount = Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100);
+      targetEvents = await coreSqlite.getEvents(null, { limit: maxCount });
+    }
+
+    if (targetEvents.length === 0) {
+      return res.status(404).json({ success: false, error: '未匹配到符合条件的历史单据记录' });
+    }
+
+    const results = [];
+    for (const evt of targetEvents) {
+      const r = await dispatchToWebhookNode(evt, hook);
+      results.push({ event_id: evt.event_id, task_name: evt.task_name, ...r });
+    }
+
+    const successCount = results.filter(r => r.ok).length;
+    addAuditLog('WEBHOOK_BATCH_REDISPATCH', `批量补推 ${targetEvents.length} 条单据到 [${hook.name}] (成功 ${successCount} 条)`, successCount > 0 ? 'SUCCESS' : 'WARN');
+
+    res.json({
+      success: true,
+      message: `批量补推完成：成功 ${successCount}/${targetEvents.length} 条单据`,
+      total: targetEvents.length,
+      successCount,
+      failedCount: targetEvents.length - successCount,
+      results
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// 获取第三方图片同步固定服务令牌 (X-Sync-Token)
+app.get('/api/config/sync-token', requireRole('admin'), (req, res) => {
+  const token = getSecuritySyncToken() || '';
+  res.json({
+    success: true,
+    data: {
+      sync_token: token,
+      sync_token_masked: maskSecret(token),
+      created_at: new Date().toISOString()
+    }
+  });
+});
+
+// 在线重新生成 / 轮换固定服务令牌
+app.post('/api/config/sync-token/rotate', requireRole('admin'), (req, res) => {
+  const newToken = 'vfusion_sync_' + crypto.randomBytes(24).toString('hex');
+  updateJsonAtomic(SECURITY_CONFIG_FILE, {}, sec => {
+    return { ...sec, asset_sync_token: newToken };
+  });
+  addAuditLog('SYNC_TOKEN_ROTATE', '重新生成第三方图片同步固定服务令牌 (X-Sync-Token)', 'SUCCESS');
+  res.json({
+    success: true,
+    message: '第三方图片同步固定服务令牌已更新，请将新令牌同步至 HCZC 等第三方系统',
+    data: {
+      sync_token: newToken,
+      sync_token_masked: maskSecret(newToken)
+    }
+  });
+});
+
+// 自定义保存固定服务令牌
+app.put('/api/config/sync-token', requireRole('admin'), (req, res) => {
+  const { sync_token } = req.body || {};
+  if (!sync_token || typeof sync_token !== 'string' || sync_token.trim().length < 16) {
+    return res.status(400).json({ success: false, error: '固定服务令牌长度不能少于 16 个字符' });
+  }
+  const cleanToken = sync_token.trim();
+  updateJsonAtomic(SECURITY_CONFIG_FILE, {}, sec => {
+    return { ...sec, asset_sync_token: cleanToken };
+  });
+  addAuditLog('SYNC_TOKEN_UPDATE', '自定义更新第三方图片同步固定服务令牌', 'SUCCESS');
+  res.json({
+    success: true,
+    message: '固定服务令牌已保存',
+    data: {
+      sync_token: cleanToken,
+      sync_token_masked: maskSecret(cleanToken)
+    }
+  });
 });
 
 const FTP_PASSWORD_MASK = '********';

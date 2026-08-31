@@ -241,7 +241,11 @@ function serveAssetFallback(req, res) {
 }
 
 const protectedAssetAuth = assetAuthMiddleware({
-  loadUser: (id) => (readCollectorDb().users || []).find(u => u.id === id) || null
+  loadUser: (id) => (readCollectorDb().users || []).find(u => u.id === id) || null,
+  getSyncToken: () => {
+    const sec = loadSecurityConfig();
+    return (sec && typeof sec.asset_sync_token === 'string' && sec.asset_sync_token.trim()) ? sec.asset_sync_token.trim() : null;
+  }
 });
 app.use('/collector-assets', protectedAssetAuth, express.static(COLLECTOR_ASSETS_DIR), express.static(STORAGE_ROOT), serveAssetFallback);
 app.use('/assets', protectedAssetAuth, express.static(COLLECTOR_ASSETS_DIR), express.static(STORAGE_ROOT), serveAssetFallback);

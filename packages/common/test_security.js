@@ -29,7 +29,8 @@ try {
   check('安全文件名拒绝目录分隔符', !isSafeFileName('../secret.jpg'));
   check('图片扩展名白名单生效', getImageExtension('snapshot.JPG', 'image/jpeg') === '.jpg');
   check('图片扩展名拒绝脚本', getImageExtension('payload.svg', 'image/svg+xml') === null);
-  check('Webhook 拒绝本机地址', !validateHttpUrl('http://127.0.0.1:8080/hook').valid);
+  check('Webhook 拒绝云元数据地址', !validateHttpUrl('http://169.254.169.254/latest/meta-data').valid);
+  check('Webhook 默认支持内网与本机地址', validateHttpUrl('http://127.0.0.1:8080/hook').valid);
   check('Webhook 接受公网 HTTPS', validateHttpUrl('https://example.com/hook').valid);
   check('经纬度范围校验并规范化', JSON.stringify(normalizeCoordinates('116.3971284', '39.9165278')) === JSON.stringify({ longitude: 116.3971284, latitude: 39.9165278 }));
   let invalidCoordinatesRejected = false;

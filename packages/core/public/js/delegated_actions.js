@@ -4,8 +4,12 @@
   const knownFunctions = [
     'handleLogin','closeDrawer','handleLogout','toggleAlertDropdown','markAlertsRead','exportCsvReport','switchTab',
     'openImageLightbox','closeImageLightbox','showPersonDetailModal','closePersonDetailModal','openAddWebhookModal',
-    'loadWebhooks','changeWebhookPageSize','prevWebhookPage','nextWebhookPage','closeAddWebhookModal','handleAddWebhookSubmit',
+    'loadWebhooks','refreshWebhooksList','filterWebhooks','changeWebhookPageSize','prevWebhookPage','nextWebhookPage','closeAddWebhookModal','handleAddWebhookSubmit',
     'closeEditWebhookModal','handleSaveWebhook','toggleWebhookNode','openEditWebhookModal','testWebhook','deleteWebhook','rotateWebhookSecret',
+    'copyWebhookText','openWebhookSecretModal','closeWebhookSecretModal','copyWebhookSecretFromModal','closeWebhookTestResultPanel',
+    'openEventRedispatchModal','closeEventRedispatchModal','submitEventRedispatch','openBatchReplayModal','closeBatchReplayModal','submitBatchReplay',
+    'loadSyncTokenConfig','toggleSyncTokenVisibility','copySyncToken','rotateSyncToken','openCustomSyncTokenPrompt',
+    'closeRotateSyncTokenModal','confirmRotateSyncToken','closeCustomSyncTokenModal','generateRandomSyncTokenForModal','submitCustomSyncToken',
     'openAddUserModal','closeAddUserModal','handleCreateUserSubmit','closeEditUserModal','handleSaveUser','resetUserPassword','deleteUser','changeUsersPageSize','prevUsersPage','nextUsersPage',
     'loadFullAuditLogs','changeAuditPageSize','prevAuditPage','nextAuditPage','exportAuditLogsCsv','loadErrors','changeErrorPageSize',
     'prevErrorPage','nextErrorPage','retryError','deleteError','loadPersonnelArchive','changePersonnelPageSize','prevPersonnelPage',

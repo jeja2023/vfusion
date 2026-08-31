@@ -659,6 +659,92 @@ function downloadEventZip(eventId) {
   downloadWithAuth(`/api/events/${encodeURIComponent(eventId)}/download`, `vfusion_${eventId}.zip`);
 }
 
+let currentRedispatchEventId = null;
+
+async function openEventRedispatchModal(eventId) {
+  currentRedispatchEventId = eventId;
+  const evt = (typeof eventsData !== 'undefined' ? eventsData : []).find(e => e.event_id === eventId);
+  const eventIdEl = document.getElementById('redispatchModalEventId');
+  const taskNameEl = document.getElementById('redispatchModalTaskName');
+  const selectEl = document.getElementById('redispatchTargetNodeSelect');
+  const resultBox = document.getElementById('redispatchResultBox');
+
+  if (eventIdEl) eventIdEl.innerText = eventId;
+  if (taskNameEl) taskNameEl.innerText = evt ? `${evt.task_name || '任务'} (${evt.task_code || '-'})` : '-';
+  if (resultBox) { resultBox.style.display = 'none'; resultBox.innerHTML = ''; }
+
+  if (selectEl) {
+    selectEl.innerHTML = '<option value="ALL">全部已开启的第三方订阅节点 (广播补推)</option>';
+    try {
+      const res = await apiFetch('/api/webhooks');
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        json.data.filter(h => h.enabled !== false).forEach(h => {
+          selectEl.innerHTML += `<option value="${h.id}">仅补推至: ${escapeHtml(h.name)}</option>`;
+        });
+      }
+    } catch (e) {}
+  }
+
+  const modal = document.getElementById('eventRedispatchModal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeEventRedispatchModal() {
+  const modal = document.getElementById('eventRedispatchModal');
+  if (modal) modal.style.display = 'none';
+  currentRedispatchEventId = null;
+}
+
+async function submitEventRedispatch() {
+  if (!currentRedispatchEventId) return;
+  const selectEl = document.getElementById('redispatchTargetNodeSelect');
+  const nodeId = selectEl ? selectEl.value : 'ALL';
+  const submitBtn = document.getElementById('btnSubmitRedispatch');
+  const resultBox = document.getElementById('redispatchResultBox');
+
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<svg class="icon-svg" style="width:12px; height:12px; animation:spin 1s linear infinite;" viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg> 补推送中...';
+  }
+
+  try {
+    const res = await apiFetch(`/api/events/${encodeURIComponent(currentRedispatchEventId)}/redispatch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ node_id: nodeId })
+    });
+    const json = await res.json();
+    if (json.success) {
+      showToast(json.message || '单据补推送已完成');
+      if (resultBox) {
+        resultBox.style.display = 'block';
+        resultBox.style.background = '#f0fdf4';
+        resultBox.style.border = '1px solid #bbf7d0';
+        resultBox.style.color = '#15803d';
+        const details = (json.results || []).map(r => `<div>[${r.ok ? '✓ 成功' : '✕ 失败'}] ${escapeHtml(r.name)}: HTTP ${r.statusCode || 'ERR'} (${r.durationMs || 0}ms)${r.error ? ` - ${escapeHtml(r.error)}` : ''}</div>`).join('');
+        resultBox.innerHTML = `<strong>${escapeHtml(json.message)}</strong><div style="margin-top:4px;">${details}</div>`;
+      }
+    } else {
+      showToast(json.error || '补推送失败', 'error');
+      if (resultBox) {
+        resultBox.style.display = 'block';
+        resultBox.style.background = '#fef2f2';
+        resultBox.style.border = '1px solid #fecaca';
+        resultBox.style.color = '#b91c1c';
+        resultBox.innerHTML = `<strong>补推送失败：</strong> ${escapeHtml(json.error || '未知错误')}`;
+      }
+    }
+  } catch (e) {
+    showToast('请求发生网络异常: ' + e.message, 'error');
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<svg class="icon-svg" viewBox="0 0 24 24" style="width:13px; height:13px;"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> 再次补推送';
+    }
+  }
+}
+
 function exportCsvReport() {
   showToast('准备导出 Excel 报表...');
   downloadWithAuth('/api/events/export', 'vfusion_report.csv');
@@ -688,5 +774,6 @@ window.addEventListener('DOMContentLoaded', async () => {
 Object.assign(window.VFusionActions = window.VFusionActions || {}, {
   checkAuth, handleLogin, handleLogout, switchTab, openImageLightbox, closeImageLightbox,
   showPersonDetailModal, closePersonDetailModal, toggleAlertDropdown, markAlertsRead,
-  exportCsvReport, openEventDrawer, closeDrawer, downloadEventZip, triggerDiodeSimulation
+  exportCsvReport, openEventDrawer, closeDrawer, downloadEventZip, triggerDiodeSimulation,
+  openEventRedispatchModal, closeEventRedispatchModal, submitEventRedispatch
 });
